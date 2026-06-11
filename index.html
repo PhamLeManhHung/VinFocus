@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lock In</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="card">
+            <h1>Lock In</h1>
+            <p class="tagline">Canvas information hub — browse courses, weeks, and resources.</p>
+        </div>
+
+        <div class="card hub_container">
+            <div class="hub_header">
+                <div class="input-wrapper">
+                    <button type="button" class="icon" aria-label="Focus search">
+                        <svg
+                            width="25px"
+                            height="25px"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                d="M11.5 21C16.7467 21 21 16.7467 21 11.5C21 6.25329 16.7467 2 11.5 2C6.25329 2 2 6.25329 2 11.5C2 16.7467 6.25329 21 11.5 21Z"
+                                stroke="#fff"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path
+                                d="M22 22L20 20"
+                                stroke="#fff"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+                    </button>
+                    <input id="search_input" type="search" class="input" placeholder="Search items">
+                </div>
+
+                <h2 id="hub_title">Browse</h2>
+
+                <label class="filter_toggle">
+                    <input id="unfinished_only" type="checkbox">
+                    <span>Unfinished</span>
+                </label>
+            </div>
+
+            <div id="course_pills" class="course_pills"></div>
+
+            <div id="item_list"></div>
+
+            <div class="week_nav">
+                <button id="prev_week" type="button" class="week_nav_btn" aria-label="Previous week">
+                    ←
+                </button>
+                <span id="week_label" class="week_label">Week —</span>
+                <button id="next_week" type="button" class="week_nav_btn" aria-label="Next week">
+                    →
+                </button>
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>
