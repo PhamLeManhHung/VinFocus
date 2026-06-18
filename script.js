@@ -50,24 +50,65 @@ const TIMETABLE_DAYS = [
 ];
 
 const TIMETABLE_PERIODS = [
-  { key: "p1", label: "Period 1", start: "08:00", end: "08:45", type: "class" },
-  { key: "p2", label: "Period 2", start: "08:50", end: "09:35", type: "class" },
-  { key: "break", label: "Break", start: "09:35", end: "09:55", type: "break" },
-  { key: "p3", label: "Period 3", start: "09:55", end: "10:40", type: "class" },
-  { key: "p4", label: "Period 4", start: "10:45", end: "11:30", type: "class" },
-  { key: "lunch", label: "Lunch", start: "11:30", end: "12:30", type: "break" },
-  { key: "p5", label: "Period 5", start: "12:30", end: "13:15", type: "class" },
-  { key: "p6", label: "Period 6", start: "13:20", end: "14:05", type: "class" },
-  { key: "p7", label: "Period 7", start: "14:10", end: "14:55", type: "class" },
+  { key: "p1", label: "Period 1", start: "08:00am", end: "08:45am", type: "class" },
+  { key: "p2", label: "Period 2", start: "08:50am", end: "09:35am", type: "class" },
+  { key: "break1", label: "Breaktime", start: "09:35am", end: "09:55am", type: "break" },
+  { key: "p3", label: "Period 3", start: "09:55am", end: "10:40am", type: "class" },
+  { key: "p4", label: "Period 4", start: "10:45am", end: "11:30am", type: "class" },
+  { key: "p5", label: "Period 5", start: "11:35am", end: "12:20pm", type: "class" },
+  { key: "lunch", label: "Lunch Break", start: "12:20pm", end: "01:30pm", type: "break" },
+  { key: "p6", label: "Period 6", start: "01:35pm", end: "02:20pm", type: "class" },
+  { key: "break2", label: "Breaktime", start: "02:20pm", end: "02:40pm", type: "break" },
+  { key: "p7", label: "Period 7", start: "02:40pm", end: "03:25pm", type: "class" },
 ];
 
 // Add classes as { period: "p1", subject: "Math", room: "A203", teacher: "Ms. Nguyen" }.
 const TIMETABLE = {
-  monday: [],
-  tuesday: [],
-  wednesday: [],
-  thursday: [],
-  friday: [],
+  monday: [
+    { period: "p1", subject: "Geography" },
+    { period: "p2", subject: "Physics" },
+    { period: "p3", subject: "ESL (GVVN)" },
+    { period: "p4", subject: "ESL (GVVN)" },
+    { period: "p5", subject: "Music" },
+    { period: "p6", subject: "Literature" },
+    { period: "p7", subject: "Vietnamese Studies" },
+  ],
+  tuesday: [
+    { period: "p1", subject: "ESL (GVVN)" },
+    { period: "p2", subject: "ESL (GVVN)" },
+    { period: "p3", subject: "Math" },
+    { period: "p4", subject: "Math" },
+    { period: "p5", subject: "Physics" },
+    { period: "p6", subject: "Sports" },
+    { period: "p7", subject: "CLISE" },
+  ],
+  wednesday: [
+    { period: "p1", subject: "ESL (GVVN)" },
+    { period: "p2", subject: "ESL (GVVN)" },
+    { period: "p3", subject: "Literature" },
+    { period: "p4", subject: "GCED" },
+    { period: "p5", subject: "ESL (GVVN)" },
+    { period: "p6", subject: "Math" },
+    { period: "p7", subject: "Math" },
+  ],
+  thursday: [
+    { period: "p1", subject: "Sports" },
+    { period: "p2", subject: "Literature" },
+    { period: "p3", subject: "Literature" },
+    { period: "p4", subject: "Math" },
+    { period: "p5", subject: "Physics" },
+    { period: "p6", subject: "ESL (GVVN)" },
+    { period: "p7", subject: "ESL (GVVN)" },
+  ],
+  friday: [
+    { period: "p1", subject: "GCED" },
+    { period: "p2", subject: "Physics" },
+    { period: "p3", subject: "Physics" },
+    { period: "p4", subject: "History" },
+    { period: "p5", subject: "ESL (GVVN)" },
+    { period: "p6", subject: "ICT" },
+    { period: "p7", subject: "ICT" },
+  ],
 };
 
 let items = [];
