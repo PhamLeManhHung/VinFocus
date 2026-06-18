@@ -21,6 +21,46 @@ body {
     color: #888;
 }
 
+.app_nav {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    margin-top: 16px;
+    border: 1px solid #2f2f2f;
+    border-radius: 10px;
+    background: #141414;
+}
+
+.view_tab {
+    min-width: 92px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #aaa;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view_tab:hover {
+    color: #fff;
+}
+
+.view_tab_active {
+    background: #1557c0;
+    color: #fff;
+}
+
+.app_view {
+    display: none;
+}
+
+.app_view_active {
+    display: block;
+}
+
 .hub_container {
     max-width: 1200px;
     text-align: left;
@@ -299,7 +339,183 @@ body {
     opacity: 1;
 }
 
+.timetable_container {
+    max-width: 1200px;
+    text-align: left;
+}
+
+.timetable_header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.timetable_header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.timetable_note {
+    margin: 6px 0 0;
+    color: #888;
+    font-size: 0.88rem;
+}
+
+.today_label {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border: 1px solid #2d4f31;
+    border-radius: 999px;
+    background: #17281b;
+    color: #8fd4a8;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.timetable_grid {
+    display: grid;
+    grid-template-columns: 96px repeat(5, minmax(120px, 1fr));
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    background: #121212;
+}
+
+.time_cell,
+.day_cell,
+.slot_cell {
+    min-width: 0;
+    border-right: 1px solid #262626;
+    border-bottom: 1px solid #262626;
+}
+
+.time_cell:nth-child(6n),
+.day_cell:nth-child(6n),
+.slot_cell:nth-child(6n) {
+    border-right: 0;
+}
+
+.time_cell {
+    padding: 12px 10px;
+    background: #161616;
+    color: #8f8f8f;
+    font-size: 0.76rem;
+    line-height: 1.35;
+    white-space: pre-line;
+}
+
+.day_cell {
+    padding: 12px 10px;
+    background: #181818;
+    color: #ccc;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.day_cell_today,
+.slot_cell_today {
+    background: #142038;
+}
+
+.day_cell_today {
+    color: #c6ddff;
+}
+
+.slot_cell {
+    min-height: 86px;
+    padding: 10px;
+    background: #151515;
+}
+
+.slot_cell_break {
+    min-height: 48px;
+    background: #171717;
+}
+
+.slot_subject {
+    margin: 0;
+    color: #f0f0f0;
+    font-size: 0.94rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.slot_cell_free .slot_subject {
+    color: #666;
+    font-weight: 600;
+}
+
+.slot_meta {
+    margin: 6px 0 0;
+    color: #8d8d8d;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.slot_cell_break .slot_subject {
+    color: #b8b8b8;
+    font-size: 0.86rem;
+}
+
+.timetable_mobile {
+    display: none;
+}
+
+.day_schedule {
+    border-top: 1px solid #2a2a2a;
+    padding-top: 14px;
+    margin-top: 14px;
+}
+
+.day_schedule:first-child {
+    margin-top: 0;
+}
+
+.day_schedule h3 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 10px;
+    color: #ddd;
+    font-size: 1rem;
+}
+
+.day_empty {
+    color: #777;
+    font-size: 0.9rem;
+    margin: 6px 0 12px;
+}
+
+.mobile_slot {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #282828;
+}
+
+.mobile_time {
+    color: #8d8d8d;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    white-space: pre-line;
+}
+
 @media (max-width: 720px) {
+    .card {
+        margin: 14px auto;
+        border-radius: 12px;
+    }
+
     .hub_header {
         grid-template-columns: 1fr;
         grid-template-areas:
@@ -338,5 +554,28 @@ body {
         border-radius: 10px;
         background-color: #222;
         border-bottom: 1px solid #1557c0;
+    }
+
+    .app_nav {
+        display: flex;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .view_tab {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .timetable_header {
+        align-items: flex-start;
+    }
+
+    .timetable_grid {
+        display: none;
+    }
+
+    .timetable_mobile {
+        display: block;
     }
 }

@@ -6,6 +6,12 @@ const hubTitle = document.getElementById("hub_title");
 const prevWeekBtn = document.getElementById("prev_week");
 const nextWeekBtn = document.getElementById("next_week");
 const weekLabel = document.getElementById("week_label");
+const viewTabs = document.querySelectorAll(".view_tab");
+const workView = document.getElementById("work_view");
+const timetableView = document.getElementById("timetable_view");
+const timetableGrid = document.getElementById("timetable_grid");
+const timetableMobile = document.getElementById("timetable_mobile");
+const todayLabel = document.getElementById("today_label");
 
 const TYPE_ORDER = ["Quiz", "Assignment", "File"];
 const TYPE_LABELS = {
@@ -35,12 +41,42 @@ const SUBJECT_LABELS = {
 
 const HIDDEN_SUBJECTS = new Set(["MUS", "PE", "ART"]);
 
+const TIMETABLE_DAYS = [
+  { key: "monday", label: "Monday", index: 1 },
+  { key: "tuesday", label: "Tuesday", index: 2 },
+  { key: "wednesday", label: "Wednesday", index: 3 },
+  { key: "thursday", label: "Thursday", index: 4 },
+  { key: "friday", label: "Friday", index: 5 },
+];
+
+const TIMETABLE_PERIODS = [
+  { key: "p1", label: "Period 1", start: "08:00", end: "08:45", type: "class" },
+  { key: "p2", label: "Period 2", start: "08:50", end: "09:35", type: "class" },
+  { key: "break", label: "Break", start: "09:35", end: "09:55", type: "break" },
+  { key: "p3", label: "Period 3", start: "09:55", end: "10:40", type: "class" },
+  { key: "p4", label: "Period 4", start: "10:45", end: "11:30", type: "class" },
+  { key: "lunch", label: "Lunch", start: "11:30", end: "12:30", type: "break" },
+  { key: "p5", label: "Period 5", start: "12:30", end: "13:15", type: "class" },
+  { key: "p6", label: "Period 6", start: "13:20", end: "14:05", type: "class" },
+  { key: "p7", label: "Period 7", start: "14:10", end: "14:55", type: "class" },
+];
+
+// Add classes as { period: "p1", subject: "Math", room: "A203", teacher: "Ms. Nguyen" }.
+const TIMETABLE = {
+  monday: [],
+  tuesday: [],
+  wednesday: [],
+  thursday: [],
+  friday: [],
+};
+
 let items = [];
 let courses = [];
 let subjectCounts = new Map();
 let availableWeeks = [];
 let selectedCourseId = null;
 let currentWeek = Number(localStorage.getItem("selectedWeek")) || 36;
+let coursesLoaded = false;
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -226,10 +262,15 @@ function updateHubTitle() {
 }
 
 async function loadCourses() {
+  if (coursesLoaded) {
+    return;
+  }
+
   showMessage("Loading courses...");
 
   const data = await fetchJson("/api/courses");
   courses = data.courses.filter((course) => !isCourseHidden(course));
+  coursesLoaded = true;
 
   if (courses.length === 0) {
     showMessage("No active courses found.");
@@ -306,10 +347,185 @@ function changeWeek(delta) {
   loadItems();
 }
 
-loadCourses().catch((error) => showMessage(error.message));
+function timetableEntryFor(dayKey, periodKey) {
+  return (TIMETABLE[dayKey] || []).find((entry) => entry.period === periodKey);
+}
+
+function todayDayKey() {
+  const todayIndex = new Date().getDay();
+  return TIMETABLE_DAYS.find((day) => day.index === todayIndex)?.key ?? null;
+}
+
+function createSlotContent(period, entry) {
+  const fragment = document.createDocumentFragment();
+
+  const subject = document.createElement("p");
+  subject.className = "slot_subject";
+  subject.textContent = period.type === "break"
+    ? period.label
+    : entry?.subject || "Free";
+
+  const metaParts = [];
+  if (entry?.room) {
+    metaParts.push(entry.room);
+  }
+  if (entry?.teacher) {
+    metaParts.push(entry.teacher);
+  }
+
+  const meta = document.createElement("p");
+  meta.className = "slot_meta";
+  meta.textContent = metaParts.length > 0
+    ? metaParts.join(" · ")
+    : `${period.start}-${period.end}`;
+
+  fragment.append(subject, meta);
+  return fragment;
+}
+
+function renderTimetableGrid() {
+  const todayKey = todayDayKey();
+  const cells = [];
+
+  const corner = document.createElement("div");
+  corner.className = "day_cell";
+  corner.textContent = "Time";
+  cells.push(corner);
+
+  for (const day of TIMETABLE_DAYS) {
+    const dayCell = document.createElement("div");
+    dayCell.className = "day_cell";
+    dayCell.textContent = day.label;
+
+    if (day.key === todayKey) {
+      dayCell.classList.add("day_cell_today");
+    }
+
+    cells.push(dayCell);
+  }
+
+  for (const period of TIMETABLE_PERIODS) {
+    const timeCell = document.createElement("div");
+    timeCell.className = "time_cell";
+    timeCell.textContent = `${period.label}\n${period.start}-${period.end}`;
+    cells.push(timeCell);
+
+    for (const day of TIMETABLE_DAYS) {
+      const entry = timetableEntryFor(day.key, period.key);
+      const slot = document.createElement("div");
+      slot.className = "slot_cell";
+
+      if (period.type === "break") {
+        slot.classList.add("slot_cell_break");
+      } else if (!entry) {
+        slot.classList.add("slot_cell_free");
+      }
+
+      if (day.key === todayKey) {
+        slot.classList.add("slot_cell_today");
+      }
+
+      slot.append(createSlotContent(period, entry));
+      cells.push(slot);
+    }
+  }
+
+  timetableGrid.replaceChildren(...cells);
+}
+
+function renderTimetableMobile() {
+  const todayKey = todayDayKey();
+  const daySections = TIMETABLE_DAYS.map((day) => {
+    const section = document.createElement("section");
+    section.className = "day_schedule";
+
+    const heading = document.createElement("h3");
+    heading.textContent = day.label;
+
+    if (day.key === todayKey) {
+      const badge = document.createElement("span");
+      badge.className = "today_label";
+      badge.textContent = "Today";
+      heading.appendChild(badge);
+    }
+
+    section.appendChild(heading);
+
+    const hasClasses = (TIMETABLE[day.key] || []).some((entry) => entry.subject);
+    if (!hasClasses) {
+      const empty = document.createElement("p");
+      empty.className = "day_empty";
+      empty.textContent = "No classes added yet.";
+      section.appendChild(empty);
+    }
+
+    for (const period of TIMETABLE_PERIODS) {
+      const entry = timetableEntryFor(day.key, period.key);
+      if (period.type === "class" && !entry) {
+        continue;
+      }
+
+      const slot = document.createElement("div");
+      slot.className = "mobile_slot";
+
+      const time = document.createElement("div");
+      time.className = "mobile_time";
+      time.textContent = `${period.label}\n${period.start}-${period.end}`;
+
+      const content = document.createElement("div");
+      content.append(createSlotContent(period, entry));
+
+      slot.append(time, content);
+      section.appendChild(slot);
+    }
+
+    return section;
+  });
+
+  timetableMobile.replaceChildren(...daySections);
+}
+
+function renderTimetable() {
+  const todayKey = todayDayKey();
+  const today = TIMETABLE_DAYS.find((day) => day.key === todayKey);
+  todayLabel.textContent = today ? `Today: ${today.label}` : "Weekend";
+
+  renderTimetableGrid();
+  renderTimetableMobile();
+}
+
+function setView(viewName) {
+  const nextView = viewName === "timetable" ? "timetable" : "work";
+  localStorage.setItem("selectedView", nextView);
+
+  workView.hidden = nextView !== "work";
+  timetableView.hidden = nextView !== "timetable";
+  workView.classList.toggle("app_view_active", nextView === "work");
+  timetableView.classList.toggle("app_view_active", nextView === "timetable");
+
+  for (const tab of viewTabs) {
+    const isActive = tab.dataset.view === nextView;
+    tab.classList.toggle("view_tab_active", isActive);
+    tab.setAttribute("aria-pressed", String(isActive));
+  }
+
+  if (nextView === "work") {
+    loadCourses().catch((error) => showMessage(error.message));
+  } else {
+    renderTimetable();
+  }
+}
 
 prevWeekBtn.addEventListener("click", () => changeWeek(-1));
 nextWeekBtn.addEventListener("click", () => changeWeek(1));
 unfinishedOnly.addEventListener("change", loadItems);
 searchInput.addEventListener("input", renderItems);
 document.querySelector(".icon").addEventListener("click", () => searchInput.focus());
+viewTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setView(tab.dataset.view));
+});
+
+const initialView = new URLSearchParams(window.location.search).get("view")
+  || localStorage.getItem("selectedView")
+  || "work";
+setView(initialView);

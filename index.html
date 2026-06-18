@@ -10,8 +10,13 @@
         <div class="card">
             <h1>Lock In</h1>
             <p class="tagline">Canvas information hub — browse courses, weeks, and resources.</p>
+            <nav class="app_nav" aria-label="App views">
+                <button type="button" class="view_tab view_tab_active" data-view="work">Work</button>
+                <button type="button" class="view_tab" data-view="timetable">Timetable</button>
+            </nav>
         </div>
 
+        <main id="work_view" class="app_view app_view_active">
         <div class="card hub_container">
             <div class="hub_header">
                 <div class="input-wrapper">
@@ -64,6 +69,22 @@
                 </button>
             </div>
         </div>
+        </main>
+
+        <main id="timetable_view" class="app_view" hidden>
+        <div class="card timetable_container">
+            <div class="timetable_header">
+                <div>
+                    <h2>Weekly Timetable</h2>
+                    <p id="timetable_note" class="timetable_note">Manual schedule stored locally in this app.</p>
+                </div>
+                <span id="today_label" class="today_label">Today</span>
+            </div>
+
+            <div id="timetable_grid" class="timetable_grid" aria-label="Weekly timetable"></div>
+            <div id="timetable_mobile" class="timetable_mobile" aria-label="Weekly timetable by day"></div>
+        </div>
+        </main>
 
         <script src="script.js"></script>
     </body>
