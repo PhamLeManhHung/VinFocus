@@ -8,6 +8,7 @@ const nextWeekBtn = document.getElementById("next_week");
 const weekLabel = document.getElementById("week_label");
 const weekInput = document.getElementById("week_input");
 const viewTabs = document.querySelectorAll(".view_tab");
+const themeToggle = document.getElementById("theme_toggle");
 const workView = document.getElementById("work_view");
 const timetableView = document.getElementById("timetable_view");
 const timetableGrid = document.getElementById("timetable_grid");
@@ -688,3 +689,23 @@ const initialView = new URLSearchParams(window.location.search).get("view")
   || localStorage.getItem("selectedView")
   || "work";
 setView(initialView);
+
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.body.classList.add("light");
+  } else {
+    document.body.classList.remove("light");
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.contains("light");
+  const newTheme = isLight ? "dark" : "light";
+  localStorage.setItem("theme", newTheme);
+  applyTheme(newTheme);
+}
+
+const savedTheme = localStorage.getItem("theme") || "dark";
+applyTheme(savedTheme);
+
+themeToggle.addEventListener("click", toggleTheme);
