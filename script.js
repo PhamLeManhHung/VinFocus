@@ -13,7 +13,6 @@ const workView = document.getElementById("work_view");
 const timetableView = document.getElementById("timetable_view");
 const timetableGrid = document.getElementById("timetable_grid");
 const timetableMobile = document.getElementById("timetable_mobile");
-const todayLabel = document.getElementById("today_label");
 
 const TYPE_ORDER = ["Quiz", "Assignment", "File"];
 const TYPE_LABELS = {
@@ -400,6 +399,61 @@ function todayDayKey() {
   return TIMETABLE_DAYS.find((day) => day.index === todayIndex)?.key ?? null;
 }
 
+function timeToMinutes(timeStr) {
+  const match = timeStr.match(/(\d+):(\d+)(am|pm)/);
+  if (!match) return 0;
+  
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const meridiem = match[3];
+  
+  if (meridiem === "pm" && hours !== 12) {
+    hours += 12;
+  } else if (meridiem === "am" && hours === 12) {
+    hours = 0;
+  }
+  
+  return hours * 60 + minutes;
+}
+
+function currentPeriodKey() {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  for (const period of TIMETABLE_PERIODS) {
+    const startTotal = timeToMinutes(period.start);
+    const endTotal = timeToMinutes(period.end);
+    
+    if (currentMinutes >= startTotal && currentMinutes < endTotal) {
+      return period.key;
+    }
+  }
+
+  return null;
+}
+
+function nextPeriodKey() {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  let foundCurrent = false;
+  
+  for (const period of TIMETABLE_PERIODS) {
+    if (foundCurrent) {
+      return period.key;
+    }
+    
+    const startTotal = timeToMinutes(period.start);
+    const endTotal = timeToMinutes(period.end);
+    
+    if (currentMinutes >= startTotal && currentMinutes < endTotal) {
+      foundCurrent = true;
+    }
+  }
+
+  return null;
+}
+
 function createSlotContent(period, entry) {
   const fragment = document.createDocumentFragment();
 
@@ -429,6 +483,8 @@ function createSlotContent(period, entry) {
 
 function renderTimetableGrid() {
   const todayKey = todayDayKey();
+  const currentPeriod = currentPeriodKey();
+  const nextPeriod = nextPeriodKey();
   const cells = [];
 
   const corner = document.createElement("div");
@@ -485,6 +541,12 @@ function renderTimetableGrid() {
         slot.classList.add("slot_cell_today");
       }
 
+      if (day.key === todayKey && period.key === currentPeriod) {
+        slot.classList.add("slot_cell_current");
+      } else if (day.key === todayKey && period.key === nextPeriod) {
+        slot.classList.add("slot_cell_next");
+      }
+
       if (i === TIMETABLE_DAYS.length - 1) {
         slot.classList.add("last_col");
       }
@@ -499,6 +561,8 @@ function renderTimetableGrid() {
 
 function renderTimetableMobile() {
   const todayKey = todayDayKey();
+  const currentPeriod = currentPeriodKey();
+  const nextPeriod = nextPeriodKey();
   const daySections = TIMETABLE_DAYS.map((day) => {
     const section = document.createElement("section");
     section.className = "day_schedule";
@@ -537,6 +601,11 @@ function renderTimetableMobile() {
       time.textContent = `${period.label}\n${period.start}-\n${period.end}`;
 
       const content = document.createElement("div");
+      if (day.key === todayKey && period.key === currentPeriod) {
+        slot.classList.add("slot_cell_current");
+      } else if (day.key === todayKey && period.key === nextPeriod) {
+        slot.classList.add("slot_cell_next");
+      }
       content.append(createSlotContent(period, entry));
 
       slot.append(time, content);
@@ -549,82 +618,7 @@ function renderTimetableMobile() {
   timetableMobile.replaceChildren(...daySections);
 }
 
-function renderTodaySchedule() {
-  const todayKey = todayDayKey();
-  const card = document.getElementById("today_schedule_card");
-  card.replaceChildren();
-
-  if (!todayKey) {
-    const empty = document.createElement("p");
-    empty.className = "today_schedule_empty";
-    empty.textContent = "No classes today — enjoy the weekend!";
-    card.appendChild(empty);
-    return;
-  }
-
-  const heading = document.createElement("h3");
-  heading.className = "today_schedule_heading";
-  const today = TIMETABLE_DAYS.find((day) => day.key === todayKey);
-  heading.textContent = `Today · ${today.label}`;
-  card.appendChild(heading);
-
-  const list = document.createElement("div");
-  list.className = "today_schedule_list";
-
-  const todayEntries = (TIMETABLE[todayKey] || [])
-    .map((entry) => {
-      const period = TIMETABLE_PERIODS.find((p) => p.key === entry.period);
-      return period ? { ...entry, period } : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.period.start.localeCompare(b.period.start));
-
-  if (todayEntries.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "today_schedule_empty";
-    empty.textContent = "No classes scheduled for today.";
-    list.appendChild(empty);
-  } else {
-    for (const entry of todayEntries) {
-      const item = document.createElement("div");
-      item.className = "today_schedule_item";
-
-      const timeBadge = document.createElement("span");
-      timeBadge.className = "today_schedule_time";
-      timeBadge.textContent = `${entry.period.start}-\n${entry.period.end}`;
-
-      const info = document.createElement("div");
-      info.className = "today_schedule_info";
-
-      const subject = document.createElement("p");
-      subject.className = "today_schedule_subject";
-      subject.textContent = entry.subject;
-
-      const metaParts = [];
-      if (entry.room) metaParts.push(entry.room);
-      if (entry.teacher) metaParts.push(entry.teacher);
-
-      const meta = document.createElement("p");
-      meta.className = "today_schedule_meta";
-      meta.textContent = metaParts.length > 0 ? metaParts.join(" · ") : "";
-
-      info.append(subject, meta);
-      item.append(timeBadge, info);
-      list.appendChild(item);
-    }
-  }
-
-  card.appendChild(list);
-}
-
-
-
 function renderTimetable() {
-  const todayKey = todayDayKey();
-  const today = TIMETABLE_DAYS.find((day) => day.key === todayKey);
-  todayLabel.textContent = today ? `Today: ${today.label}` : "Weekend";
-
-  renderTodaySchedule();
   renderTimetableGrid();
   renderTimetableMobile();
 }
