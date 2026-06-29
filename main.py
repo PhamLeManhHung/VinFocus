@@ -1,5 +1,8 @@
 import os
 import re
+import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from flask import Flask, jsonify, send_from_directory
@@ -10,9 +13,29 @@ DEFAULT_COURSE_ID = 32140
 LMS_BASE_URL = "https://lms.vinschool.edu.vn"
 REQUEST_TIMEOUT = 10
 PER_PAGE = 100
+CACHE_TTL = 300  # seconds (5 minutes)
 
 ALLOWED_ITEM_TYPES = frozenset({"Quiz", "Assignment", "File"})
 WEEK_PATTERN = re.compile(r"TUẦN\s*(\d+)", re.IGNORECASE)
+
+# In-memory cache: key -> {"data": ..., "ts": float}
+_cache: dict = {}
+_cache_lock = threading.Lock()
+
+
+def cache_get(key):
+    """Return cached value if it exists and hasn't expired, else None."""
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry and time.time() - entry["ts"] < CACHE_TTL:
+            return entry["data"]
+        return None
+
+
+def cache_set(key, data):
+    """Store a value in the cache with the current timestamp."""
+    with _cache_lock:
+        _cache[key] = {"data": data, "ts": time.time()}
 
 
 @app.get("/")
@@ -75,6 +98,10 @@ def extract_week_number(module_name):
 
 
 def get_courses(headers):
+    cached = cache_get("courses")
+    if cached is not None:
+        return cached, None
+
     data, response = canvas_get(
         f"{LMS_BASE_URL}/api/v1/courses",
         headers,
@@ -92,22 +119,38 @@ def get_courses(headers):
         for course in data
     ]
 
+    cache_set("courses", courses)
     return courses, None
 
 
 def get_course_name(course_id, headers):
+    cache_key = f"course_name:{course_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     data, response = canvas_get(course_api_url(course_id), headers)
-    if response is not None:
-        return f"Course {course_id}"
-    return data.get("name") or f"Course {course_id}"
+    name = (data.get("name") if response is None else None) or f"Course {course_id}"
+    cache_set(cache_key, name)
+    return name
 
 
 def get_course_modules(course_id, headers):
-    return canvas_get(
+    cache_key = f"modules:{course_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached, None
+
+    data, response = canvas_get(
         f"{course_api_url(course_id)}/modules",
         headers,
         params={"per_page": PER_PAGE},
     )
+    if response is not None:
+        return None, response
+
+    cache_set(cache_key, data)
+    return data, None
 
 
 def get_week_modules(course_id, week, headers):
@@ -125,11 +168,21 @@ def get_week_modules(course_id, week, headers):
 
 
 def get_module_items(course_id, module_id, headers):
-    return canvas_get(
+    cache_key = f"items:{course_id}:{module_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached, None
+
+    data, response = canvas_get(
         f"{course_api_url(course_id)}/modules/{module_id}/items",
         headers,
         params={"per_page": PER_PAGE},
     )
+    if response is not None:
+        return None, response
+
+    cache_set(cache_key, data)
+    return data, None
 
 
 def item_url(course_id, item):
@@ -165,6 +218,14 @@ def is_incomplete(item):
     return bool(completion) and completion.get("completed") is False
 
 
+def fetch_items_for_module(course_id, module, headers):
+    """Fetch and return (module, items_list) for a single module. Returns None items on error."""
+    module_items, error = get_module_items(course_id, module["id"], headers)
+    if error is not None:
+        return module, None
+    return module, module_items
+
+
 def get_week_items(course_id, week, headers, unfinished_only=False):
     week_modules, response = get_week_modules(course_id, week, headers)
     if response is not None:
@@ -173,10 +234,22 @@ def get_week_items(course_id, week, headers, unfinished_only=False):
     course_name = get_course_name(course_id, headers)
     items = []
 
-    for module in week_modules:
-        module_items, items_response = get_module_items(course_id, module["id"], headers)
+    # Fetch all module items in parallel
+    with ThreadPoolExecutor(max_workers=min(len(week_modules), 8) or 1) as executor:
+        futures = {
+            executor.submit(fetch_items_for_module, course_id, module, headers): module
+            for module in week_modules
+        }
 
-        if items_response is not None:
+        # Collect results; preserve module order for deterministic output
+        results = {}
+        for future in as_completed(futures):
+            module, module_items = future.result()
+            results[module["id"]] = (module, module_items)
+
+    for module in week_modules:
+        _module, module_items = results[module["id"]]
+        if module_items is None:
             continue
 
         for item in module_items:
@@ -184,7 +257,7 @@ def get_week_items(course_id, week, headers, unfinished_only=False):
                 continue
             if unfinished_only and not is_incomplete(item):
                 continue
-            items.append(format_module_item(course_id, course_name, module, item))
+            items.append(format_module_item(course_id, course_name, _module, item))
 
     return items, course_name, None
 

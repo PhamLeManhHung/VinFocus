@@ -213,16 +213,12 @@ body {
 }
 
 #hub_title {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
     margin: 0;
     font-size: 1.1rem;
     text-align: center;
     line-height: 1.4;
-    white-space: nowrap;
-    margin-top: -8px
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .filter_toggle {
@@ -388,6 +384,50 @@ body {
     border-bottom: 1px solid var(--border-secondary);
 }
 
+.skeleton_item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border-secondary);
+}
+
+.skeleton_title {
+    flex: 1;
+    height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+.skeleton_meta {
+    width: 120px;
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+.skeleton_badge {
+    width: 72px;
+    height: 20px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 .item_content {
     flex: 1;
     min-width: 0;
@@ -528,6 +568,68 @@ body {
     justify-content: center;
     gap: 16px;
     margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.timetable_edit_btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-pill);
+    border-radius: 8px;
+    background: var(--bg-pill);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.timetable_edit_btn:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+    color: var(--text-primary);
+}
+
+.timetable_edit_btn_active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.timetable_editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    box-shadow: var(--shadow-card);
+}
+
+.timetable_editor_select {
+    padding: 6px 8px;
+    border: 1px solid var(--border-input);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.timetable_editor_btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-pill);
+    border-radius: 6px;
+    background: var(--bg-pill);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.timetable_editor_btn:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+    color: var(--text-primary);
 }
 
 .timetable_header > div {

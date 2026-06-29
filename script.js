@@ -16,6 +16,7 @@ const languageSelector = document.getElementById("language_selector");
 const tagline = document.getElementById("tagline");
 const timetableTitle = document.getElementById("timetable_title");
 const timetableNote = document.getElementById("timetable_note");
+const timetableHeader = document.querySelector(".timetable_header");
 
 // Language state management
 let currentLanguage = localStorage.getItem("language") || "en";
@@ -159,8 +160,7 @@ const SUBJECT_LABELS = {
 
 const HIDDEN_SUBJECTS = new Set(["MUS", "PE", "ART"]);
 
-// Timetable data using subject IDs with teacher specifications
-const TIMETABLE = {
+const DEFAULT_TIMETABLE = {
   monday: [
     { period: "p1", subject: "GEO" },
     { period: "p2", subject: "PHY" },
@@ -208,6 +208,25 @@ const TIMETABLE = {
   ],
 };
 
+function loadTimetable() {
+  try {
+    const stored = localStorage.getItem("timetable");
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_TIMETABLE));
+}
+
+function saveTimetable(timetable) {
+  localStorage.setItem("timetable", JSON.stringify(timetable));
+}
+
+let TIMETABLE = loadTimetable();
+let timetableEditMode = false;
+
 const TIMETABLE_DAYS = [
   { key: "monday", labelKey: "monday", index: 1 },
   { key: "tuesday", labelKey: "tuesday", index: 2 },
@@ -243,6 +262,7 @@ let availableWeeks = [];
 let selectedCourseId = null;
 let currentWeek = Number(localStorage.getItem("selectedWeek")) || 36;
 let coursesLoaded = false;
+let itemCache = new Map();
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -302,6 +322,27 @@ function showMessage(text) {
   message.className = "empty_message";
   message.textContent = text;
   itemList.appendChild(message);
+}
+
+function showSkeletonLoading() {
+  itemList.innerHTML = "";
+  const skeletonCount = 6;
+  for (let i = 0; i < skeletonCount; i++) {
+    const skeleton = document.createElement("div");
+    skeleton.className = "skeleton_item";
+    
+    const title = document.createElement("div");
+    title.className = "skeleton_title";
+    
+    const meta = document.createElement("div");
+    meta.className = "skeleton_meta";
+    
+    const badge = document.createElement("div");
+    badge.className = "skeleton_badge";
+    
+    skeleton.append(title, meta, badge);
+    itemList.appendChild(skeleton);
+  }
 }
 
 function itemMatchesSearch(item, query) {
@@ -411,8 +452,15 @@ function updateWeekNav() {
   const weekIndex = availableWeeks.indexOf(currentWeek);
 
   weekInput.value = currentWeek || "";
-  prevWeekBtn.disabled = weekIndex <= 0;
-  nextWeekBtn.disabled = weekIndex < 0 || weekIndex >= availableWeeks.length - 1;
+
+  if (weekIndex < 0) {
+    // Current week is not in available weeks, enable arrows to jump to nearest valid week
+    prevWeekBtn.disabled = availableWeeks.length === 0;
+    nextWeekBtn.disabled = availableWeeks.length === 0;
+  } else {
+    prevWeekBtn.disabled = weekIndex <= 0;
+    nextWeekBtn.disabled = weekIndex >= availableWeeks.length - 1;
+  }
 }
 
 function weekApiPath(courseId, week) {
@@ -479,11 +527,22 @@ async function loadItems() {
     return;
   }
 
-  showMessage(t("loadingItems"));
+  const cacheKey = `${selectedCourseId}:${currentWeek}:${unfinishedOnly.checked}`;
+  
+  if (itemCache.has(cacheKey)) {
+    items = itemCache.get(cacheKey);
+    updateHubTitle();
+    updateWeekNav();
+    renderItems();
+    return;
+  }
+
+  showSkeletonLoading();
 
   try {
     const data = await fetchJson(weekApiPath(selectedCourseId, currentWeek));
     items = data.items;
+    itemCache.set(cacheKey, items);
     updateHubTitle();
     updateWeekNav();
     renderItems();
@@ -501,14 +560,30 @@ async function selectCourse(courseId) {
 }
 
 function changeWeek(delta) {
-  const weekIndex = availableWeeks.indexOf(currentWeek);
-  const nextIndex = weekIndex + delta;
+  if (availableWeeks.length === 0) return;
 
-  if (weekIndex < 0 || nextIndex < 0 || nextIndex >= availableWeeks.length) {
-    return;
+  // Find where currentWeek would be inserted (first week >= currentWeek)
+  let insertPoint = availableWeeks.findIndex((w) => w >= currentWeek);
+  if (insertPoint < 0) insertPoint = availableWeeks.length;
+
+  let targetIndex;
+  if (delta > 0) {
+    // Moving right
+    if (insertPoint < availableWeeks.length && availableWeeks[insertPoint] === currentWeek) {
+      // Current week exists in array, go to next
+      targetIndex = insertPoint + 1;
+    } else {
+      // Current week doesn't exist, go to first week >= currentWeek
+      targetIndex = insertPoint;
+    }
+  } else {
+    // Moving left
+    targetIndex = insertPoint - 1;
   }
 
-  currentWeek = availableWeeks[nextIndex];
+  if (targetIndex < 0 || targetIndex >= availableWeeks.length) return;
+
+  currentWeek = availableWeeks[targetIndex];
   localStorage.setItem("selectedWeek", String(currentWeek));
   loadItems();
 }
@@ -685,6 +760,12 @@ function renderTimetableGrid() {
         slot.classList.add("last_col");
       }
 
+      if (timetableEditMode && period.type === "class") {
+        slot.style.cursor = "pointer";
+        slot.title = "Click to edit subject";
+        slot.addEventListener("click", () => openSubjectEditor(day.key, period.key, slot));
+      }
+
       slot.append(createSlotContent(period, entry));
       cells.push(slot);
     }
@@ -757,22 +838,100 @@ function renderTimetable() {
   renderTimetableMobile();
 }
 
-function renderAll() {
+function openSubjectEditor(dayKey, periodKey, slotElement) {
+  const currentEntry = timetableEntryFor(dayKey, periodKey);
+  const currentSubject = currentEntry?.subject || "";
+  
+  const editor = document.createElement("div");
+  editor.className = "timetable_editor";
+  
+  const select = document.createElement("select");
+  select.className = "timetable_editor_select";
+  
+  const allSubjects = Object.keys(SUBJECT_LABELS[currentLanguage] || {});
+  allSubjects.forEach((subjectId) => {
+    const option = document.createElement("option");
+    option.value = subjectId;
+    option.textContent = getSubjectLabel(subjectId);
+    if (subjectId === currentSubject) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+  
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "timetable_editor_btn";
+  saveBtn.textContent = "Save";
+  saveBtn.addEventListener("click", () => {
+    const selectedSubject = select.value;
+    const day = TIMETABLE[dayKey] || [];
+    const existingIndex = day.findIndex((entry) => entry.period === periodKey);
+    
+    if (existingIndex >= 0) {
+      day[existingIndex].subject = selectedSubject;
+    } else {
+      day.push({ period: periodKey, subject: selectedSubject });
+    }
+    
+    TIMETABLE[dayKey] = day;
+    saveTimetable(TIMETABLE);
+    closeEditor(editor);
+    renderTimetable();
+  });
+  
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "timetable_editor_btn";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => closeEditor(editor));
+  
+  editor.append(select, saveBtn, cancelBtn);
+  slotElement.innerHTML = "";
+  slotElement.appendChild(editor);
+}
+
+function closeEditor(editor) {
+  editor.remove();
+  renderTimetable();
+}
+
+function toggleTimetableEditMode() {
+  timetableEditMode = !timetableEditMode;
+  const editBtn = document.getElementById("timetable_edit_btn");
+  if (editBtn) {
+    editBtn.textContent = timetableEditMode ? "Exit Edit" : "Edit";
+    editBtn.classList.toggle("timetable_edit_btn_active", timetableEditMode);
+  }
+  renderTimetable();
+}
+
+function renderWorkView() {
   renderCoursePills();
   renderItems();
-  renderTimetable();
   updateHubTitle();
   updateWeekNav();
   
-  // Update static text elements
-  tagline.textContent = t("tagline");
-  timetableTitle.textContent = t("timetableTitle");
-  timetableNote.textContent = t("timetableNote");
+  // Update static text elements for work view
   document.querySelector(".view_tab[data-view='work']").textContent = t("work");
-  document.querySelector(".view_tab[data-view='timetable']").textContent = t("timetable");
   document.getElementById("week_label").childNodes[0].textContent = `${t("week")} `;
   searchInput.placeholder = t("searchPlaceholder");
   document.querySelector(".filter_toggle span").textContent = t("unfinishedLabel");
+}
+
+function renderTimetableView() {
+  renderTimetable();
+  
+  // Update static text elements for timetable view
+  document.querySelector(".view_tab[data-view='timetable']").textContent = t("timetable");
+  timetableTitle.textContent = t("timetableTitle");
+  timetableNote.textContent = t("timetableNote");
+}
+
+function renderAll() {
+  renderWorkView();
+  renderTimetableView();
+  
+  // Update shared static text elements
+  tagline.textContent = t("tagline");
 }
 
 function setView(viewName) {
@@ -818,12 +977,32 @@ weekInput.addEventListener("keydown", (event) => {
 weekInput.addEventListener("blur", () => {
   updateWeekNav();
 });
+
+document.addEventListener("keydown", (event) => {
+  if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.isContentEditable) {
+    return;
+  }
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    changeWeek(-1);
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    changeWeek(1);
+  }
+});
+
 unfinishedOnly.addEventListener("change", loadItems);
 searchInput.addEventListener("input", renderItems);
 document.querySelector(".icon").addEventListener("click", () => searchInput.focus());
 viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => setView(tab.dataset.view));
 });
+
+const timetableEditBtn = document.getElementById("timetable_edit_btn");
+if (timetableEditBtn) {
+  timetableEditBtn.addEventListener("click", toggleTimetableEditMode);
+}
 
 languageSelector.addEventListener("change", (event) => {
   setLanguage(event.target.value);
