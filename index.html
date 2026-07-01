@@ -24,8 +24,6 @@
         <main id="work_view" class="app_view app_view_active">
         <div class="card hub_container">
             <div class="hub_header">
-                <h2 id="hub_title">Browse</h2>
-
                 <div class="input-wrapper">
                     <button type="button" class="icon" aria-label="Focus search">
                         <svg
@@ -54,6 +52,9 @@
                     <input id="search_input" type="search" class="input" placeholder="Search items">
                 </div>
 
+                <div class="hub_title_section">
+                    <h2 id="hub_title">Browse</h2>
+                </div>
 
                 <label class="filter_toggle">
                     <input id="unfinished_only" type="checkbox">
@@ -79,11 +80,13 @@
         <main id="timetable_view" class="app_view" hidden>
         <div class="card timetable_container">
             <div class="timetable_header">
-            <div>
-                <h2 id="timetable_title">Weekly Timetable</h2>
-                <p id="timetable_note" class="timetable_note">Manual schedule stored locally in this app.</p>
-                <button id="timetable_edit_btn" type="button" class="timetable_edit_btn">Edit</button>
-            </div>
+                <div class="timetable_title_section">
+                    <h2 id="timetable_title">Weekly Timetable</h2>
+                    <p id="timetable_note" class="timetable_note">Manual schedule stored locally in this app.</p>
+                </div>
+                <button id="timetable_edit_btn" type="button" class="timetable_edit_btn" aria-label="Edit timetable">
+                    <img src="/static/edit_icon.png" alt="" class="edit_icon">
+                </button>
             </div>
 
             <div id="timetable_grid" class="timetable_grid" aria-label="Weekly timetable"></div>

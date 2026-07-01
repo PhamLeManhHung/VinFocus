@@ -197,19 +197,31 @@ body {
 }
 
 .hub_header {
-    display: grid;
+    display: flex;
     align-items: center;
-    grid-template-columns: auto 1fr auto;
-    gap: 12px;
+    justify-content: space-between;
+    gap: 16px;
     margin-bottom: 16px;
     position: relative;
 }
 
 .input-wrapper {
-    grid-column: 1;
-    grid-row: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
     justify-self: start;
     align-self: center;
+}
+
+.hub_title_section {
+    flex: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-left: -50px;
+    margin-top: -15px;
 }
 
 #hub_title {
@@ -222,8 +234,9 @@ body {
 }
 
 .filter_toggle {
-    grid-column: 3;
-    grid-row: 1;
+    position: absolute;
+    top: 0;
+    right: 0;
     justify-self: center;
     align-self: start;
     display: flex;
@@ -565,33 +578,68 @@ body {
 .timetable_header {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 16px;
     margin-bottom: 18px;
-    flex-wrap: wrap;
+    position: relative;
 }
 
 .timetable_edit_btn {
-    padding: 6px 12px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 8px;
     border: 1px solid var(--border-pill);
     border-radius: 8px;
     background: var(--bg-pill);
-    color: var(--text-secondary);
-    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
 }
 
 .timetable_edit_btn:hover {
     background: var(--bg-pill-hover);
     border-color: var(--border-pill-hover);
-    color: var(--text-primary);
 }
 
 .timetable_edit_btn_active {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
+}
+
+.timetable_edit_btn_active:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.timetable_edit_btn_active:focus {
+    outline: none;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.timetable_edit_btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.edit_icon {
+    width: 20px;
+    height: 20px;
+    display: block;
+    pointer-events: none;
+    filter: invert(1);
+}
+
+body.light .edit_icon {
+    filter: invert(0);
 }
 
 .timetable_editor {
@@ -632,8 +680,13 @@ body {
     color: var(--text-primary);
 }
 
-.timetable_header > div {
+.timetable_title_section {
+    flex: 1;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .timetable_header h2 {

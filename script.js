@@ -130,7 +130,8 @@ const SUBJECT_LABELS = {
     LOCE: "Local Studies",
     CAREER: "Career",
     VNS: "VNH",
-    ESL: "ESL",
+    "ESL (GVVN)": "ESL (GVVN)",
+    "ESL (GVNN)": "ESL (GVNN)",
     MUS: "Music",
     PE: "Sports",
     ART: "Art",
@@ -151,7 +152,8 @@ const SUBJECT_LABELS = {
     LOCE: "NDĐP",
     CAREER: "HĐTN-HN",
     VNS: "VNH",
-    ESL: "ESL",
+    "ESL (GVVN)": "ESL (GVVN)",
+    "ESL (GVNN)": "ESL (GVNN)",
     MUS: "Âm Nhạc",
     PE: "Thể Chất",
     ART: "Mỹ Thuật",
@@ -763,6 +765,8 @@ function renderTimetableGrid() {
       if (timetableEditMode && period.type === "class") {
         slot.style.cursor = "pointer";
         slot.title = "Click to edit subject";
+        slot.dataset.dayKey = day.key;
+        slot.dataset.periodKey = period.key;
         slot.addEventListener("click", () => openSubjectEditor(day.key, period.key, slot));
       }
 
@@ -859,10 +863,20 @@ function openSubjectEditor(dayKey, periodKey, slotElement) {
     select.appendChild(option);
   });
   
+  // Prevent select from losing focus
+  select.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+  });
+  
+  select.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+  
   const saveBtn = document.createElement("button");
   saveBtn.className = "timetable_editor_btn";
   saveBtn.textContent = "Save";
-  saveBtn.addEventListener("click", () => {
+  saveBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     const selectedSubject = select.value;
     const day = TIMETABLE[dayKey] || [];
     const existingIndex = day.findIndex((entry) => entry.period === periodKey);
@@ -876,29 +890,51 @@ function openSubjectEditor(dayKey, periodKey, slotElement) {
     TIMETABLE[dayKey] = day;
     saveTimetable(TIMETABLE);
     closeEditor(editor);
-    renderTimetable();
   });
   
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "timetable_editor_btn";
   cancelBtn.textContent = "Cancel";
-  cancelBtn.addEventListener("click", () => closeEditor(editor));
+  cancelBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeEditor(editor);
+  });
+  
+  // Prevent editor clicks from bubbling to slot
+  editor.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+  
+  editor.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+  });
   
   editor.append(select, saveBtn, cancelBtn);
   slotElement.innerHTML = "";
   slotElement.appendChild(editor);
+  
+  // Auto-focus the select
+  setTimeout(() => select.focus(), 0);
 }
 
 function closeEditor(editor) {
+  const slotElement = editor.parentElement;
+  if (slotElement) {
+    const dayKey = slotElement.dataset.dayKey;
+    const periodKey = slotElement.dataset.periodKey;
+    const period = TIMETABLE_PERIODS.find(p => p.key === periodKey);
+    const entry = timetableEntryFor(dayKey, periodKey);
+    
+    slotElement.innerHTML = "";
+    slotElement.appendChild(createSlotContent(period, entry || { subject: "" }));
+  }
   editor.remove();
-  renderTimetable();
 }
 
 function toggleTimetableEditMode() {
   timetableEditMode = !timetableEditMode;
   const editBtn = document.getElementById("timetable_edit_btn");
   if (editBtn) {
-    editBtn.textContent = timetableEditMode ? "Exit Edit" : "Edit";
     editBtn.classList.toggle("timetable_edit_btn_active", timetableEditMode);
   }
   renderTimetable();
