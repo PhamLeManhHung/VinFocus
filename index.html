@@ -3,6 +3,9 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Lock In - A personal information hub for Vinschool's Canvas LMS. Browse courses, weeks, and resources in a cleaner interface.">
+        <meta name="theme-color" content="#0d0d0d">
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
         <title>Lock In</title>
         <link rel="stylesheet" href="style.css">
     </head>
@@ -22,7 +25,7 @@
         </div>
 
         <main id="work_view" class="app_view app_view_active">
-        <div class="card hub_container">
+        <div class="card hub_container" id="main_content">
             <div class="hub_header">
                 <div class="input-wrapper">
                     <button type="button" class="icon" aria-label="Focus search">
@@ -87,6 +90,11 @@
                 <button id="timetable_edit_btn" type="button" class="timetable_edit_btn" aria-label="Edit timetable">
                     <img src="/static/edit_icon.png" alt="" class="edit_icon">
                 </button>
+            </div>
+
+            <div id="timetable_view_toggle" class="timetable_view_toggle">
+                <button type="button" class="timetable_view_toggle_btn timetable_view_toggle_btn_active" data-view="today">Today</button>
+                <button type="button" class="timetable_view_toggle_btn" data-view="week">Full Week</button>
             </div>
 
             <div id="timetable_grid" class="timetable_grid" aria-label="Weekly timetable"></div>
