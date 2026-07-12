@@ -6,7 +6,7 @@ VinFocus is a personal information hub for Vinschool's Canvas LMS. It aggregates
 
 The school's LMS works, but it is not always the fastest place to see what quizzes, assignments, and files exist for a given week. I wanted a focused view of Canvas data across courses.
 
-The dashboard does not schedule daily work. Teachers may assign things verbally, lessons can span multiple weeks, and the LMS does not contain enough information to infer daily priorities accurately. Instead, Lock In helps answer questions like:
+The dashboard does not schedule daily work. Teachers may assign things verbally, lessons can span multiple weeks, and the LMS does not contain enough information to infer daily priorities accurately. Instead, VinFocus helps answer questions like:
 
 - What quizzes exist for this week?
 - What assignments exist for this week?
@@ -18,41 +18,79 @@ I decide what to work on.
 
 ## Features
 
-- Lists active Canvas courses from your account.
-- Browses modules filtered by week number (e.g. `TUẦN 36`).
-- Shows quizzes, assignments, and files grouped by type.
-- Links each item back to the original Canvas page.
-- Filters to unfinished items using Canvas completion requirements.
-- Includes search, loading, empty, and error states.
+- **Course browser** — Lists active Canvas courses from your account as clickable pills.
+- **Week navigation** — Browse modules filtered by week number (e.g. `TUẦN 36`). Use arrow keys or the prev/next buttons.
+- **General (Week 0)** — Modules without week information are grouped under a "General" category.
+- **Item grouping** — Shows quizzes, assignments, and files grouped by type with counts.
+- **Unfinished filter** — Filters to incomplete items using Canvas completion requirements.
+- **Search** — Real-time search across item titles, module names, types, and course names.
+- **Item importance** — Items matching keywords like `HKII`, `HKI`, `hệ số 1`, etc. are visually highlighted.
+- **Skeleton loading** — Placeholder UI while items are being fetched.
+- **Timetable view** — A weekly timetable with subject labels, room info, and edit mode. Highlights the current period and next period. Mobile view supports "Today" and "Full Week" toggles.
+- **Bilingual UI** — Full English and Vietnamese translations. Switch via the language selector in the top-right corner.
+- **Dark/Light theme** — Toggle between dark and light themes. Persisted to localStorage.
+- **Keyboard navigation** — Left/right arrow keys navigate between weeks (when no input is focused).
 
 ## Tech Stack
 
-- Python
-- Flask
-- Requests
-- HTML
-- CSS
-- JavaScript
+- **Python** — Backend logic and API
+- **Flask** — Web framework
+- **Requests** — HTTP client for Canvas API
+- **pytest** — Testing framework
+- **HTML / CSS / JavaScript** — Frontend
 
 ## API Endpoints
 
+### Course-aware routes (current)
+
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/courses` | Active courses for the authenticated user |
-| `GET /api/courses/<course_id>/weeks` | Week numbers found in module names |
-| `GET /api/courses/<course_id>/week/<week>` | Quizzes, assignments, and files for a week |
-| `GET /api/courses/<course_id>/week/<week>/unfinished` | Same items, filtered to incomplete Canvas work |
+| `GET /api/courses` | Active courses for the authenticated user. Returns `{ course_count, courses: [{ id, name, course_code }] }`. |
+| `GET /api/courses/<course_id>/weeks` | Week numbers found in module names. Week `0` is included if any modules have no week information. Returns `{ course_id, week_count, weeks: [int] }`. |
+| `GET /api/courses/<course_id>/week/<week>` | Quizzes, assignments, and files for a week. Returns `{ course_id, course_name, week, item_count, items: [...] }`. |
+| `GET /api/courses/<course_id>/week/<week>/unfinished` | Same items, filtered to incomplete Canvas work. Same response shape. |
 
-Legacy Math-only routes still exist for compatibility:
+### Legacy routes (backward compatibility)
 
-- `GET /api/week/<week>`
-- `GET /api/todo/<week>`
+These routes use a hardcoded default course ID (`32140`) and exist for older clients:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/week/<week>` | Items for a week in the default course. Returns `{ course_id, course_name, week, item_count, items }`. |
+| `GET /api/todo/<week>` | Unfinished items for a week in the default course. Returns `{ course_id, course_name, week, todo_count, todo }`. |
+
+### Item response shape
+
+Each item in the `items` array has the following fields:
+
+```json
+{
+  "course_id": 123,
+  "course_name": "Course Name",
+  "module": "TUẦN 36",
+  "title": "Quiz 1",
+  "type": "Quiz",
+  "completed": false,
+  "module_item_id": 456,
+  "url": "https://lms.vinschool.edu.vn/courses/123/quizzes/789"
+}
+```
+
+Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
 ## How It Works
 
 The Flask server in `main.py` proxies Canvas API requests using an `API_TOKEN` environment variable. Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
 
-The frontend in `script.js` loads courses, lets you pick a course and week, and renders items grouped by type.
+The frontend in `script.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
+
+### Architecture notes
+
+- **Caching** — In-memory cache with a 5-minute TTL and LRU eviction (max 1000 entries). Thread-safe with a lock.
+- **Concurrency** — Module items are fetched in parallel using `ThreadPoolExecutor` (up to 8 workers).
+- **Logging** — Structured logging with timestamps, log levels, and module names.
+- **Week parsing** — A custom parser extracts week numbers from module names. Supports Vietnamese (`tuần`) and English (`week`) keywords, ranges (`-`, `–`), lists (`+`, `&`, `,`, `/`), and mixed formats.
+- **Course code parsing** — Course codes like `THCS.OP-MATHS-TEACHER` are parsed to extract subject keys for labeling and filtering. Hidden subjects (`MUS`, `PE`, `ART`) are excluded from the course list.
 
 ## Running Locally
 
@@ -62,10 +100,22 @@ The frontend in `script.js` loads courses, lets you pick a course and week, and 
 pip install flask requests
 ```
 
+For testing:
+
+```bash
+pip install pytest
+```
+
 2. Set your Canvas API token:
 
 ```bash
 export API_TOKEN="your_token_here"
+```
+
+Optionally enable debug mode:
+
+```bash
+export FLASK_DEBUG="true"
 ```
 
 3. Start the app:
@@ -76,12 +126,23 @@ python main.py
 
 4. Open `http://127.0.0.1:5000` in your browser.
 
-## Architecture Notes
+## Running Tests
 
-- Small helper functions (`get_courses`, `get_week_modules`, `get_module_items`, etc.)
-- Course-aware API routes for multi-subject support
-- No scheduling or prediction logic
-- Correctness and maintainability over premature optimization
+```bash
+pytest test_main.py -v
+```
+
+The test suite covers:
+
+- **Unit tests** for the `extract_weeks()` parser (single weeks, ranges, multi-week lists, edge cases, non-week modules).
+- **Integration tests** for all API endpoints (success, missing token, API failure, week 0/general, range expansion, legacy routes).
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_TOKEN` | — | Canvas API token (required) |
+| `FLASK_DEBUG` | `"false"` | Enable Flask debug mode |
 
 ## Future Plans
 
