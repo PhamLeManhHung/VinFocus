@@ -1,6 +1,6 @@
 # VinFocus
 
-VinFocus is a personal information hub for Vinschool's Canvas LMS. It aggregates course modules and items into a cleaner interface so you can browse what exists — without trying to predict what you should do on a given day.
+VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for Vinschool students. It aggregates course modules and items into a cleaner interface so you can browse what exists — without trying to predict what you should do on a given day.
 
 ## Why I Built This
 
