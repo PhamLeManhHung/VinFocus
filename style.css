@@ -418,6 +418,19 @@ body {
     border-bottom: 1px solid var(--border-secondary);
 }
 
+.item_row_important {
+    background: rgba(255, 193, 7, 0.08);
+    border-left: 3px solid #ffc107;
+    border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+    border-radius: 0 4px 4px 0;
+    padding-left: 8px;
+}
+
+body.light .item_row_important {
+    background: rgba(255, 193, 7, 0.12);
+    border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+}
+
 .skeleton_item {
     display: flex;
     align-items: center;
@@ -862,6 +875,17 @@ body.light .edit_icon {
     font-size: 0.86rem;
 }
 
+.weekend_message {
+    text-align: center;
+    padding: 40px 16px;
+    color: var(--text-muted-light);
+    font-size: 1.1rem;
+    border: 1px dashed var(--border-dashed);
+    border-radius: 12px;
+    background: var(--bg-empty);
+    margin: 20px 0;
+}
+
 .timetable_mobile {
     display: none;
 }
@@ -1161,7 +1185,133 @@ body.light .theme_icon_moon {
         margin-bottom: 6px;
     }
     
-    .mobile_slot .timetable_editor_btn:last-child {
-        margin-bottom: 0;
+.mobile_slot .timetable_editor_btn:last-child {
+    margin-bottom: 0;
+}
+
+/* Mobile Modal Editor Styles */
+.timetable_mobile_modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease;
+}
+
+.timetable_mobile_modal_content {
+    background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+}
+
+.timetable_mobile_period_info {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: pre-line;
+}
+
+.timetable_mobile_current_subject {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.timetable_mobile_select {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border-input);
+    border-radius: 12px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 16px;
+    cursor: pointer;
+    min-height: 50px;
+}
+
+.timetable_mobile_btn_save {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.timetable_mobile_btn_cancel {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.timetable_mobile_buttons {
+    display: contents;
+}
+
+.timetable_mobile_btn {
+    padding: 14px 20px;
+    border: 1px solid var(--border-pill);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-height: 50px;
+}
+
+.timetable_mobile_btn_save {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.timetable_mobile_btn_save:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.timetable_mobile_btn_cancel {
+    background: var(--bg-pill);
+    border-color: var(--border-pill);
+    color: var(--text-secondary);
+}
+
+.timetable_mobile_btn_cancel:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+    color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
     }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
 }

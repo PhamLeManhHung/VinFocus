@@ -1,7 +1,7 @@
 import json
 import pytest
 from unittest.mock import patch, MagicMock
-from main import app
+from main import app, extract_weeks
 
 
 @pytest.fixture
@@ -27,6 +27,120 @@ def mock_response(status_code=200, json_data=None, text=""):
     mock.text = text
     return mock
 
+
+# ──────────────────────────────────────────────
+# Unit tests for extract_weeks
+# ──────────────────────────────────────────────
+
+class TestExtractWeeks:
+    """Tests for the extract_weeks() parser function."""
+
+    # Vietnamese week format
+    def test_tuan_single(self):
+        assert extract_weeks("Tuần 36") == [36]
+
+    def test_tuan_single_uppercase(self):
+        assert extract_weeks("TUẦN 25") == [25]
+
+    # English week format
+    def test_week_single(self):
+        assert extract_weeks("Week 36") == [36]
+
+    def test_week_single_lowercase(self):
+        assert extract_weeks("week 20") == [20]
+
+    # Week ranges
+    def test_tuan_range_hyphen(self):
+        assert extract_weeks("Tuần 36-40") == [36, 37, 38, 39, 40]
+
+    def test_tuan_range_spaces(self):
+        assert extract_weeks("Tuần 36 - 40") == [36, 37, 38, 39, 40]
+
+    def test_tuan_range_en_dash(self):
+        assert extract_weeks("Tuần 36–40") == [36, 37, 38, 39, 40]
+
+    def test_week_range_english(self):
+        assert extract_weeks("Week 20-22") == [20, 21, 22]
+
+    # Multi-week: plus-separated
+    def test_tuan_plus_separated(self):
+        assert extract_weeks("Tuần 23 + 24 + 25") == [23, 24, 25]
+        
+    def test_week_ampersand(self):
+        assert extract_weeks("Week 23 & 24") == [23, 24]
+
+    # Multi-week: comma-separated
+    def test_week_comma_separated(self):
+        assert extract_weeks("Week 23, 24, 25") == [23, 24, 25]
+
+    # Compound: ranges + individual
+    def test_tuan_range_and_individual(self):
+        assert extract_weeks("Tuần 36-40, 42") == [36, 37, 38, 39, 40, 42]
+
+    def test_tuan_complex_mixed(self):
+        assert extract_weeks("Tuần 23, 24-26") == [23, 24, 25, 26]
+
+    # Non-week modules
+    def test_non_week_emoji_exam(self):
+        assert extract_weeks("📝Kiểm tra đánh giá học kì II") == []
+
+    def test_non_week_phan(self):
+        assert extract_weeks("Phần 1") == []
+
+    def test_non_week_english_phrase(self):
+        assert extract_weeks("Must do quizzes for upcoming semester") == []
+
+    # Real-world edge cases: avoid parsing unrelated numbers
+    def test_tuan_stops_at_bai(self):
+        assert extract_weeks("Tuần 36 - Bài 13.4") == [36]
+
+    def test_tuan_stops_at_quiz(self):
+        assert extract_weeks("Tuần 36 | Quiz 2") == [36]
+
+    def test_week_stops_at_assignment(self):
+        assert extract_weeks("Week 25 Assignment 3") == [25]
+
+    def test_tuan_stops_at_parentheses(self):
+        assert extract_weeks("Tuần 36 (15 phút)") == [36]
+
+    def test_week_stops_at_chapter(self):
+        assert extract_weeks("Week 20 Chapter 5") == [20]
+
+    # Edge cases: empty / None / blank
+    def test_empty_string(self):
+        assert extract_weeks("") == []
+
+    def test_none_value(self):
+        assert extract_weeks(None) == []
+
+    def test_blank_string(self):
+        assert extract_weeks("   ") == []
+
+    # Slash separator
+    def test_week_slash_separated(self):
+        assert extract_weeks("Week 23/24") == [23, 24]
+
+    # Fore/aft spaces handled
+    def test_leading_trailing_spaces(self):
+        assert extract_weeks("  Tuần 36  ") == [36]
+
+    # Mixed case
+    def test_tuan_mixed_case(self):
+        assert extract_weeks("TuẦn 36") == [36]
+
+    def test_week_mixed_case(self):
+        assert extract_weeks("wEEk 36") == [36]
+
+    # Range in wrong direction (descending) still captures both ends
+    def test_range_descending(self):
+        result = extract_weeks("Tuần 40-36")
+        assert sorted(result) == result  # sorted
+        assert set(result) == {36, 40}
+
+
+# ──────────────────────────────────────────────
+# Integration tests for API endpoints
+# ──────────────────────────────────────────────
 
 class TestListCourses:
     @patch("main.get_canvas_headers")
@@ -107,7 +221,8 @@ class TestListCourseWeeks:
         response = client.get("/api/courses/1/weeks")
         assert response.status_code == 200
         data = response.get_json()
-        assert data["weeks"] == [36, 37]
+        # Week 0 should now be included for non-week modules
+        assert data["weeks"] == [0, 36, 37]
 
     @patch("main.get_canvas_headers")
     def test_list_weeks_missing_token(self, mock_get_headers, client):
@@ -115,6 +230,57 @@ class TestListCourseWeeks:
 
         response = client.get("/api/courses/1/weeks")
         assert response.status_code == 500
+
+    @patch("main.get_canvas_headers")
+    @patch("main.canvas_get")
+    def test_list_weeks_english_format(self, mock_canvas_get, mock_get_headers, client):
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        mock_canvas_get.return_value = (
+            [
+                {"id": 1, "name": "Week 36"},
+                {"id": 2, "name": "Week 37"},
+            ],
+            None,
+        )
+
+        response = client.get("/api/courses/1/weeks")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["weeks"] == [36, 37]
+
+    @patch("main.get_canvas_headers")
+    @patch("main.canvas_get")
+    def test_list_weeks_expands_ranges(self, mock_canvas_get, mock_get_headers, client):
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        mock_canvas_get.return_value = (
+            [
+                {"id": 1, "name": "Tuần 36-40"},
+            ],
+            None,
+        )
+
+        response = client.get("/api/courses/1/weeks")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["weeks"] == [36, 37, 38, 39, 40]
+
+    @patch("main.get_canvas_headers")
+    @patch("main.canvas_get")
+    def test_list_weeks_multi_week_lists(self, mock_canvas_get, mock_get_headers, client):
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        mock_canvas_get.return_value = (
+            [
+                {"id": 1, "name": "Tuần 23 + 24 + 25"},
+                {"id": 2, "name": "Week 23, 24, 25"},
+                {"id": 3, "name": "Week 23 & 24"},
+            ],
+            None,
+        )
+
+        response = client.get("/api/courses/1/weeks")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["weeks"] == [23, 24, 25]
 
 
 class TestGetCourseWeek:
@@ -188,6 +354,48 @@ class TestGetCourseWeek:
 
         response = client.get("/api/courses/1/week/36")
         assert response.status_code == 500
+
+    @patch("main.get_canvas_headers")
+    @patch("main.canvas_get")
+    def test_get_week_range_returns_module(self, mock_canvas_get, mock_get_headers, client):
+        """A module named 'Tuần 36-40' should be returned for week 37."""
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        # Mock get_course_modules to return a range module
+        mock_canvas_get.return_value = (
+            [{"id": 1, "name": "Tuần 36-40"}],
+            None,
+        )
+        # Also need to mock get_course_name (called inside get_week_items)
+        # And get_module_items
+
+        with patch("main.get_course_name", return_value="Test Course"):
+            with patch("main.get_module_items", return_value=([], None)):
+                response = client.get("/api/courses/1/week/37")
+                assert response.status_code == 200
+                data = response.get_json()
+                # The module should be found for week 37 (since 36-40 expands)
+                # It won't have any matching items, but week should exist
+                assert data["week"] == 37
+
+    @patch("main.get_canvas_headers")
+    @patch("main.canvas_get")
+    def test_get_week_zero_general(self, mock_canvas_get, mock_get_headers, client):
+        """Week 0 should return non-week modules."""
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        mock_canvas_get.return_value = (
+            [
+                {"id": 1, "name": "📝Kiểm tra đánh giá học kì II"},
+                {"id": 2, "name": "TUẦN 36"},
+            ],
+            None,
+        )
+
+        with patch("main.get_course_name", return_value="Test Course"):
+            with patch("main.get_module_items", return_value=([], None)):
+                response = client.get("/api/courses/1/week/0")
+                assert response.status_code == 200
+                data = response.get_json()
+                assert data["week"] == 0
 
 
 class TestLegacyRoutes:

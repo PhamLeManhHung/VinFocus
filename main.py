@@ -33,8 +33,12 @@ class Config:
 # Apply configuration
 app.config["DEBUG"] = Config.DEBUG
 
-ALLOWED_ITEM_TYPES = frozenset({"Quiz", "Assignment", "File"})
-WEEK_PATTERN = re.compile(r"TUẦN\s*(\d+)", re.IGNORECASE)
+ALLOWED_ITEM_TYPES = frozenset({"Quiz", "Assignment", "File", "Page"})
+
+# Detection: does the module name even mention weeks?
+WEEK_KEYWORD = re.compile(r"(?:tuần|week)", re.IGNORECASE)
+# Characters that separate week-number tokens inside a contiguous week expression
+WEEK_SEPARATORS = frozenset("-–+&,/")
 
 # In-memory cache: key -> {"data": ..., "ts": float}
 _cache: Dict[str, Dict[str, Any]] = {}
@@ -142,9 +146,94 @@ def canvas_get(url: str, headers: Dict[str, str], params: Optional[Dict] = None)
         return None, None
 
 
-def extract_week_number(module_name):
-    match = WEEK_PATTERN.search(module_name or "")
-    return int(match.group(1)) if match else None
+def extract_weeks(module_name: Optional[str]) -> List[int]:
+    """Extract all week numbers from a Canvas module name.
+    
+    Uses a small parser that:
+    1. Looks for the keyword (tuần or week) at the start of a phrase
+    2. Collects the contiguous week-number expression following it
+    3. Stops at the first unrelated word or punctuation
+    4. Interprets ranges (-, –) and lists (+, &, ,, /)
+    
+    Returns a sorted list of unique week numbers, or [] if no week info found.
+    """
+    if not module_name:
+        return []
+
+    # Normalize: strip leading emoji/common symbols that might precede the keyword
+    # (the keyword can appear after emoji or decorative characters)
+    name = module_name.strip()
+    if not name:
+        return []
+
+    # Locate the week keyword
+    match = WEEK_KEYWORD.search(name)
+    if not match:
+        logger.debug(f"No week keyword found in module: {module_name!r}")
+        return []
+
+    # Extract the substring starting at the keyword
+    start = match.start()
+    tail = name[start:]
+
+    # Build a token sequence from the tail:
+    # We want to collect: numbers, and allowed separators (-, +, &, ,, /)
+    # Stop at the first unrelated token (a word, parenthesis, period, etc.)
+    tokens = []
+    i = len(match.group())  # skip past the keyword itself
+    while i < len(tail):
+        ch = tail[i]
+        # Skip whitespace between tokens
+        if ch.isspace():
+            i += 1
+            continue
+
+        # Number: collect consecutive digits
+        if ch.isdigit():
+            j = i
+            while j < len(tail) and tail[j].isdigit():
+                j += 1
+            tokens.append(("num", tail[i:j]))
+            i = j
+            continue
+
+        # Separator characters
+        if ch in WEEK_SEPARATORS:
+            tokens.append(("sep", ch))
+            i += 1
+            continue
+
+        # Anything else terminates the week expression
+        break
+
+    if not tokens:
+        logger.debug(f"Keyword found but no numbers in module: {module_name!r}")
+        return []
+
+    # Parse tokens into week numbers
+    weeks: List[int] = []
+    i = 0
+    while i < len(tokens):
+        typ, val = tokens[i]
+        if typ != "num":
+            i += 1
+            continue
+
+        num = int(val)
+        # Look ahead for a range
+        if i + 2 < len(tokens) and tokens[i + 1][0] == "sep" and tokens[i + 1][1] in "-–" and tokens[i + 2][0] == "num":
+            end_num = int(tokens[i + 2][1])
+            if num < end_num:
+                weeks.extend(range(num, end_num + 1))
+            else:
+                weeks.append(num)
+                weeks.append(end_num)
+            i += 3
+        else:
+            weeks.append(num)
+            i += 1
+
+    return sorted(set(weeks))
 
 
 def get_courses(headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
@@ -210,16 +299,28 @@ def get_course_modules(course_id: int, headers: Dict[str, str]) -> Tuple[Optiona
 
 
 def get_week_modules(course_id: int, week: int, headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
-    """Fetch modules for a specific week in a course."""
+    """Fetch modules for a specific week in a course.
+    
+    For week > 0: includes modules whose extracted weeks contain the requested week.
+    For week == 0: includes modules with no week information (General category).
+    """
     modules, response = get_course_modules(course_id, headers)
     if response is not None:
         return None, response
 
-    week_modules = [
-        module
-        for module in modules
-        if extract_week_number(module.get("name")) == week
-    ]
+    if week == 0:
+        # General: modules with no week information
+        week_modules = [
+            module
+            for module in modules
+            if not extract_weeks(module.get("name"))
+        ]
+    else:
+        week_modules = [
+            module
+            for module in modules
+            if week in extract_weeks(module.get("name"))
+        ]
 
     return week_modules, None
 
@@ -370,17 +471,26 @@ def list_course_weeks(course_id: int):
     if response is not None:
         return api_error("Failed to fetch modules", response)
 
-    weeks = sorted({
-        week
-        for module in modules
-        if (week := extract_week_number(module.get("name"))) is not None
-    })
+    # Collect all week numbers from extract_weeks (ranges already expanded)
+    # If any module has no week information, include week 0 (General)
+    weeks = set()
+    has_general = False
+    for module in modules:
+        module_weeks = extract_weeks(module.get("name"))
+        if module_weeks:
+            weeks.update(module_weeks)
+        else:
+            has_general = True
 
-    logger.info(f"Found {len(weeks)} weeks for course {course_id}")
+    result = sorted(weeks)
+    if has_general:
+        result = [0] + result
+
+    logger.info(f"Found {len(result)} weeks for course {course_id}")
     return jsonify({
         "course_id": course_id,
-        "week_count": len(weeks),
-        "weeks": weeks,
+        "week_count": len(result),
+        "weeks": result,
     })
 
 

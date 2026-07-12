@@ -66,6 +66,7 @@ const TRANSLATIONS = {
     work: "Work",
     timetable: "Timetable",
     week: "Week",
+    general: "General",
     searchPlaceholder: "Search items",
     unfinishedLabel: "Unfinished",
     tagline: "Canvas information hub — browse courses, weeks, and resources.",
@@ -73,8 +74,10 @@ const TRANSLATIONS = {
     timetableNote: "Manual schedule stored locally in this app.",
     items: "items",
     noClassesAdded: "No classes added yet.",
+    weekendNoClasses: "No classes, it's the weekend.",
   },
   vi: {
+    weekendNoClasses: "Không có tiết học nào, hôm nay là cuối tuần.",
     monday: "Thứ Hai",
     tuesday: "Thứ Ba",
     wednesday: "Thứ Tư",
@@ -102,6 +105,7 @@ const TRANSLATIONS = {
     work: "Làm Việc",
     timetable: "Thời Khóa Biểu",
     week: "Tuần",
+    general: "Tổng hợp",
     searchPlaceholder: "Tìm kiếm mục",
     unfinishedLabel: "Chưa Hoàn Thành",
     tagline: "Trung tâm thông tin Canvas — duyệt khóa học, tuần và tài nguyên.",
@@ -250,11 +254,12 @@ const TIMETABLE_PERIODS = [
   { key: "p7", labelKey: "period7", start: "02:40pm", end: "03:25pm", type: "class" },
 ];
 
-const TYPE_ORDER = ["Quiz", "Assignment", "File"];
+const TYPE_ORDER = ["Quiz", "Assignment", "File", "Page"];
 const TYPE_LABELS = {
   Quiz: "Quizzes",
   Assignment: "Assignments",
   File: "Files",
+  Page: "Pages",
 };
 
 let items = [];
@@ -262,9 +267,10 @@ let courses = [];
 let subjectCounts = new Map();
 let availableWeeks = [];
 let selectedCourseId = null;
-let currentWeek = Number(localStorage.getItem("selectedWeek")) || 36;
+let currentWeek = (() => { const w = Number(localStorage.getItem("selectedWeek")); return Number.isFinite(w) ? w : 36; })();
 let coursesLoaded = false;
 let itemCache = new Map();
+let timetableMobileView = localStorage.getItem("timetableMobileView") || "today";
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -358,9 +364,27 @@ function itemMatchesSearch(item, query) {
     .includes(query);
 }
 
+// Keywords that indicate an item is important for scoring
+const IMPORTANT_KEYWORDS = [
+  "HKII", "HKI", "HK1", "HK2",
+  "học kỳ 1", "học kì 1", "học kỳ 2", "học kì 2",
+  "cuối năm",
+  "hệ số 1", "hệ số 2", "hệ số 3",
+  "HS1", "HS2", "HS3",
+];
+
+function isItemImportant(item) {
+  const text = [item.title, item.module].join(" ").toLowerCase();
+  return IMPORTANT_KEYWORDS.some((keyword) => text.includes(keyword.toLowerCase()));
+}
+
 function createItemRow(item) {
   const row = document.createElement("div");
   row.className = "item_row";
+
+  if (isItemImportant(item)) {
+    row.classList.add("item_row_important");
+  }
 
   const content = document.createElement("div");
   content.className = "item_content";
@@ -453,7 +477,7 @@ function renderCoursePills() {
 function updateWeekNav() {
   const weekIndex = availableWeeks.indexOf(currentWeek);
 
-  weekInput.value = currentWeek || "";
+  weekInput.value = currentWeek != null ? String(currentWeek) : "";
 
   if (weekIndex < 0) {
     // Current week is not in available weeks, enable arrows to jump to nearest valid week
@@ -474,7 +498,8 @@ function updateHubTitle() {
   const course = courses.find((entry) => entry.id === selectedCourseId);
   const courseLabel = course ? courseShortLabel(course) : "Course";
   const scope = unfinishedOnly.checked ? t("unfinished") : `${items.length} ${t("items")}`;
-  hubTitle.textContent = `${courseLabel} · ${t("week")} ${currentWeek} · ${scope}`;
+  const weekLabel = currentWeek === 0 ? t("general") : `${t("week")} ${currentWeek}`;
+  hubTitle.textContent = `${courseLabel} · ${weekLabel} · ${scope}`;
 }
 
 async function loadCourses() {
@@ -525,7 +550,7 @@ async function loadWeeks() {
 }
 
 async function loadItems() {
-  if (!selectedCourseId || !currentWeek) {
+  if (!selectedCourseId || (currentWeek !== 0 && !currentWeek)) {
     return;
   }
 
@@ -780,9 +805,29 @@ function renderTimetableGrid() {
 
 function renderTimetableMobile() {
   const todayKey = todayDayKey();
-  const currentPeriod = currentPeriodKey();
   const nextPeriod = nextPeriodKey();
-  const daySections = TIMETABLE_DAYS.map((day) => {
+  
+  // Check if it's a weekend (Saturday=6, Sunday=0) and "Today" view is active
+  const dayIndex = new Date().getDay();
+  const isWeekend = dayIndex === 0 || dayIndex === 6;
+  
+  // On weekend with "Today" view, show a message instead of days
+  if (timetableMobileView === "today" && isWeekend) {
+    timetableMobile.replaceChildren();
+    const weekendMsg = document.createElement("p");
+    weekendMsg.className = "weekend_message";
+    weekendMsg.textContent = t("weekendNoClasses");
+    timetableMobile.appendChild(weekendMsg);
+    return;
+  }
+  
+  // Filter days based on mobile view toggle
+  let daysToShow = TIMETABLE_DAYS;
+  if (timetableMobileView === "today" && todayKey) {
+    daysToShow = TIMETABLE_DAYS.filter(day => day.key === todayKey);
+  }
+  
+  const daySections = daysToShow.map((day) => {
     const section = document.createElement("section");
     section.className = "day_schedule";
 
@@ -820,12 +865,18 @@ function renderTimetableMobile() {
       time.textContent = `${t(period.labelKey)}\n${period.start}-\n${period.end}`;
 
       const content = document.createElement("div");
-      if (day.key === todayKey && period.key === currentPeriod) {
-        slot.classList.add("slot_cell_current");
-      } else if (day.key === todayKey && period.key === nextPeriod) {
+      if (day.key === todayKey && period.key === nextPeriod) {
         slot.classList.add("slot_cell_next");
       }
       content.append(createSlotContent(period, entry));
+      
+      if (timetableEditMode && period.type === "class") {
+        slot.style.cursor = "pointer";
+
+        slot.addEventListener("click", () => {
+          openSubjectEditor(day.key, period.key, slot);
+        });
+      }
 
       slot.append(time, content);
       section.appendChild(slot);
@@ -842,10 +893,23 @@ function renderTimetable() {
   renderTimetableMobile();
 }
 
+function isMobile() {
+  return window.innerWidth <= 900;
+}
+
 function openSubjectEditor(dayKey, periodKey, slotElement) {
   const currentEntry = timetableEntryFor(dayKey, periodKey);
   const currentSubject = currentEntry?.subject || "";
   
+  // Use modal editor on mobile, inline editor on desktop
+  if (isMobile()) {
+    openMobileSubjectEditor(dayKey, periodKey, slotElement, currentSubject);
+  } else {
+    openDesktopSubjectEditor(dayKey, periodKey, slotElement, currentSubject);
+  }
+}
+
+function openDesktopSubjectEditor(dayKey, periodKey, slotElement, currentSubject) {
   const editor = document.createElement("div");
   editor.className = "timetable_editor";
   
@@ -915,6 +979,94 @@ function openSubjectEditor(dayKey, periodKey, slotElement) {
   
   // Auto-focus the select
   setTimeout(() => select.focus(), 0);
+}
+
+function openMobileSubjectEditor(dayKey, periodKey, slotElement, currentSubject) {
+  // Create modal overlay
+  const modal = document.createElement("div");
+  modal.className = "timetable_mobile_modal";
+  
+  const modalContent = document.createElement("div");
+  modalContent.className = "timetable_mobile_modal_content";
+  
+  const period = TIMETABLE_PERIODS.find(p => p.key === periodKey);
+  const entry = timetableEntryFor(dayKey, periodKey);
+  
+  // Period info (left column, row 1)
+  const periodInfo = document.createElement("div");
+  periodInfo.className = "timetable_mobile_period_info";
+  periodInfo.textContent = `${t(period.labelKey)}\n${period.start}-\n${period.end}`;
+  
+  // Current subject text (left column, row 2)
+  const currentSubjectText = document.createElement("p");
+  currentSubjectText.className = "timetable_mobile_current_subject";
+  const currentSubjectLabel = entry?.subject ? getSubjectLabel(entry.subject) : t("free");
+  currentSubjectText.textContent = `${currentLanguage === "vi" ? "Môn hiện tại:" : "Current:"} ${currentSubjectLabel}`;
+  
+  // Subject selector (middle column, spans rows 1-2)
+  const select = document.createElement("select");
+  select.className = "timetable_mobile_select";
+  
+  const allSubjects = Object.keys(SUBJECT_LABELS[currentLanguage] || {});
+  allSubjects.forEach((subjectId) => {
+    const option = document.createElement("option");
+    option.value = subjectId;
+    option.textContent = getSubjectLabel(subjectId);
+    if (subjectId === currentSubject) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+  
+  // Save button (right column, row 1)
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "timetable_mobile_btn timetable_mobile_btn_save";
+  saveBtn.textContent = currentLanguage === "vi" ? "Lưu" : "Save";
+  saveBtn.addEventListener("click", () => {
+    const selectedSubject = select.value;
+    const day = TIMETABLE[dayKey] || [];
+    const existingIndex = day.findIndex((entry) => entry.period === periodKey);
+    
+    if (existingIndex >= 0) {
+      day[existingIndex].subject = selectedSubject;
+    } else {
+      day.push({ period: periodKey, subject: selectedSubject });
+    }
+    
+    TIMETABLE[dayKey] = day;
+    saveTimetable(TIMETABLE);
+    modal.remove();
+    renderTimetable();
+  });
+  
+  // Cancel button (right column, row 2)
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "timetable_mobile_btn timetable_mobile_btn_cancel";
+  cancelBtn.textContent = currentLanguage === "vi" ? "Hủy" : "Cancel";
+  cancelBtn.addEventListener("click", () => {
+    modal.remove();
+  });
+  
+  // Button container for grid layout
+  const buttons = document.createElement("div");
+  buttons.className = "timetable_mobile_buttons";
+  buttons.append(saveBtn, cancelBtn);
+  
+  // Assemble grid layout - order matters for CSS grid placement
+  modalContent.append(periodInfo, currentSubjectText, select, buttons);
+  modal.appendChild(modalContent);
+  
+  // Close modal when clicking outside
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+  
+  document.body.appendChild(modal);
+  
+  // Auto-focus select
+  setTimeout(() => select.focus(), 100);
 }
 
 function closeEditor(editor) {
@@ -1029,7 +1181,20 @@ document.addEventListener("keydown", (event) => {
 });
 
 unfinishedOnly.addEventListener("change", loadItems);
-searchInput.addEventListener("input", renderItems);
+
+// Search input management
+function updateSearchWrapperClass() {
+  const wrapper = searchInput.closest('.input-wrapper');
+  if (wrapper) {
+    wrapper.classList.toggle('has-value', searchInput.value.trim() !== '');
+  }
+}
+
+searchInput.addEventListener("input", () => {
+  renderItems();
+  updateSearchWrapperClass();
+});
+
 document.querySelector(".icon").addEventListener("click", () => searchInput.focus());
 viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => setView(tab.dataset.view));
@@ -1040,9 +1205,28 @@ if (timetableEditBtn) {
   timetableEditBtn.addEventListener("click", toggleTimetableEditMode);
 }
 
+// Mobile timetable view toggle (Today/Full Week)
+const timetableViewToggleBtns = document.querySelectorAll(".timetable_view_toggle_btn");
+timetableViewToggleBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    timetableMobileView = btn.dataset.view;
+    localStorage.setItem("timetableMobileView", timetableMobileView);
+    
+    // Update active button state
+    timetableViewToggleBtns.forEach((b) => b.classList.remove("timetable_view_toggle_btn_active"));
+    btn.classList.add("timetable_view_toggle_btn_active");
+    
+    renderTimetableMobile();
+  });
+});
+
 languageSelector.addEventListener("change", (event) => {
   setLanguage(event.target.value);
 });
+
+// Clear search input on page load to prevent persisted text
+searchInput.value = "";
+updateSearchWrapperClass();
 
 const initialView = new URLSearchParams(window.location.search).get("view")
   || localStorage.getItem("selectedView")
