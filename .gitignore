@@ -35,4 +35,4 @@ dist/
 # Logs
 *.log
 
-.continue
+.continue/
