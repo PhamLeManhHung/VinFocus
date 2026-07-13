@@ -18,6 +18,40 @@ const timetableTitle = document.getElementById("timetable_title");
 const timetableNote = document.getElementById("timetable_note");
 const timetableHeader = document.querySelector(".timetable_header");
 
+const VINFOCUS_SCRIPT_VERSION = "2.0-fixed";
+console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
+const DEBUG = true;
+function debugLog(...args) {
+  if (DEBUG) console.log("[VinFocus Debug]", ...args);
+}
+
+// Token management
+function getToken() {
+  const token = localStorage.getItem("api_token") || "";
+  debugLog("getToken():", token ? token.slice(0, 10) + "..." : "(empty)");
+  return token;
+}
+
+function saveToken(token) {
+  debugLog("saveToken called, token:", token ? token.slice(0, 10) + "..." : "(empty)");
+  localStorage.setItem("api_token", token);
+  localStorage.setItem("api_token_saved_at", String(Date.now()));
+  debugLog("saveToken: localStorage now has api_token =", (localStorage.getItem("api_token") || "").slice(0, 10) + "...");
+}
+
+function clearToken() {
+  debugLog("clearToken called");
+  localStorage.removeItem("api_token");
+  localStorage.removeItem("api_token_saved_at");
+  debugLog("clearToken: api_token in localStorage =", localStorage.getItem("api_token"));
+}
+
+function getTokenAgeDays() {
+  const savedAt = localStorage.getItem("api_token_saved_at");
+  if (!savedAt) return null;
+  return (Date.now() - Number(savedAt)) / (1000 * 60 * 60 * 24);
+}
+
 // Language state management
 let currentLanguage = localStorage.getItem("language") || "en";
 
@@ -75,6 +109,47 @@ const TRANSLATIONS = {
     items: "items",
     noClassesAdded: "No classes added yet.",
     weekendNoClasses: "No classes, it's the weekend.",
+    // Setup wizard
+    setupTitle: "Welcome to VinFocus",
+    setupSubtitle: "Set up your Canvas API token to get started.",
+    setupStep: "Step",
+    setupOf: "of",
+    setupNext: "Next",
+    setupPrev: "Back",
+    setupFinish: "Finish",
+    setupSkip: "I already have a token",
+    setupTokenLabel: "Paste your API token here",
+    setupTokenPlaceholder: "Paste your Canvas API token...",
+    setupValidate: "Validate & Save",
+    setupValidating: "Validating...",
+    setupSuccess: "Token saved successfully!",
+    setupError: "Invalid token. Please check and try again.",
+    setupTokenHelp: "Don't have a token yet? Follow the steps below.",
+    setupSecurityTitle: "⚠️ Security Notice",
+    setupSecurityDesc: "Your Canvas API token is like a password. It grants full access to your Canvas account. VinFocus only uses this token to read your course data. It is never sent to any third party. • Never share your token with anyone • Never commit it to public code repositories • It is stored only in your browser's local storage (not on any server) • You can revoke it anytime from your Canvas Account Settings.",
+    setupStep1Title: "Log in to Vinschool Canvas",
+    setupStep1Desc: "Go to lms.vinschool.edu.vn and log in with your school account.",
+    setupStep2Title: "Open Account Settings",
+    setupStep2Desc: 'Click the "Tài Khoản" (Account) button at the top-left corner, then select "Cài Đặt" (Settings).',
+    setupStep3Title: "Find Approved Integrations",
+    setupStep3Desc: 'Scroll down to the "Tích Hợp Được Phê Duyệt" (Approved Integrations) section.',
+    setupStep4Title: "Create a New Access Token",
+    setupStep4Desc: 'Click the "Thẻ Truy Cập Mới" (New Access Token) button.',
+    setupStep5Title: "Fill in Token Details",
+    setupStep5Desc: 'Set "Mục Đích" (Purpose) to "VinFocus" and select the latest possible date for "Ngày Hết Hạn" (Expiration Date).',
+    setupStep5Note: "Each token lasts up to 3 months. You'll need to repeat this process about 3 times per school year.",
+    setupStep6Title: "Copy and Paste Your Token",
+    setupStep6Desc: "Copy the generated API key and paste it into the field below.",
+    setupScreenshot: "Screenshot coming soon",
+    // Token expiry warning
+    tokenExpiresSoon: "Your API token will expire in {days} days.",
+    tokenExpired: "Your API token has expired. Please update it.",
+    tokenExpiresToday: "Your API token expires today!",
+    tokenSettings: "API Token Settings",
+    tokenUpdate: "Update Token",
+    tokenClose: "Close",
+    tokenAge: "Token age: {days} days",
+    tokenValid: "Token is active",
   },
   vi: {
     weekendNoClasses: "Không có tiết học nào, hôm nay là cuối tuần.",
@@ -113,6 +188,47 @@ const TRANSLATIONS = {
     timetableNote: "Lịch học được lưu cục bộ trong ứng dụng này.",
     items: "bài",
     noClassesAdded: "Chưa có lớp học nào được thêm.",
+    // Setup wizard
+    setupTitle: "Chào mừng đến với VinFocus",
+    setupSubtitle: "Thiết lập mã API Canvas để bắt đầu.",
+    setupStep: "Bước",
+    setupOf: "trên",
+    setupNext: "Tiếp theo",
+    setupPrev: "Quay lại",
+    setupFinish: "Hoàn tất",
+    setupSkip: "Tôi đã có mã",
+    setupTokenLabel: "Dán mã API của bạn vào đây",
+    setupTokenPlaceholder: "Dán mã Canvas API...",
+    setupValidate: "Xác thực & Lưu",
+    setupValidating: "Đang xác thực...",
+    setupSuccess: "Đã lưu mã thành công!",
+    setupError: "Mã không hợp lệ. Vui lòng kiểm tra lại.",
+    setupTokenHelp: "Chưa có mã? Làm theo các bước dưới đây.",
+    setupSecurityTitle: "⚠️ Lưu ý Bảo Mật",
+    setupSecurityDesc: "Mã API Canvas của bạn giống như mật khẩu. Nó cấp quyền truy cập đầy đủ vào tài khoản Canvas của bạn. VinFocus chỉ sử dụng mã này để đọc dữ liệu khóa học của bạn. Mã không bao giờ được gửi cho bên thứ ba.\n\n• Không bao giờ chia sẻ mã của bạn với bất kỳ ai\n• Không bao giờ đưa nó vào kho mã nguồn công cộng\n• Mã chỉ được lưu trữ trong trình duyệt của bạn (không trên máy chủ nào)\n• Bạn có thể thu hồi mã bất cứ lúc nào từ Cài Đặt Tài Khoản Canvas.\n\n",
+    setupStep1Title: "Đăng nhập vào Vinschool Canvas",
+    setupStep1Desc: "Truy cập lms.vinschool.edu.vn và đăng nhập bằng tài khoản trường của bạn.",
+    setupStep2Title: "Mở Cài Đặt Tài Khoản",
+    setupStep2Desc: 'Nhấn nút "Tài Khoản" ở góc trên bên trái, sau đó chọn "Cài Đặt".',
+    setupStep3Title: "Tìm Tích Hợp Được Phê Duyệt",
+    setupStep3Desc: 'Cuộn xuống phần "Tích Hợp Được Phê Duyệt".',
+    setupStep4Title: "Tạo Thẻ Truy Cập Mới",
+    setupStep4Desc: 'Nhấn nút "Thẻ Truy Cập Mới".',
+    setupStep5Title: "Điền Thông Tin Token",
+    setupStep5Desc: 'Đặt "Mục Đích" là "VinFocus" và chọn ngày xa nhất có thể cho "Ngày Hết Hạn".',
+    setupStep5Note: "Mỗi token có thời hạn tối đa 3 tháng. Bạn sẽ cần làm lại quy trình này khoảng 3 lần mỗi năm học.",
+    setupStep6Title: "Sao Chép và Dán Token",
+    setupStep6Desc: "Sao chép mã API được tạo và dán vào ô bên dưới.",
+    setupScreenshot: "Ảnh chụp màn hình sẽ được cập nhật sau",
+    // Token expiry warning
+    tokenExpiresSoon: "Mã API của bạn sẽ hết hạn trong {days} ngày.",
+    tokenExpired: "Mã API của bạn đã hết hạn. Vui lòng cập nhật.",
+    tokenExpiresToday: "Mã API của bạn hết hạn hôm nay!",
+    tokenSettings: "Cài Đặt Mã API",
+    tokenUpdate: "Cập Nhật Mã",
+    tokenClose: "Đóng",
+    tokenAge: "Tuổi mã: {days} ngày",
+    tokenValid: "Mã API đang hoạt động",
   },
 };
 
@@ -313,14 +429,38 @@ function courseShortLabel(course) {
   return subject;
 }
 
+function apiFetch(url, options = {}) {
+  const token = getToken();
+  const headers = {
+    ...(options.headers || {}),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return fetch(url, { ...options, headers });
+}
+
 async function fetchJson(url) {
-  const response = await fetch(url);
-  const data = await response.json();
+  debugLog("fetchJson: calling", url);
+  const response = await apiFetch(url);
+  debugLog("fetchJson: response status", response.status, "for", url);
 
   if (!response.ok) {
+    const dataText = await response.text();
+    let data;
+    try { data = JSON.parse(dataText); } catch { data = { error: dataText }; }
+    debugLog("fetchJson: error response body", data);
+
+    if (response.status === 401) {
+      // Token expired or invalid - clear it and show setup
+      debugLog("fetchJson: got 401, clearing token and showing setup overlay");
+      clearToken();
+      showSetupOverlay();
+    }
     throw new Error(data.error || "Request failed.");
   }
 
+  const data = await response.json();
   return data;
 }
 
@@ -1228,11 +1368,6 @@ languageSelector.addEventListener("change", (event) => {
 searchInput.value = "";
 updateSearchWrapperClass();
 
-const initialView = new URLSearchParams(window.location.search).get("view")
-  || localStorage.getItem("selectedView")
-  || "work";
-setView(initialView);
-
 function applyTheme(theme) {
   if (theme === "light") {
     document.body.classList.add("light");
@@ -1252,6 +1387,477 @@ const savedTheme = localStorage.getItem("theme") || "dark";
 applyTheme(savedTheme);
 
 themeToggle.addEventListener("click", toggleTheme);
+
+// ── Setup Wizard ───────────────────────────────────────────────
+
+const SETUP_STEPS = [
+  { titleKey: "setupSecurityTitle", descKey: "setupSecurityDesc", isSecurity: true },
+  { titleKey: "setupStep1Title", descKey: "setupStep1Desc" },
+  { titleKey: "setupStep2Title", descKey: "setupStep2Desc" },
+  { titleKey: "setupStep3Title", descKey: "setupStep3Desc" },
+  { titleKey: "setupStep4Title", descKey: "setupStep4Desc" },
+  { titleKey: "setupStep5Title", descKey: "setupStep5Desc", noteKey: "setupStep5Note" },
+  { titleKey: "setupStep6Title", descKey: "setupStep6Desc" },
+];
+
+function renderSetupStep(stepIndex) {
+  debugLog("renderSetupStep called, stepIndex:", stepIndex);
+  const step = SETUP_STEPS[stepIndex];
+  if (!step) {
+    debugLog("renderSetupStep: no step found for index", stepIndex);
+    return;
+  }
+
+  const content = document.getElementById("setup_content");
+  content.innerHTML = "";
+
+  // Step indicator
+  const indicator = document.createElement("p");
+  indicator.className = "setup_step_indicator";
+  indicator.setAttribute("data-step", String(stepIndex + 1));
+  indicator.textContent = `${t("setupStep")} ${stepIndex + 1} ${t("setupOf")} ${SETUP_STEPS.length}`;
+  content.appendChild(indicator);
+
+  // Title
+  const title = document.createElement("h2");
+  title.className = "setup_step_title";
+  title.textContent = t(step.titleKey);
+  content.appendChild(title);
+
+  // Screenshot — one per step, mapped 1:1 (step 1 → setup_step0.jpg, ..., step 7 → setup_step6.jpg)
+  const screenshot = document.createElement("img");
+  screenshot.className = "setup_screenshot";
+  screenshot.src = `/static/setup_step${stepIndex}.jpg`;
+  screenshot.alt = t(step.titleKey);
+  screenshot.loading = "lazy";
+  content.appendChild(screenshot);
+
+  // Description
+  const desc = document.createElement("p");
+  desc.className = "setup_step_desc";
+  desc.textContent = t(step.descKey);
+  content.appendChild(desc);
+
+  // Optional note (for step 5 - expiry info)
+  if (step.noteKey) {
+    const note = document.createElement("p");
+    note.className = "setup_step_note";
+    note.textContent = t(step.noteKey);
+    content.appendChild(note);
+  }
+
+  // Step 6: Token input + validate
+  if (stepIndex === SETUP_STEPS.length - 1) {
+    const inputGroup = document.createElement("div");
+    inputGroup.className = "setup_token_group";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = "setup_token_input";
+    input.className = "setup_token_input";
+    input.placeholder = t("setupTokenPlaceholder");
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    inputGroup.appendChild(input);
+
+    const validateBtn = document.createElement("button");
+    validateBtn.type = "button";
+    validateBtn.className = "setup_validate_btn";
+    validateBtn.textContent = t("setupValidate");
+    validateBtn.addEventListener("click", validateAndSaveToken);
+    inputGroup.appendChild(validateBtn);
+
+    content.appendChild(inputGroup);
+
+    // Message area
+    const msg = document.createElement("p");
+    msg.id = "setup_message";
+    msg.className = "setup_message";
+    content.appendChild(msg);
+  }
+
+  // Navigation buttons
+  const nav = document.createElement("div");
+  nav.className = "setup_nav";
+
+  if (stepIndex > 0) {
+    const prevBtn = document.createElement("button");
+    prevBtn.type = "button";
+    prevBtn.className = "setup_nav_btn setup_nav_btn_prev";
+    prevBtn.textContent = t("setupPrev");
+    prevBtn.addEventListener("click", () => renderSetupStep(stepIndex - 1));
+    nav.appendChild(prevBtn);
+  } else {
+    // Spacer
+    const spacer = document.createElement("div");
+    nav.appendChild(spacer);
+  }
+
+  if (stepIndex < SETUP_STEPS.length - 1) {
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "setup_nav_btn setup_nav_btn_next";
+    nextBtn.textContent = t("setupNext");
+    nextBtn.addEventListener("click", () => renderSetupStep(stepIndex + 1));
+    nav.appendChild(nextBtn);
+  }
+
+  content.appendChild(nav);
+
+  // Step dots
+  const dots = document.createElement("div");
+  dots.className = "setup_dots";
+  for (let i = 0; i < SETUP_STEPS.length; i++) {
+    const dot = document.createElement("span");
+    dot.className = `setup_dot${i === stepIndex ? " setup_dot_active" : ""}`;
+    dot.addEventListener("click", () => renderSetupStep(i));
+    dots.appendChild(dot);
+  }
+  content.appendChild(dots);
+
+  // Focus token input if on step 6
+  if (stepIndex === SETUP_STEPS.length - 1) {
+    setTimeout(() => document.getElementById("setup_token_input")?.focus(), 100);
+  }
+}
+
+async function validateAndSaveToken() {
+  const input = document.getElementById("setup_token_input");
+  const msg = document.getElementById("setup_message");
+  const token = input.value.trim();
+  debugLog("validateAndSaveToken called, token present:", !!token);
+
+  if (!token) {
+    msg.textContent = t("setupTokenLabel");
+    msg.className = "setup_message setup_message_error";
+    return;
+  }
+
+  msg.textContent = t("setupValidating");
+  msg.className = "setup_message setup_message_info";
+
+  try {
+    debugLog("validateAndSaveToken: sending POST to /api/validate-token");
+    const response = await fetch("/api/validate-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const data = await response.json();
+    debugLog("validateAndSaveToken: response", data);
+
+    if (data.valid) {
+      debugLog("validateAndSaveToken: token is valid, saving");
+      saveToken(token);
+      msg.textContent = t("setupSuccess");
+      msg.className = "setup_message setup_message_success";
+      setTimeout(() => {
+        debugLog("validateAndSaveToken: hiding overlay and reinitializing");
+        hideSetupOverlay();
+        reinitializeApp();
+      }, 1000);
+    } else {
+      debugLog("validateAndSaveToken: token invalid:", data.message);
+      msg.textContent = data.message || t("setupError");
+      msg.className = "setup_message setup_message_error";
+    }
+  } catch (err) {
+    debugLog("validateAndSaveToken: error:", err.message);
+    msg.textContent = t("setupError");
+    msg.className = "setup_message setup_message_error";
+  }
+}
+
+function showSetupOverlay() {
+  debugLog("showSetupOverlay called");
+  // Close settings modal if it's open to prevent overlap
+  const settingsModal = document.getElementById("token_settings_modal");
+  if (settingsModal) {
+    settingsModal.remove();
+    debugLog("showSetupOverlay: removed settings modal");
+  }
+
+  const overlay = document.getElementById("setup_overlay");
+  if (overlay) {
+    overlay.hidden = false;
+    // Update dynamic header text
+    const titleEl = document.getElementById("setup_title");
+    if (titleEl) titleEl.textContent = t("setupTitle");
+    const subtitleEl = document.getElementById("setup_subtitle");
+    if (subtitleEl) subtitleEl.textContent = t("setupSubtitle");
+    const skipBtn = document.getElementById("setup_skip_btn");
+    if (skipBtn) skipBtn.textContent = t("setupSkip");
+    debugLog("showSetupOverlay: overlay unhidden, calling renderSetupStep(0)");
+    renderSetupStep(0);
+  } else {
+    debugLog("showSetupOverlay: overlay element NOT FOUND (DOM not ready?)");
+  }
+}
+
+function hideSetupOverlay() {
+  debugLog("hideSetupOverlay called");
+  const overlay = document.getElementById("setup_overlay");
+  if (overlay) {
+    overlay.hidden = true;
+    debugLog("hideSetupOverlay: overlay hidden");
+  } else {
+    debugLog("hideSetupOverlay: overlay element NOT FOUND");
+  }
+}
+
+function reinitializeApp() {
+  // Reset all state to force a fresh load
+  coursesLoaded = false;
+  courses = [];
+  items = [];
+  itemCache = new Map();
+  availableWeeks = [];
+  selectedCourseId = null;
+
+  // Reload the app in-place
+  const currentView = localStorage.getItem("selectedView") || "work";
+  setView(currentView);
+  updateTokenWarning();
+}
+
+// ── Token Expiry Warning ───────────────────────────────────────
+
+function updateTokenWarning() {
+  const banner = document.getElementById("token_warning");
+  if (!banner) return;
+
+  const token = getToken();
+  if (!token) {
+    banner.hidden = true;
+    return;
+  }
+
+  const ageDays = getTokenAgeDays();
+  if (ageDays === null) {
+    banner.hidden = true;
+    return;
+  }
+
+  const maxAgeDays = 90; // ~3 months
+  const warningThreshold = 7; // Warn 1 week before
+  const remaining = maxAgeDays - ageDays;
+
+  let message = "";
+  let isExpired = false;
+
+  if (remaining <= 0) {
+    message = t("tokenExpired");
+    isExpired = true;
+  } else if (remaining <= 1) {
+    message = t("tokenExpiresToday");
+  } else if (remaining <= warningThreshold) {
+    message = t("tokenExpiresSoon").replace("{days}", String(Math.ceil(remaining)));
+  }
+
+  if (message) {
+    banner.querySelector(".token_warning_text").textContent = message;
+    banner.hidden = false;
+    banner.className = `token_warning${isExpired ? " token_warning_expired" : ""}`;
+  } else {
+    banner.hidden = true;
+  }
+}
+
+// ── Settings / Token Management Modal ───────────────────────────
+
+function openTokenSettings() {
+  // Close setup overlay if it's open to prevent overlap
+  const setupOverlay = document.getElementById("setup_overlay");
+  if (setupOverlay && !setupOverlay.hidden) {
+    setupOverlay.hidden = true;
+  }
+
+  const existing = document.getElementById("token_settings_modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "token_settings_modal";
+  modal.className = "token_settings_modal";
+
+  const content = document.createElement("div");
+  content.className = "token_settings_content";
+
+  const title = document.createElement("h2");
+  title.textContent = t("tokenSettings");
+  content.appendChild(title);
+
+  const ageDays = getTokenAgeDays();
+  if (ageDays !== null) {
+    const ageP = document.createElement("p");
+    ageP.className = "token_settings_info";
+    ageP.textContent = t("tokenAge").replace("{days}", String(Math.round(ageDays)));
+    content.appendChild(ageP);
+  }
+
+  // Token input field
+  const inputGroup = document.createElement("div");
+  inputGroup.className = "setup_token_group";
+  inputGroup.style.marginTop = "8px";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = "settings_token_input";
+  input.className = "setup_token_input";
+  input.placeholder = t("setupTokenPlaceholder");
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  // Pre-fill with current token if it exists
+  const currentToken = getToken();
+  if (currentToken) {
+    input.value = currentToken;
+  }
+  inputGroup.appendChild(input);
+
+  const validateBtn = document.createElement("button");
+  validateBtn.type = "button";
+  validateBtn.className = "setup_validate_btn";
+  validateBtn.textContent = t("setupValidate");
+  validateBtn.addEventListener("click", async () => {
+    const token = input.value.trim();
+    if (!token) {
+      msg.textContent = t("setupTokenLabel");
+      msg.className = "setup_message setup_message_error";
+      return;
+    }
+
+    validateBtn.disabled = true;
+    msg.textContent = t("setupValidating");
+    msg.className = "setup_message setup_message_info";
+
+    try {
+      const response = await fetch("/api/validate-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await response.json();
+
+      if (data.valid) {
+        saveToken(token);
+        msg.textContent = t("setupSuccess");
+        msg.className = "setup_message setup_message_success";
+        setTimeout(() => {
+          modal.remove();
+          reinitializeApp();
+        }, 1000);
+      } else {
+        msg.textContent = data.message || t("setupError");
+        msg.className = "setup_message setup_message_error";
+        validateBtn.disabled = false;
+      }
+    } catch (err) {
+      msg.textContent = t("setupError");
+      msg.className = "setup_message setup_message_error";
+      validateBtn.disabled = false;
+    }
+  });
+  inputGroup.appendChild(validateBtn);
+
+  content.appendChild(inputGroup);
+
+  // Message area
+  const msg = document.createElement("p");
+  msg.id = "settings_token_message";
+  msg.className = "setup_message";
+  content.appendChild(msg);
+
+  // "Need a token?" link to open the tutorial wizard
+  const needTokenBtn = document.createElement("button");
+  needTokenBtn.type = "button";
+  needTokenBtn.className = "setup_skip_btn";
+  needTokenBtn.textContent = t("setupTokenHelp");
+  needTokenBtn.style.marginTop = "4px";
+  needTokenBtn.addEventListener("click", () => {
+    modal.remove();
+    showSetupOverlay();
+  });
+  content.appendChild(needTokenBtn);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "setup_nav_btn setup_nav_btn_prev";
+  closeBtn.textContent = t("tokenClose");
+  closeBtn.style.marginTop = "8px";
+  closeBtn.addEventListener("click", () => modal.remove());
+  content.appendChild(closeBtn);
+
+  modal.appendChild(content);
+
+  // Close on backdrop click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  document.body.appendChild(modal);
+
+  // Focus the input
+  setTimeout(() => input.focus(), 100);
+}
+
+// ── Initialize ─────────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Setup overlay
+  const overlay = document.getElementById("setup_overlay");
+  let showingSetup = false;
+  if (overlay) {
+    // Close setup overlay when "skip" is clicked and open settings modal
+    const skipBtn = document.getElementById("setup_skip_btn");
+    if (skipBtn) {
+      skipBtn.addEventListener("click", () => {
+        overlay.hidden = true;
+        openTokenSettings();
+      });
+    }
+
+    // If no token, show the setup overlay
+    if (!getToken()) {
+      showSetupOverlay();
+      showingSetup = true;
+    }
+  }
+
+  // Only start the app if we have a token (overlay not shown)
+  if (!showingSetup) {
+    const initialView = new URLSearchParams(window.location.search).get("view")
+      || localStorage.getItem("selectedView")
+      || "work";
+    setView(initialView);
+  }
+
+  // Settings button
+  const settingsBtn = document.getElementById("token_settings_btn");
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", openTokenSettings);
+  }
+
+  // Token expiry warning
+  updateTokenWarning();
+  // Check every hour
+  setInterval(updateTokenWarning, 60 * 60 * 1000);
+
+  // Warning banner "Update" button
+  const warningBtn = document.getElementById("token_warning_btn");
+  if (warningBtn) {
+    warningBtn.addEventListener("click", openTokenSettings);
+  }
+
+  // Warning banner dismiss button
+  const dismissBtn = document.getElementById("token_warning_dismiss");
+  if (dismissBtn) {
+    dismissBtn.addEventListener("click", () => {
+      const banner = document.getElementById("token_warning");
+      if (banner) {
+        banner.hidden = true;
+      }
+    });
+  }
+});
 
 // Initialize language
 setLanguage(currentLanguage);

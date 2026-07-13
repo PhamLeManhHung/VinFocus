@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 
 # Configure logging
 logging.basicConfig(
@@ -43,6 +43,11 @@ WEEK_SEPARATORS = frozenset("-–+&,/")
 # In-memory cache: key -> {"data": ..., "ts": float}
 _cache: Dict[str, Dict[str, Any]] = {}
 _cache_lock = threading.Lock()
+
+# Token storage: maps a session id or simply stores the most recently used token
+# This allows the frontend to send a token that the server uses for Canvas API calls
+_last_used_token: Optional[str] = None
+_token_timestamp: Optional[float] = None
 
 
 def cache_get(key: str) -> Optional[Any]:
@@ -87,16 +92,31 @@ def styles():
 
 
 def get_canvas_headers():
+    """Get Canvas API headers.
+    
+    Priority:
+    1. Authorization header from the incoming request (frontend-sent token)
+    2. API_TOKEN environment variable (legacy/fallback)
+    """
+    # Check if the incoming request has an Authorization header
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]  # Strip "Bearer "
+        if token:
+            return {"Authorization": f"Bearer {token}"}
+    
+    # Fallback: environment variable
     token = os.getenv("API_TOKEN")
-    if not token:
-        return None
-    return {"Authorization": f"Bearer {token}"}
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    
+    return None
 
 
 def require_headers():
     headers = get_canvas_headers()
     if not headers:
-        return None, (jsonify({"error": "Missing API_TOKEN environment variable"}), 500)
+        return None, (jsonify({"error": "Missing API token. Please set your Canvas API token in the app."}), 401)
     return headers, None
 
 
@@ -440,6 +460,97 @@ def get_week_items(
 
     logger.info(f"Found {len(items)} items for course {course_id}, week {week}")
     return items, course_name, None
+
+
+# ─── Token Management Endpoints ─────────────────────────────────
+
+
+@app.post("/api/validate-token")
+def validate_token():
+    """Validate a Canvas API token by making a test call to the Canvas API.
+    
+    Expects JSON body: { "token": "..." }
+    Returns: { "valid": true/false, "message": "..." }
+    If valid, also stores the token server-side as the active token for subsequent requests.
+    """
+    data = request.get_json(silent=True)
+    if not data or not data.get("token"):
+        return jsonify({"valid": False, "message": "No token provided."}), 400
+    
+    token = data["token"].strip()
+    if not token:
+        return jsonify({"valid": False, "message": "Token is empty."}), 400
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Try fetching courses to see if the token works
+    try:
+        response = requests.get(
+            f"{Config.LMS_BASE_URL}/api/v1/courses",
+            headers=headers,
+            params={"per_page": 1},
+            timeout=Config.REQUEST_TIMEOUT,
+        )
+        
+        if response.status_code == 200:
+            # Token is valid - store for server-side use
+            global _last_used_token, _token_timestamp
+            _last_used_token = token
+            _token_timestamp = time.time()
+            
+            return jsonify({
+                "valid": True,
+                "message": "Token is valid.",
+                "timestamp": _token_timestamp,
+            })
+        elif response.status_code == 401:
+            return jsonify({
+                "valid": False,
+                "message": "Token is invalid or expired. Please check your token and try again.",
+            })
+        else:
+            return jsonify({
+                "valid": False,
+                "message": f"Canvas API returned status {response.status_code}. Please try again later.",
+            })
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "valid": False,
+            "message": "Connection timed out. Please check your internet connection.",
+        })
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            "valid": False,
+            "message": f"Connection error: {str(e)}",
+        })
+
+
+@app.get("/api/token-status")
+def token_status():
+    """Return the status of the currently saved token.
+    
+    Returns:
+        { "has_token": bool, "age_seconds": number|null, "message": "..." }
+    """
+    has_token = _last_used_token is not None or bool(os.getenv("API_TOKEN"))
+    
+    if _token_timestamp is not None:
+        age_seconds = time.time() - _token_timestamp
+    else:
+        age_seconds = None
+    
+    # Check if the Authorization header from frontend is present
+    auth_header = request.headers.get("Authorization", "")
+    frontend_has_token = bool(auth_header.startswith("Bearer ") and auth_header[7:])
+    
+    return jsonify({
+        "has_token": has_token or frontend_has_token,
+        "age_seconds": age_seconds,
+        "token_timestamp": _token_timestamp,
+    })
+
+
+# ─── API Routes ────────────────────────────────────────────────
 
 
 @app.get("/api/courses")

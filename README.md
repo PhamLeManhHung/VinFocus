@@ -80,7 +80,9 @@ Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
 ## How It Works
 
-The Flask server in `main.py` proxies Canvas API requests using an `API_TOKEN` environment variable. Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
+The Flask server in `main.py` proxies Canvas API requests. When you open the app for the first time, a setup wizard guides you through generating and pasting your Canvas API token. The token is sent with every request via the `Authorization` header, so no environment variable is needed for end users.
+
+Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
 
 The frontend in `script.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
 
@@ -106,25 +108,17 @@ For testing:
 pip install pytest
 ```
 
-2. Set your Canvas API token:
-
-```bash
-export API_TOKEN="your_token_here"
-```
-
-Optionally enable debug mode:
-
-```bash
-export FLASK_DEBUG="true"
-```
-
-3. Start the app:
+2. Start the app:
 
 ```bash
 python main.py
 ```
 
-4. Open `http://127.0.0.1:5000` in your browser.
+3. Open `http://127.0.0.1:5000` in your browser.
+
+4. On first launch, a setup wizard will appear. Follow the 6-step guide to generate and paste your Canvas API token. The token is stored in your browser and sent with each request — no server-side setup required.
+
+> **Note:** Each token lasts up to 3 months. You'll need to repeat the setup about 3 times per school year. The app will warn you a week before the token expires.
 
 ## Running Tests
 
@@ -141,7 +135,7 @@ The test suite covers:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `API_TOKEN` | — | Canvas API token (required) |
+| `API_TOKEN` | — | Canvas API token (optional — can be set via the UI wizard instead) |
 | `FLASK_DEBUG` | `"false"` | Enable Flask debug mode |
 
 ## Future Plans

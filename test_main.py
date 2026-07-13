@@ -166,7 +166,7 @@ class TestListCourses:
         mock_get_headers.return_value = None
 
         response = client.get("/api/courses")
-        assert response.status_code == 500
+        assert response.status_code == 401
         data = response.get_json()
         assert "error" in data
 
@@ -229,7 +229,7 @@ class TestListCourseWeeks:
         mock_get_headers.return_value = None
 
         response = client.get("/api/courses/1/weeks")
-        assert response.status_code == 500
+        assert response.status_code == 401
 
     @patch("main.get_canvas_headers")
     @patch("main.canvas_get")
@@ -353,7 +353,7 @@ class TestGetCourseWeek:
         mock_get_headers.return_value = None
 
         response = client.get("/api/courses/1/week/36")
-        assert response.status_code == 500
+        assert response.status_code == 401
 
     @patch("main.get_canvas_headers")
     @patch("main.canvas_get")
