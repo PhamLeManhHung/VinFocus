@@ -2,6 +2,10 @@
 
 VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for Vinschool students. It aggregates course modules and items into a cleaner interface so you can browse what exists — without trying to predict what you should do on a given day.
 
+## Demo
+
+https://github.com/user-attachments/assets/4932d876-058c-41d3-b15a-f7abbc0a05ac
+
 ## Why I Built This
 
 Vinschool's Canvas LMS contains all the information students need, but finding it is often more difficult than it should be. Checking a quiz or assignment can require navigating through multiple pages, opening modules manually, and searching through long lists of content. As a result, students sometimes miss activities, complete the wrong quiz, or spend unnecessary time looking for information instead of studying. When I realized this issue had become normal for many students and was unlikely to be addressed soon, I decided to solve it myself.
