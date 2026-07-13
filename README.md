@@ -4,17 +4,21 @@ VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for 
 
 ## Why I Built This
 
-The school's LMS works, but it is not always the fastest place to see what quizzes, assignments, and files exist for a given week. I wanted a focused view of Canvas data across courses.
+Vinschool's Canvas LMS contains all the information students need, but finding it is often more difficult than it should be. Checking a quiz or assignment can require navigating through multiple pages, opening modules manually, and searching through long lists of content. As a result, students sometimes miss activities, complete the wrong quiz, or spend unnecessary time looking for information instead of studying. When I realized this issue had become normal for many students and was unlikely to be addressed soon, I decided to solve it myself.
 
-The dashboard does not schedule daily work. Teachers may assign things verbally, lessons can span multiple weeks, and the LMS does not contain enough information to infer daily priorities accurately. Instead, VinFocus helps answer questions like:
+I built VinFocus because I wanted a faster way to see what existed across my courses without repeatedly digging through the LMS interface. Rather than trying to replace Canvas, the goal was to make its information easier to access.
+
+VinFocus organizes modules into weeks and presents quizzes, assignments, files, and other resources in a single, searchable view. It also highlights unfinished work and provides a timetable view, reducing the amount of navigation required to find relevant information.
+
+The dashboard intentionally does not tell students what they should do each day. Teachers may assign work verbally, lessons can span multiple weeks, and the LMS does not always contain enough context to determine priorities accurately. Instead, VinFocus is designed to answer questions such as:
 
 - What quizzes exist for this week?
 - What assignments exist for this week?
-- What files/resources exist for this week?
-- What items are still unfinished in Canvas?
-- What modules belong to each week?
+- What resources are available for this week?
+- What items are still unfinished?
+- Which modules belong to each week?
 
-I decide what to work on.
+Students decide what to work on. VinFocus simply makes the information easier to find.
 
 ## Features
 
