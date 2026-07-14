@@ -114,6 +114,7 @@ const TRANSLATIONS = {
     aboutHow5: "View and manage your weekly timetable.",
     aboutHow6: "Switch between English and Vietnamese.",
     aboutHow7: "Toggle between dark and light themes.",
+    aboutHow8: "For general modules that don't have a week number, go to Week 0.",
     week: "Week",
     general: "General",
     searchPlaceholder: "Search items",
@@ -228,6 +229,7 @@ const TRANSLATIONS = {
     aboutHow5: "Xem và quản lý thời khóa biểu hàng tuần của bạn.",
     aboutHow6: "Chuyển đổi giữa Tiếng Anh và Tiếng Việt.",
     aboutHow7: "Chuyển đổi giữa chủ đề tối và sáng.",
+    aboutHow8: "Đối với các học phần chung không có số tuần, hãy chuyển đến Tuần 0.",
     week: "Tuần",
     general: "Chung",
     searchPlaceholder: "Tìm kiếm mục",
@@ -1347,6 +1349,7 @@ function renderAll() {
   document.getElementById("about_how_5").textContent = t("aboutHow5");
   document.getElementById("about_how_6").textContent = t("aboutHow6");
   document.getElementById("about_how_7").textContent = t("aboutHow7");
+  document.getElementById("about_how_8").textContent = t("aboutHow8");
   // Update footer text
   document.getElementById("footer_made_by").textContent = t("footerMadeBy");
   document.getElementById("footer_feedback").textContent = t("footerFeedback");
