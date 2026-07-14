@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import sqlite3
 import threading
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -688,6 +689,87 @@ def _legacy_week_response(week: int, unfinished_only: bool = False, todo_key: bo
 
     return jsonify(payload)
 
+
+# ─── Feedback Database ─────────────────────────────────────────
+
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "feedback.db")
+
+
+def get_db() -> sqlite3.Connection:
+    """Get a connection to the SQLite feedback database."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+
+def init_db() -> None:
+    """Initialize the feedback database, creating the table if it doesn't exist."""
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+            usage_type TEXT NOT NULL,
+            recommend TEXT NOT NULL,
+            improvement TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+    logger.info("Feedback database initialized")
+
+
+@app.post("/api/feedback")
+def submit_feedback():
+    """Submit user feedback.
+    
+    Expects JSON body: { "rating": int, "usage_type": str, "recommend": str, "improvement": str }
+    Returns: { "success": true/false, "message": "..." }
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"success": False, "message": "No data provided."}), 400
+
+    rating = data.get("rating")
+    usage_type = data.get("usage_type")
+    recommend = data.get("recommend")
+    improvement = data.get("improvement", "")
+
+    # Validate required fields
+    if not isinstance(rating, int) or rating < 1 or rating > 5:
+        return jsonify({"success": False, "message": "Rating must be an integer between 1 and 5."}), 400
+
+    allowed_usage = ["quizzes_assignments", "timetable", "unfinished", "other"]
+    if usage_type not in allowed_usage:
+        return jsonify({"success": False, "message": f"Usage type must be one of: {', '.join(allowed_usage)}."}), 400
+
+    allowed_recommend = ["yes", "maybe", "no"]
+    if recommend not in allowed_recommend:
+        return jsonify({"success": False, "message": f"Recommend must be one of: {', '.join(allowed_recommend)}."}), 400
+
+    if not isinstance(improvement, str):
+        improvement = ""
+
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO feedback (rating, usage_type, recommend, improvement) VALUES (?, ?, ?, ?)",
+            (rating, usage_type, recommend, improvement),
+        )
+        conn.commit()
+        conn.close()
+        logger.info(f"Feedback saved: rating={rating}, usage={usage_type}, recommend={recommend}")
+        return jsonify({"success": True, "message": "Thank you for your feedback!"})
+    except Exception as e:
+        logger.error(f"Failed to save feedback: {e}")
+        return jsonify({"success": False, "message": "An error occurred while saving feedback."}), 500
+
+
+# ─── Startup ────────────────────────────────────────────────────
+
+init_db()
 
 if __name__ == "__main__":
     logger.info(f"Starting Lock In in {'DEBUG' if Config.DEBUG else 'PRODUCTION'} mode")

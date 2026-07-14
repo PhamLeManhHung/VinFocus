@@ -61,8 +61,38 @@
             <nav class="app_nav" aria-label="App views">
                 <button type="button" class="view_tab view_tab_active" data-view="work">Work</button>
                 <button type="button" class="view_tab" data-view="timetable">Timetable</button>
+                <button type="button" class="view_tab" data-view="about">About</button>
             </nav>
         </div>
+
+        <main id="about_view" class="app_view">
+            <div class="card about_container">
+                <h2 id="about_title">About VinFocus</h2>
+
+                <section class="about_section">
+                    <h3 id="about_what_title">what is vinfocus?</h3>
+                    <p id="about_what_desc">vinfocus is a personal dashboard for vinschool's canvas lms. it organizes quizzes, assignments, files, and course modules into a cleaner, easier-to-navigate interface so students can quickly find what they need.</p>
+                </section>
+
+                <section class="about_section">
+                    <h3 id="about_why_title">why i built it</h3>
+                    <p id="about_why_desc">canvas contains all the necessary information, but finding it often requires opening multiple pages and searching through long module lists. i built vinfocus to make course information easier to access, helping students spend less time navigating and more time studying.</p>
+                </section>
+
+                <section class="about_section">
+                    <h3 id="about_how_title">how to use it</h3>
+                    <ul id="about_how_list">
+                        <li id="about_how_1">browse your active canvas courses.</li>
+                        <li id="about_how_2">navigate between weeks to view related modules and resources.</li>
+                        <li id="about_how_3">search across courses, modules, quizzes, assignments, and files.</li>
+                        <li id="about_how_4">filter unfinished items based on canvas completion status.</li>
+                        <li id="about_how_5">view and manage your weekly timetable.</li>
+                        <li id="about_how_6">switch between english and vietnamese.</li>
+                        <li id="about_how_7">toggle between dark and light themes.</li>
+                    </ul>
+                </section>
+            </div>
+        </main>
 
         <main id="work_view" class="app_view app_view_active">
         <div class="card hub_container" id="main_content">
@@ -118,6 +148,7 @@
                     →
                 </button>
             </div>
+        </div>
         </main>
 
         <main id="timetable_view" class="app_view" hidden>
@@ -157,6 +188,12 @@
                 </div>
             </div>
         </div>
+
+        <footer class="app_footer" id="app_footer">
+            <p id="footer_made_by">Made by Pham Le Manh Hung</p>
+            <p id="footer_feedback">I appreciate any reviews or feedbacks towards this project.</p>
+            <p id="footer_copyright">© 2026 VinFocus</p>
+        </footer>
 
         <script src="script.js"></script>
     </body>

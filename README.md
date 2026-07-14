@@ -6,6 +6,14 @@ VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for 
 
 https://github.com/user-attachments/assets/4932d876-058c-41d3-b15a-f7abbc0a05ac
 
+## Access
+
+The app is hosted and ready to use at:
+
+**https://vinschool-lms-dashboard.onrender.com/**
+
+No installation or setup is required, just open the link, follow the setup wizard to generate and paste your Canvas API token, and start browsing.
+
 ## Why I Built This
 
 Vinschool's Canvas LMS contains all the information students need, but finding it is often more difficult than it should be. Checking a quiz or assignment can require navigating through multiple pages, opening modules manually, and searching through long lists of content. As a result, students sometimes miss activities, complete the wrong quiz, or spend unnecessary time looking for information instead of studying. When I realized this issue had become normal for many students and was unlikely to be addressed soon, I decided to solve it myself.
@@ -38,6 +46,7 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - **Bilingual UI** — Full English and Vietnamese translations. Switch via the language selector in the top-right corner.
 - **Dark/Light theme** — Toggle between dark and light themes. Persisted to localStorage.
 - **Keyboard navigation** — Left/right arrow keys navigate between weeks (when no input is focused).
+- **In-app feedback form** — Rate VinFocus, share what you use it for, and suggest improvements. Feedback is stored in a SQLite database.
 
 ## Tech Stack
 
@@ -104,6 +113,8 @@ The frontend in `script.js` loads courses, lets you pick a course and week, and 
 
 ## Running Locally
 
+If you prefer to run the app on your own machine instead of using the hosted version:
+
 1. Install dependencies:
 
 ```bash
@@ -148,10 +159,7 @@ The test suite covers:
 
 ## Future Plans
 
-- Support all enrolled courses (initial multi-course API is in place)
 - Optional display of pages and discussions
-- Basic caching when loading many courses
-- Backend tests for API routes
 
 ## Notes
 

@@ -10,6 +10,7 @@ const viewTabs = document.querySelectorAll(".view_tab");
 const themeToggle = document.getElementById("theme_toggle");
 const workView = document.getElementById("work_view");
 const timetableView = document.getElementById("timetable_view");
+const aboutView = document.getElementById("about_view");
 const timetableGrid = document.getElementById("timetable_grid");
 const timetableMobile = document.getElementById("timetable_mobile");
 const languageSelector = document.getElementById("language_selector");
@@ -99,6 +100,20 @@ const TRANSLATIONS = {
     lunchBreak: "Lunch Break",
     work: "Work",
     timetable: "Timetable",
+    about: "About",
+    aboutTitle: "About VinFocus",
+    aboutWhatTitle: "What is VinFocus?",
+    aboutWhatDesc: "VinFocus is a personal dashboard for vinschool's Canvas LMS. It organizes quizzes, assignments, files, and course modules into a cleaner, easier-to-navigate interface so students can quickly find what they need.",
+    aboutWhyTitle: "Why I built it",
+    aboutWhyDesc: "Vinschool LMS contains all the necessary information, but finding it often requires opening multiple pages and searching through long module lists. I built VinFocus to make course information easier to access, helping students spend less time navigating and more time studying.",
+    aboutHowTitle: "How to use it",
+    aboutHow1: "Browse your active Canvas courses.",
+    aboutHow2: "Navigate between weeks to view related modules and resources.",
+    aboutHow3: "Search across courses, modules, quizzes, assignments, and files.",
+    aboutHow4: "Filter unfinished items based on Canvas completion status.",
+    aboutHow5: "View and manage your weekly timetable.",
+    aboutHow6: "Switch between English and Vietnamese.",
+    aboutHow7: "Toggle between dark and light themes.",
     week: "Week",
     general: "General",
     searchPlaceholder: "Search items",
@@ -109,7 +124,6 @@ const TRANSLATIONS = {
     items: "items",
     noClassesAdded: "No classes added yet.",
     weekendNoClasses: "No classes, it's the weekend.",
-    // Setup wizard
     setupTitle: "Welcome to VinFocus",
     setupSubtitle: "Set up your Canvas API token to get started.",
     setupStep: "Step",
@@ -141,7 +155,6 @@ const TRANSLATIONS = {
     setupStep6Title: "Copy and Paste Your Token",
     setupStep6Desc: "Copy the generated API key and paste it into the field below.",
     setupScreenshot: "Screenshot coming soon",
-    // Token expiry warning
     tokenExpiresSoon: "Your API token will expire in {days} days.",
     tokenExpired: "Your API token has expired. Please update it.",
     tokenExpiresToday: "Your API token expires today!",
@@ -150,9 +163,31 @@ const TRANSLATIONS = {
     tokenClose: "Close",
     tokenAge: "Token age: {days} days",
     tokenValid: "Token is active",
+    footerMadeBy: "Made by Pham Le Manh Hung",
+    footerFeedback: "I appreciate any reviews or feedbacks towards this project.",
+    footerCopyright: "© 2026 VinFocus",
+    settingsTitle: "Settings",
+    settingsApiToken: "API Token Settings",
+    settingsFeedback: "Send Feedback",
+    feedbackTitle: "Send Feedback",
+    feedbackRating: "How useful has VinFocus been?",
+    feedbackUsage: "What do you use it for most?",
+    feedbackUsageQuizzes: "Finding quizzes, assignments and more",
+    feedbackUsageTimetable: "Timetable",
+    feedbackUsageUnfinished: "Unfinished work",
+    feedbackUsageOther: "Other",
+    feedbackRecommend: "Would you recommend VinFocus to another student?",
+    feedbackRecommendYes: "Yes",
+    feedbackRecommendMaybe: "Maybe",
+    feedbackRecommendNo: "No",
+    feedbackImprove: "What's one thing you'd improve?",
+    feedbackImprovePlaceholder: "Type your suggestion...",
+    feedbackSubmit: "Submit Feedback",
+    feedbackSubmitting: "Submitting...",
+    feedbackSuccess: "Thank you for your feedback!",
+    feedbackError: "Something went wrong. Please try again.",
   },
   vi: {
-    weekendNoClasses: "Không có tiết học nào, hôm nay là cuối tuần.",
     monday: "Thứ Hai",
     tuesday: "Thứ Ba",
     wednesday: "Thứ Tư",
@@ -179,8 +214,22 @@ const TRANSLATIONS = {
     lunchBreak: "Nghỉ trưa",
     work: "Làm Việc",
     timetable: "Thời Khóa Biểu",
+    about: "Giới Thiệu",
+    aboutTitle: "Giới Thiệu VinFocus",
+    aboutWhatTitle: "VinFocus là gì?",
+    aboutWhatDesc: "VinFocus là một bảng điều khiển cá nhân cho Canvas LMS của vinschool. Nó sắp xếp các bài kiểm tra, bài tập, tệp tin và các module khóa học vào một giao diện sạch hơn, dễ điều hướng hơn, giúp học sinh nhanh chóng tìm thấy những gì cần thiết.",
+    aboutWhyTitle: "Tại sao mình xây dựng nó",
+    aboutWhyDesc: "Vinschool LMS chứa tất cả thông tin cần thiết, nhưng việc tìm kiếm thường đòi hỏi phải mở nhiều trang và tìm kiếm qua danh sách module dài. Mình xây dựng VinFocus để giúp việc truy cập thông tin khóa học dễ dàng hơn, giúp học sinh dành ít thời gian điều hướng hơn và nhiều thời gian học tập hơn.",
+    aboutHowTitle: "Cách sử dụng",
+    aboutHow1: "Duyệt các khóa học Canvas đang hoạt động của bạn.",
+    aboutHow2: "Điều hướng giữa các tuần để xem module và tài nguyên liên quan.",
+    aboutHow3: "Tìm kiếm qua các khóa học, module, bài kiểm tra, bài tập và tệp tin.",
+    aboutHow4: "Lọc các mục chưa hoàn thành dựa trên trạng thái hoàn thành của Canvas.",
+    aboutHow5: "Xem và quản lý thời khóa biểu hàng tuần của bạn.",
+    aboutHow6: "Chuyển đổi giữa Tiếng Anh và Tiếng Việt.",
+    aboutHow7: "Chuyển đổi giữa chủ đề tối và sáng.",
     week: "Tuần",
-    general: "Tổng hợp",
+    general: "Chung",
     searchPlaceholder: "Tìm kiếm mục",
     unfinishedLabel: "Chưa Hoàn Thành",
     tagline: "Trung tâm thông tin Canvas — duyệt khóa học, tuần và tài nguyên.",
@@ -188,7 +237,7 @@ const TRANSLATIONS = {
     timetableNote: "Lịch học được lưu cục bộ trong ứng dụng này.",
     items: "bài",
     noClassesAdded: "Chưa có lớp học nào được thêm.",
-    // Setup wizard
+    weekendNoClasses: "Không có tiết học nào, hôm nay là cuối tuần.",
     setupTitle: "Chào mừng đến với VinFocus",
     setupSubtitle: "Thiết lập mã API Canvas để bắt đầu.",
     setupStep: "Bước",
@@ -220,7 +269,6 @@ const TRANSLATIONS = {
     setupStep6Title: "Sao Chép và Dán Token",
     setupStep6Desc: "Sao chép mã API được tạo và dán vào ô bên dưới.",
     setupScreenshot: "Ảnh chụp màn hình sẽ được cập nhật sau",
-    // Token expiry warning
     tokenExpiresSoon: "Mã API của bạn sẽ hết hạn trong {days} ngày.",
     tokenExpired: "Mã API của bạn đã hết hạn. Vui lòng cập nhật.",
     tokenExpiresToday: "Mã API của bạn hết hạn hôm nay!",
@@ -229,6 +277,29 @@ const TRANSLATIONS = {
     tokenClose: "Đóng",
     tokenAge: "Tuổi mã: {days} ngày",
     tokenValid: "Mã API đang hoạt động",
+    footerMadeBy: "Được tạo bởi Phạm Lê Mạnh Hùng",
+    footerFeedback: "Mình rất trân trọng mọi đánh giá và phản hồi về dự án này.",
+    footerCopyright: "© 2026 VinFocus",
+    settingsTitle: "Cài Đặt",
+    settingsApiToken: "Cài Đặt Mã API",
+    settingsFeedback: "Gửi Phản Hồi",
+    feedbackTitle: "Gửi Phản Hồi",
+    feedbackRating: "VinFocus hữu ích như thế nào?",
+    feedbackUsage: "Bạn sử dụng VinFocus nhiều nhất để làm gì?",
+    feedbackUsageQuizzes: "Tìm bài kiểm tra, bài tập và hơn thế nữa",
+    feedbackUsageTimetable: "Thời khóa biểu",
+    feedbackUsageUnfinished: "Công việc chưa hoàn thành",
+    feedbackUsageOther: "Khác",
+    feedbackRecommend: "Bạn có giới thiệu VinFocus cho học sinh khác không?",
+    feedbackRecommendYes: "Có",
+    feedbackRecommendMaybe: "Có thể",
+    feedbackRecommendNo: "Không",
+    feedbackImprove: "Một điều bạn muốn cải thiện?",
+    feedbackImprovePlaceholder: "Nhập gợi ý của bạn...",
+    feedbackSubmit: "Gửi Phản Hồi",
+    feedbackSubmitting: "Đang gửi...",
+    feedbackSuccess: "Cảm ơn bạn đã phản hồi!",
+    feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
   },
 };
 
@@ -1260,16 +1331,38 @@ function renderAll() {
   
   // Update shared static text elements
   tagline.textContent = t("tagline");
+  // Update about tab text
+  document.querySelector(".view_tab[data-view='about']").textContent = t("about");
+  // Update about page content
+  document.getElementById("about_title").textContent = t("aboutTitle");
+  document.getElementById("about_what_title").textContent = t("aboutWhatTitle");
+  document.getElementById("about_what_desc").textContent = t("aboutWhatDesc");
+  document.getElementById("about_why_title").textContent = t("aboutWhyTitle");
+  document.getElementById("about_why_desc").textContent = t("aboutWhyDesc");
+  document.getElementById("about_how_title").textContent = t("aboutHowTitle");
+  document.getElementById("about_how_1").textContent = t("aboutHow1");
+  document.getElementById("about_how_2").textContent = t("aboutHow2");
+  document.getElementById("about_how_3").textContent = t("aboutHow3");
+  document.getElementById("about_how_4").textContent = t("aboutHow4");
+  document.getElementById("about_how_5").textContent = t("aboutHow5");
+  document.getElementById("about_how_6").textContent = t("aboutHow6");
+  document.getElementById("about_how_7").textContent = t("aboutHow7");
+  // Update footer text
+  document.getElementById("footer_made_by").textContent = t("footerMadeBy");
+  document.getElementById("footer_feedback").textContent = t("footerFeedback");
+  document.getElementById("footer_copyright").textContent = t("footerCopyright");
 }
 
 function setView(viewName) {
-  const nextView = viewName === "timetable" ? "timetable" : "work";
+  const nextView = viewName === "timetable" ? "timetable" : viewName === "about" ? "about" : "work";
   localStorage.setItem("selectedView", nextView);
 
   workView.hidden = nextView !== "work";
   timetableView.hidden = nextView !== "timetable";
+  aboutView.hidden = nextView !== "about";
   workView.classList.toggle("app_view_active", nextView === "work");
   timetableView.classList.toggle("app_view_active", nextView === "timetable");
+  aboutView.classList.toggle("app_view_active", nextView === "about");
 
   for (const tab of viewTabs) {
     const isActive = tab.dataset.view === nextView;
@@ -1279,7 +1372,7 @@ function setView(viewName) {
 
   if (nextView === "work") {
     loadCourses().catch((error) => showMessage(error.message));
-  } else {
+  } else if (nextView === "timetable") {
     renderTimetable();
   }
 }
@@ -1663,15 +1756,87 @@ function updateTokenWarning() {
   }
 }
 
-// ── Settings / Token Management Modal ───────────────────────────
+// ── Settings Menu Modal ────────────────────────────────────────
 
-function openTokenSettings() {
+function openSettingsMenu() {
   // Close setup overlay if it's open to prevent overlap
   const setupOverlay = document.getElementById("setup_overlay");
   if (setupOverlay && !setupOverlay.hidden) {
     setupOverlay.hidden = true;
   }
 
+  const existing = document.getElementById("settings_menu_modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "settings_menu_modal";
+  modal.className = "token_settings_modal";
+
+  const content = document.createElement("div");
+  content.className = "token_settings_content";
+
+  const title = document.createElement("h2");
+  title.textContent = t("settingsTitle");
+  content.appendChild(title);
+
+  // API Token option
+  const apiOption = document.createElement("button");
+  apiOption.type = "button";
+  apiOption.className = "settings_menu_option";
+  apiOption.innerHTML = `
+    <span class="settings_menu_icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </span>
+    <span class="settings_menu_label">${t("settingsApiToken")}</span>
+  `;
+  apiOption.addEventListener("click", () => {
+    modal.remove();
+    openTokenSettings();
+  });
+  content.appendChild(apiOption);
+
+  // Feedback option
+  const feedbackOption = document.createElement("button");
+  feedbackOption.type = "button";
+  feedbackOption.className = "settings_menu_option";
+  feedbackOption.innerHTML = `
+    <span class="settings_menu_icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    </span>
+    <span class="settings_menu_label">${t("settingsFeedback")}</span>
+  `;
+  feedbackOption.addEventListener("click", () => {
+    modal.remove();
+    openFeedbackForm();
+  });
+  content.appendChild(feedbackOption);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "setup_nav_btn setup_nav_btn_prev";
+  closeBtn.textContent = t("tokenClose");
+  closeBtn.style.marginTop = "12px";
+  closeBtn.addEventListener("click", () => modal.remove());
+  content.appendChild(closeBtn);
+
+  modal.appendChild(content);
+
+  // Close on backdrop click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  document.body.appendChild(modal);
+}
+
+// ── Token Management Modal ─────────────────────────────────────
+
+function openTokenSettings() {
   const existing = document.getElementById("token_settings_modal");
   if (existing) existing.remove();
 
@@ -1799,6 +1964,220 @@ function openTokenSettings() {
   setTimeout(() => input.focus(), 100);
 }
 
+// ── Feedback Form ─────────────────────────────────────────────
+
+function openFeedbackForm() {
+  const existing = document.getElementById("feedback_modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "feedback_modal";
+  modal.className = "token_settings_modal";
+
+  const content = document.createElement("div");
+  content.className = "token_settings_content feedback_form";
+
+  const title = document.createElement("h2");
+  title.textContent = t("feedbackTitle");
+  content.appendChild(title);
+
+  // Question 1: Star rating
+  const ratingLabel = document.createElement("p");
+  ratingLabel.className = "feedback_question";
+  ratingLabel.textContent = t("feedbackRating");
+  content.appendChild(ratingLabel);
+
+  const starContainer = document.createElement("div");
+  starContainer.className = "star_rating";
+  let selectedRating = 0;
+
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement("span");
+    star.className = "star";
+    star.dataset.value = i;
+    star.textContent = "★";
+    star.dataset.value = i;
+    star.addEventListener("click", () => {
+      selectedRating = i;
+      starContainer.querySelectorAll(".star").forEach((s, idx) => {
+        s.classList.toggle("star_filled", idx < i);
+      });
+    });
+    star.addEventListener("mouseenter", () => {
+      starContainer.querySelectorAll(".star").forEach((s, idx) => {
+        s.classList.toggle("star_filled", idx < i);
+      });
+    });
+    star.addEventListener("mouseleave", () => {
+      starContainer.querySelectorAll(".star").forEach((s, idx) => {
+        s.classList.toggle("star_filled", idx < selectedRating);
+      });
+    });
+    starContainer.appendChild(star);
+  }
+  content.appendChild(starContainer);
+
+  // Question 2: Usage type (radio)
+  const usageLabel = document.createElement("p");
+  usageLabel.className = "feedback_question";
+  usageLabel.textContent = t("feedbackUsage");
+  content.appendChild(usageLabel);
+
+  const usageGroup = document.createElement("div");
+  usageGroup.className = "feedback_radio_group";
+
+  const usageOptions = [
+    { value: "quizzes_assignments", key: "feedbackUsageQuizzes" },
+    { value: "timetable", key: "feedbackUsageTimetable" },
+    { value: "unfinished", key: "feedbackUsageUnfinished" },
+    { value: "other", key: "feedbackUsageOther" },
+  ];
+
+  let selectedUsage = null;
+  usageOptions.forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "feedback_radio_btn";
+    btn.textContent = t(opt.key);
+    btn.addEventListener("click", () => {
+      selectedUsage = opt.value;
+      usageGroup.querySelectorAll(".feedback_radio_btn").forEach((b) => b.classList.remove("feedback_radio_btn_active"));
+      btn.classList.add("feedback_radio_btn_active");
+    });
+    usageGroup.appendChild(btn);
+  });
+  content.appendChild(usageGroup);
+
+  // Question 3: Recommend (radio)
+  const recommendLabel = document.createElement("p");
+  recommendLabel.className = "feedback_question";
+  recommendLabel.textContent = t("feedbackRecommend");
+  content.appendChild(recommendLabel);
+
+  const recommendGroup = document.createElement("div");
+  recommendGroup.className = "feedback_radio_group";
+
+  const recommendOptions = [
+    { value: "yes", key: "feedbackRecommendYes" },
+    { value: "maybe", key: "feedbackRecommendMaybe" },
+    { value: "no", key: "feedbackRecommendNo" },
+  ];
+
+  let selectedRecommend = null;
+  recommendOptions.forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "feedback_radio_btn";
+    btn.textContent = t(opt.key);
+    btn.addEventListener("click", () => {
+      selectedRecommend = opt.value;
+      recommendGroup.querySelectorAll(".feedback_radio_btn").forEach((b) => b.classList.remove("feedback_radio_btn_active"));
+      btn.classList.add("feedback_radio_btn_active");
+    });
+    recommendGroup.appendChild(btn);
+  });
+  content.appendChild(recommendGroup);
+
+  // Question 4: Improvement text
+  const improveLabel = document.createElement("p");
+  improveLabel.className = "feedback_question";
+  improveLabel.textContent = t("feedbackImprove");
+  content.appendChild(improveLabel);
+
+  const improveTextarea = document.createElement("textarea");
+  improveTextarea.className = "feedback_textarea";
+  improveTextarea.placeholder = t("feedbackImprovePlaceholder");
+  improveTextarea.rows = 3;
+  content.appendChild(improveTextarea);
+
+  // Message area
+  const feedbackMsg = document.createElement("p");
+  feedbackMsg.id = "feedback_message";
+  feedbackMsg.className = "setup_message";
+  content.appendChild(feedbackMsg);
+
+  // Submit button
+  const submitBtn = document.createElement("button");
+  submitBtn.type = "button";
+  submitBtn.className = "setup_validate_btn";
+  submitBtn.style.width = "100%";
+  submitBtn.style.marginTop = "8px";
+  submitBtn.textContent = t("feedbackSubmit");
+  submitBtn.addEventListener("click", async () => {
+    if (selectedRating === 0) {
+      feedbackMsg.textContent = "Please select a rating.";
+      feedbackMsg.className = "setup_message setup_message_error";
+      return;
+    }
+    if (!selectedUsage) {
+      feedbackMsg.textContent = "Please select what you use it for.";
+      feedbackMsg.className = "setup_message setup_message_error";
+      return;
+    }
+    if (!selectedRecommend) {
+      feedbackMsg.textContent = "Please select a recommendation.";
+      feedbackMsg.className = "setup_message setup_message_error";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = t("feedbackSubmitting");
+    feedbackMsg.textContent = "";
+    feedbackMsg.className = "setup_message";
+
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: selectedRating,
+          usage_type: selectedUsage,
+          recommend: selectedRecommend,
+          improvement: improveTextarea.value.trim(),
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        feedbackMsg.textContent = t("feedbackSuccess");
+        feedbackMsg.className = "setup_message setup_message_success";
+        submitBtn.textContent = t("feedbackSubmit");
+        submitBtn.disabled = true;
+        setTimeout(() => modal.remove(), 2000);
+      } else {
+        feedbackMsg.textContent = data.message || t("feedbackError");
+        feedbackMsg.className = "setup_message setup_message_error";
+        submitBtn.disabled = false;
+        submitBtn.textContent = t("feedbackSubmit");
+      }
+    } catch (err) {
+      feedbackMsg.textContent = t("feedbackError");
+      feedbackMsg.className = "setup_message setup_message_error";
+      submitBtn.disabled = false;
+      submitBtn.textContent = t("feedbackSubmit");
+    }
+  });
+  content.appendChild(submitBtn);
+
+  // Close button
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "setup_nav_btn setup_nav_btn_prev";
+  closeBtn.textContent = t("tokenClose");
+  closeBtn.style.marginTop = "8px";
+  closeBtn.addEventListener("click", () => modal.remove());
+  content.appendChild(closeBtn);
+
+  modal.appendChild(content);
+
+  // Close on backdrop click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  document.body.appendChild(modal);
+}
+
 // ── Initialize ─────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1811,7 +2190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (skipBtn) {
       skipBtn.addEventListener("click", () => {
         overlay.hidden = true;
-        openTokenSettings();
+        openSettingsMenu();
       });
     }
 
@@ -1830,10 +2209,10 @@ document.addEventListener("DOMContentLoaded", () => {
     setView(initialView);
   }
 
-  // Settings button
+  // Settings button - opens the settings menu
   const settingsBtn = document.getElementById("token_settings_btn");
   if (settingsBtn) {
-    settingsBtn.addEventListener("click", openTokenSettings);
+    settingsBtn.addEventListener("click", openSettingsMenu);
   }
 
   // Token expiry warning
@@ -1844,7 +2223,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Warning banner "Update" button
   const warningBtn = document.getElementById("token_warning_btn");
   if (warningBtn) {
-    warningBtn.addEventListener("click", openTokenSettings);
+    warningBtn.addEventListener("click", openSettingsMenu);
   }
 
   // Warning banner dismiss button
