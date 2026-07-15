@@ -735,6 +735,29 @@ def submit_feedback():
         logger.error(f"Failed to save feedback: {e}")
         return jsonify({"success": False, "message": "An error occurred while saving feedback."}), 500
 
+@app.get("/api/feedback")
+def get_feedback():
+    try:
+        conn = get_db()
+
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM feedback
+            ORDER BY id DESC
+            """
+        ).fetchall()
+
+        conn.close()
+
+        return jsonify([
+            dict(row) for row in rows
+        ])
+
+    except Exception as e:
+        logger.error(f"Failed to fetch feedback: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 # ─── Startup ────────────────────────────────────────────────────
 
