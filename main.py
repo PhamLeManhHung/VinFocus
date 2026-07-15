@@ -45,10 +45,8 @@ WEEK_SEPARATORS = frozenset("-–+&,/")
 _cache: Dict[str, Dict[str, Any]] = {}
 _cache_lock = threading.Lock()
 
-# Token storage: maps a session id or simply stores the most recently used token
-# This allows the frontend to send a token that the server uses for Canvas API calls
-_last_used_token: Optional[str] = None
-_token_timestamp: Optional[float] = None
+# Tokens are NEVER stored server-side. They are only read from the per-request
+# `Authorization` header (sent by the frontend) or the optional API_TOKEN env var.
 
 
 def cache_get(key: str) -> Optional[Any]:
@@ -472,7 +470,8 @@ def validate_token():
     
     Expects JSON body: { "token": "..." }
     Returns: { "valid": true/false, "message": "..." }
-    If valid, also stores the token server-side as the active token for subsequent requests.
+    The token is used only for this validation request and is never stored
+    server-side. The frontend is responsible for persisting it in localStorage.
     """
     data = request.get_json(silent=True)
     if not data or not data.get("token"):
@@ -484,7 +483,8 @@ def validate_token():
     
     headers = {"Authorization": f"Bearer {token}"}
     
-    # Try fetching courses to see if the token works
+    # Try fetching courses to see if the token works. The token is used only
+    # for this single request and is discarded immediately afterward.
     try:
         response = requests.get(
             f"{Config.LMS_BASE_URL}/api/v1/courses",
@@ -494,15 +494,9 @@ def validate_token():
         )
         
         if response.status_code == 200:
-            # Token is valid - store for server-side use
-            global _last_used_token, _token_timestamp
-            _last_used_token = token
-            _token_timestamp = time.time()
-            
             return jsonify({
                 "valid": True,
                 "message": "Token is valid.",
-                "timestamp": _token_timestamp,
             })
         elif response.status_code == 401:
             return jsonify({
@@ -524,31 +518,6 @@ def validate_token():
             "valid": False,
             "message": f"Connection error: {str(e)}",
         })
-
-
-@app.get("/api/token-status")
-def token_status():
-    """Return the status of the currently saved token.
-    
-    Returns:
-        { "has_token": bool, "age_seconds": number|null, "message": "..." }
-    """
-    has_token = _last_used_token is not None or bool(os.getenv("API_TOKEN"))
-    
-    if _token_timestamp is not None:
-        age_seconds = time.time() - _token_timestamp
-    else:
-        age_seconds = None
-    
-    # Check if the Authorization header from frontend is present
-    auth_header = request.headers.get("Authorization", "")
-    frontend_has_token = bool(auth_header.startswith("Bearer ") and auth_header[7:])
-    
-    return jsonify({
-        "has_token": has_token or frontend_has_token,
-        "age_seconds": age_seconds,
-        "token_timestamp": _token_timestamp,
-    })
 
 
 # ─── API Routes ────────────────────────────────────────────────
@@ -772,5 +741,5 @@ def submit_feedback():
 init_db()
 
 if __name__ == "__main__":
-    logger.info(f"Starting Lock In in {'DEBUG' if Config.DEBUG else 'PRODUCTION'} mode")
+    logger.info(f"Starting VinFocus in {'DEBUG' if Config.DEBUG else 'PRODUCTION'} mode")
     app.run(debug=Config.DEBUG)

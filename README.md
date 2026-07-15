@@ -99,6 +99,8 @@ Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
 The Flask server in `main.py` proxies Canvas API requests. When you open the app for the first time, a setup wizard guides you through generating and pasting your Canvas API token. The token is sent with every request via the `Authorization` header, so no environment variable is needed for end users.
 
+**Privacy:** Your Canvas API token is stored only in your browser's local storage. VinFocus does not store your token on any server. The token is transmitted only as needed to authenticate requests to Canvas.
+
 Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
 
 The frontend in `script.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
@@ -137,7 +139,7 @@ python main.py
 
 4. On first launch, a setup wizard will appear. Follow the 6-step guide to generate and paste your Canvas API token. The token is stored in your browser and sent with each request — no server-side setup required.
 
-> **Note:** Each token lasts up to 3 months. You'll need to repeat the setup about 3 times per school year. The app will warn you a week before the token expires.
+> **Note:** Each token lasts up to 4 months. You'll need to repeat the setup about 2-3 times per school year. The app will warn you a week before the token expires.
 
 ## Running Tests
 

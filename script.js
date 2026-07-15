@@ -133,6 +133,7 @@ const TRANSLATIONS = {
     setupPrev: "Back",
     setupFinish: "Finish",
     setupSkip: "I already have a token",
+    setupCloseWarning: "You haven't set up a Canvas API token yet, so the app can't load your course data. If you want to set up the token later, open Settings (the gear icon) and choose API Token Settings.",
     setupTokenLabel: "Paste your API token here",
     setupTokenPlaceholder: "Paste your Canvas API token...",
     setupValidate: "Validate & Save",
@@ -141,7 +142,7 @@ const TRANSLATIONS = {
     setupError: "Invalid token. Please check and try again.",
     setupTokenHelp: "Don't have a token yet? Follow the steps below.",
     setupSecurityTitle: "⚠️ Security Notice",
-    setupSecurityDesc: "Your Canvas API token is like a password. It grants full access to your Canvas account. VinFocus only uses this token to read your course data. It is never sent to any third party. • Never share your token with anyone • Never commit it to public code repositories • It is stored only in your browser's local storage (not on any server) • You can revoke it anytime from your Canvas Account Settings.",
+    setupSecurityDesc: "Your Canvas API token is like a password. It grants full access to your Canvas account. VinFocus only uses this token to read your course data. It is never sent to any third party. • Never share your token with anyone • Never commit it to public code repositories • Your Canvas API token is stored only in your browser's local storage. VinFocus does not store your token on any server. The token is transmitted only as needed to authenticate requests to Canvas. • You can revoke it anytime from your Canvas Account Settings.",
     setupStep1Title: "Log in to Vinschool Canvas",
     setupStep1Desc: "Go to lms.vinschool.edu.vn and log in with your school account.",
     setupStep2Title: "Open Account Settings",
@@ -152,7 +153,7 @@ const TRANSLATIONS = {
     setupStep4Desc: 'Click the "Thẻ Truy Cập Mới" (New Access Token) button.',
     setupStep5Title: "Fill in Token Details",
     setupStep5Desc: 'Set "Mục Đích" (Purpose) to "VinFocus" and select the latest possible date for "Ngày Hết Hạn" (Expiration Date).',
-    setupStep5Note: "Each token lasts up to 3 months. You'll need to repeat this process about 3 times per school year.",
+    setupStep5Note: "Each token lasts up to 4 months. You'll need to repeat this process about 2-3 times per school year.",
     setupStep6Title: "Copy and Paste Your Token",
     setupStep6Desc: "Copy the generated API key and paste it into the field below.",
     setupScreenshot: "Screenshot coming soon",
@@ -248,6 +249,7 @@ const TRANSLATIONS = {
     setupPrev: "Quay lại",
     setupFinish: "Hoàn tất",
     setupSkip: "Tôi đã có mã",
+    setupCloseWarning: "Bạn chưa thiết lập mã API Canvas, nên ứng dụng không thể tải dữ liệu khóa học của bạn. Nếu muốn thiết lập mã sau, hãy mở Cài Đặt (biểu tượng bánh răng) và chọn Cài Đặt Mã API.",
     setupTokenLabel: "Dán mã API của bạn vào đây",
     setupTokenPlaceholder: "Dán mã Canvas API...",
     setupValidate: "Xác thực & Lưu",
@@ -256,7 +258,7 @@ const TRANSLATIONS = {
     setupError: "Mã không hợp lệ. Vui lòng kiểm tra lại.",
     setupTokenHelp: "Chưa có mã? Làm theo các bước dưới đây.",
     setupSecurityTitle: "⚠️ Lưu ý Bảo Mật",
-    setupSecurityDesc: "Mã API Canvas của bạn giống như mật khẩu. Nó cấp quyền truy cập đầy đủ vào tài khoản Canvas của bạn. VinFocus chỉ sử dụng mã này để đọc dữ liệu khóa học của bạn. Mã không bao giờ được gửi cho bên thứ ba.\n\n• Không bao giờ chia sẻ mã của bạn với bất kỳ ai\n• Không bao giờ đưa nó vào kho mã nguồn công cộng\n• Mã chỉ được lưu trữ trong trình duyệt của bạn (không trên máy chủ nào)\n• Bạn có thể thu hồi mã bất cứ lúc nào từ Cài Đặt Tài Khoản Canvas.\n\n",
+    setupSecurityDesc: "Mã API Canvas của bạn giống như mật khẩu. Nó cấp quyền truy cập đầy đủ vào tài khoản Canvas của bạn. VinFocus chỉ sử dụng mã này để đọc dữ liệu khóa học của bạn. Mã không bao giờ được gửi cho bên thứ ba.\n\n• Không bao giờ chia sẻ mã của bạn với bất kỳ ai\n• Không bao giờ đưa nó vào kho mã nguồn công cộng\n• Mã API Canvas của bạn chỉ được lưu trữ trong bộ nhớ cục bộ của trình duyệt. VinFocus không lưu trữ mã của bạn trên bất kỳ máy chủ nào. Mã chỉ được truyền đi khi cần thiết để xác thực các yêu cầu tới Canvas.\n• Bạn có thể thu hồi mã bất cứ lúc nào từ Cài Đặt Tài Khoản Canvas.\n\n",
     setupStep1Title: "Đăng nhập vào Vinschool Canvas",
     setupStep1Desc: "Truy cập lms.vinschool.edu.vn và đăng nhập bằng tài khoản trường của bạn.",
     setupStep2Title: "Mở Cài Đặt Tài Khoản",
@@ -267,7 +269,7 @@ const TRANSLATIONS = {
     setupStep4Desc: 'Nhấn nút "Thẻ Truy Cập Mới".',
     setupStep5Title: "Điền Thông Tin Token",
     setupStep5Desc: 'Đặt "Mục Đích" là "VinFocus" và chọn ngày xa nhất có thể cho "Ngày Hết Hạn".',
-    setupStep5Note: "Mỗi token có thời hạn tối đa 3 tháng. Bạn sẽ cần làm lại quy trình này khoảng 3 lần mỗi năm học.",
+    setupStep5Note: "Mỗi token có thời hạn tối đa 4 tháng. Bạn sẽ cần làm lại quy trình này khoảng 2-3 lần mỗi năm học.",
     setupStep6Title: "Sao Chép và Dán Token",
     setupStep6Desc: "Sao chép mã API được tạo và dán vào ô bên dưới.",
     setupScreenshot: "Ảnh chụp màn hình sẽ được cập nhật sau",
@@ -342,7 +344,7 @@ const SUBJECT_LABELS = {
     GCED: "GCED",
     CLISE: "CLISE",
     NV: "Ngữ Văn",
-    LOCE: "NDĐP",
+    LOCE: "ND-GDĐP",
     CAREER: "HĐTN-HN",
     VNS: "VNH",
     "ESL (GVVN)": "ESL (GVVN)",
@@ -1683,6 +1685,12 @@ function showSetupOverlay() {
     if (subtitleEl) subtitleEl.textContent = t("setupSubtitle");
     const skipBtn = document.getElementById("setup_skip_btn");
     if (skipBtn) skipBtn.textContent = t("setupSkip");
+
+    // Hide the warning by default — it is only shown when the user tries to
+    // exit the wizard without having provided an API token.
+    const warningEl = document.getElementById("setup_warning");
+    if (warningEl) warningEl.hidden = true;
+
     debugLog("showSetupOverlay: overlay unhidden, calling renderSetupStep(0)");
     renderSetupStep(0);
   } else {
@@ -1700,6 +1708,36 @@ function hideSetupOverlay() {
     debugLog("hideSetupOverlay: overlay element NOT FOUND");
   }
 }
+
+// Attempt to close the setup wizard. If the user hasn't provided an API token
+// yet, show a warning on the first attempt and keep the wizard open. A second
+// attempt (or an existing token) closes it freely.
+function attemptCloseSetup() {
+  const warningEl = document.getElementById("setup_warning");
+  if (warningEl && !getToken() && warningEl.hidden) {
+    warningEl.textContent = t("setupCloseWarning");
+    warningEl.hidden = false;
+    return;
+  }
+  hideSetupOverlay();
+}
+
+// Wire up the setup close (X) button so users can exit the wizard.
+const setupCloseBtn = document.getElementById("setup_close_btn");
+if (setupCloseBtn) {
+  setupCloseBtn.addEventListener("click", attemptCloseSetup);
+}
+
+// Esc shortcut to exit the setup wizard (same warning behavior as the X button).
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    const overlay = document.getElementById("setup_overlay");
+    // Don't steal Esc while a modal is open on top of the wizard.
+    if (overlay && !overlay.hidden && !document.querySelector(".token_settings_modal")) {
+      attemptCloseSetup();
+    }
+  }
+});
 
 function reinitializeApp() {
   // Reset all state to force a fresh load
@@ -1758,6 +1796,28 @@ function updateTokenWarning() {
     banner.hidden = true;
   }
 }
+
+// ── Shared modal close (X) button ─────────────────────────────
+
+// Adds a top-right X close button to a modal's content element. The button
+// reuses the same styling as the setup wizard's close button for consistency.
+function addModalCloseButton(content, onClose) {
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "setup_close_btn";
+  closeBtn.setAttribute("aria-label", "Close");
+  closeBtn.textContent = "✕";
+  closeBtn.addEventListener("click", onClose);
+  content.appendChild(closeBtn);
+}
+
+// Esc shortcut to close any open modal (Settings, API Token, Feedback).
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    const modal = document.querySelector(".token_settings_modal:not([hidden])");
+    if (modal) modal.remove();
+  }
+});
 
 // ── Settings Menu Modal ────────────────────────────────────────
 
@@ -1819,13 +1879,7 @@ function openSettingsMenu() {
   });
   content.appendChild(feedbackOption);
 
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "setup_nav_btn setup_nav_btn_prev";
-  closeBtn.textContent = t("tokenClose");
-  closeBtn.style.marginTop = "12px";
-  closeBtn.addEventListener("click", () => modal.remove());
-  content.appendChild(closeBtn);
+  addModalCloseButton(content, () => modal.remove());
 
   modal.appendChild(content);
 
@@ -1946,13 +2000,7 @@ function openTokenSettings() {
   });
   content.appendChild(needTokenBtn);
 
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "setup_nav_btn setup_nav_btn_prev";
-  closeBtn.textContent = t("tokenClose");
-  closeBtn.style.marginTop = "8px";
-  closeBtn.addEventListener("click", () => modal.remove());
-  content.appendChild(closeBtn);
+  addModalCloseButton(content, () => modal.remove());
 
   modal.appendChild(content);
 
@@ -2162,14 +2210,7 @@ function openFeedbackForm() {
   });
   content.appendChild(submitBtn);
 
-  // Close button
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "setup_nav_btn setup_nav_btn_prev";
-  closeBtn.textContent = t("tokenClose");
-  closeBtn.style.marginTop = "8px";
-  closeBtn.addEventListener("click", () => modal.remove());
-  content.appendChild(closeBtn);
+  addModalCloseButton(content, () => modal.remove());
 
   modal.appendChild(content);
 

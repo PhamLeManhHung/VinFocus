@@ -1522,7 +1522,66 @@ body.light .theme_icon_moon {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    position: relative;
     animation: scaleIn 0.25s ease;
+}
+
+/* Close (X) button — top-right corner of the setup card */
+.setup_close_btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--border-pill);
+    border-radius: 10px;
+    background: var(--bg-pill);
+    color: var(--text-muted-strong);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.setup_close_btn:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+    color: var(--text-primary);
+}
+
+/* Warning shown when the user exits setup without providing an API token */
+.setup_warning {
+    margin: 16px 24px 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.setup_warning[hidden] {
+    display: none !important;
+}
+
+.setup_warning::before {
+    content: "⚠️";
+    font-size: 1rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+}
+
+body.light .setup_warning {
+    background: rgba(255, 193, 7, 0.12);
 }
 
 @keyframes scaleIn {
@@ -2027,6 +2086,7 @@ body.light .setup_step_note {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: relative;
 }
 
 .token_settings_content h2 {
