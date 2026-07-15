@@ -1,14 +1,24 @@
 import os
 import re
 import time
-import sqlite3
 import threading
 import logging
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
+from functools import lru_cache
 
 import requests
 from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +28,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# Configure CORS for frontend access
+# In production, restrict to your Render URL
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://vinschool-lms-dashboard.onrender.com", "http://localhost:5000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Configuration
 class Config:
@@ -42,6 +62,7 @@ WEEK_KEYWORD = re.compile(r"(?:tuần|week)", re.IGNORECASE)
 WEEK_SEPARATORS = frozenset("-–+&,/")
 
 # In-memory cache: key -> {"data": ..., "ts": float}
+# NOTE: Cache keys MUST include user-specific identifiers to prevent data leaks
 _cache: Dict[str, Dict[str, Any]] = {}
 _cache_lock = threading.Lock()
 
@@ -90,12 +111,26 @@ def styles():
     return send_from_directory(".", "style.css")
 
 
-def get_canvas_headers():
+def token_hash(headers: Dict[str, str]) -> str:
+    """Generate a short hash from the authorization token for cache key namespacing.
+    
+    This ensures cache entries are user-specific and prevents data leaks between users.
+    """
+    token = headers.get("Authorization", "")
+    if token.startswith("Bearer "):
+        token = token[7:]
+    return hashlib.sha256(token.encode()).hexdigest()[:12]
+
+
+def get_canvas_headers() -> Optional[Dict[str, str]]:
     """Get Canvas API headers.
     
     Priority:
     1. Authorization header from the incoming request (frontend-sent token)
     2. API_TOKEN environment variable (legacy/fallback)
+    
+    Returns:
+        Headers dict or None if no token available
     """
     # Check if the incoming request has an Authorization header
     auth_header = request.headers.get("Authorization")
@@ -256,12 +291,12 @@ def extract_weeks(module_name: Optional[str]) -> List[int]:
 
 
 def get_courses(headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
-    """Fetch all active courses from Canvas."""
-    cached = cache_get("courses")
-    if cached is not None:
-        logger.info("Returning cached courses")
-        return cached, None
-
+    """Fetch all active courses from Canvas.
+    
+    NOTE: Courses are NOT cached globally because they are user-specific.
+    Each user has different course access in Canvas, so caching would cause
+    data leaks between users. This is intentionally not cached.
+    """
     logger.info("Fetching courses from Canvas API")
     data, response = canvas_get(
         f"{Config.LMS_BASE_URL}/api/v1/courses",
@@ -280,14 +315,13 @@ def get_courses(headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional
         for course in data
     ]
 
-    cache_set("courses", courses)
-    logger.info(f"Cached {len(courses)} courses")
+    logger.info(f"Fetched {len(courses)} courses (not cached - user-specific)")
     return courses, None
 
 
 def get_course_name(course_id: int, headers: Dict[str, str]) -> str:
     """Fetch the name of a specific course."""
-    cache_key = f"course_name:{course_id}"
+    cache_key = f"course_name:{token_hash(headers)}:{course_id}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
@@ -300,7 +334,7 @@ def get_course_name(course_id: int, headers: Dict[str, str]) -> str:
 
 def get_course_modules(course_id: int, headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
     """Fetch all modules for a specific course."""
-    cache_key = f"modules:{course_id}"
+    cache_key = f"modules:{token_hash(headers)}:{course_id}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached, None
@@ -346,7 +380,7 @@ def get_week_modules(course_id: int, week: int, headers: Dict[str, str]) -> Tupl
 
 def get_module_items(course_id: int, module_id: int, headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
     """Fetch all items for a specific module."""
-    cache_key = f"items:{course_id}:{module_id}"
+    cache_key = f"items:{token_hash(headers)}:{course_id}:{module_id}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached, None
@@ -661,33 +695,65 @@ def _legacy_week_response(week: int, unfinished_only: bool = False, todo_key: bo
 
 # ─── Feedback Database ─────────────────────────────────────────
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "feedback.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Database connection pool (initialized on startup)
+_db_pool: Optional[SimpleConnectionPool] = None
 
-def get_db() -> sqlite3.Connection:
-    """Get a connection to the SQLite feedback database."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+def init_db_pool() -> None:
+    """Initialize database connection pool."""
+    global _db_pool
+    if not DATABASE_URL:
+        logger.warning("DATABASE_URL not set - feedback features will be disabled")
+        return
+    
+    try:
+        _db_pool = SimpleConnectionPool(
+            minconn=1,
+            maxconn=10,
+            dsn=DATABASE_URL,
+            cursor_factory=RealDictCursor
+        )
+        logger.info("Database connection pool initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize database pool: {e}")
+        _db_pool = None
+
+def get_db():
+    """Get a database connection from the pool."""
+    if _db_pool is None:
+        raise RuntimeError("Database pool not initialized")
+    return _db_pool.getconn()
 
 
 def init_db() -> None:
     """Initialize the feedback database, creating the table if it doesn't exist."""
+    if _db_pool is None:
+        logger.warning("Skipping database initialization - DATABASE_URL not configured")
+        return
+    
     conn = get_db()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS feedback (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
-            usage_type TEXT NOT NULL,
-            recommend TEXT NOT NULL,
-            improvement TEXT DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
-    logger.info("Feedback database initialized")
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id SERIAL PRIMARY KEY,
+                rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+                usage_type TEXT NOT NULL,
+                recommend TEXT NOT NULL,
+                improvement TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        logger.info("Feedback database initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        conn.rollback()
+    finally:
+        cur.close()
+        _db_pool.putconn(conn)
 
 
 @app.post("/api/feedback")
@@ -721,48 +787,87 @@ def submit_feedback():
     if not isinstance(improvement, str):
         improvement = ""
 
+    if _db_pool is None:
+        return jsonify({"success": False, "message": "Database not configured."}), 503
+    
+    conn = None
+    cur = None
     try:
         conn = get_db()
-        conn.execute(
-            "INSERT INTO feedback (rating, usage_type, recommend, improvement) VALUES (?, ?, ?, ?)",
-            (rating, usage_type, recommend, improvement),
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            INSERT INTO feedback
+            (rating, usage_type, recommend, improvement)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (rating, usage_type, recommend, improvement)
         )
+
         conn.commit()
-        conn.close()
+
         logger.info(f"Feedback saved: rating={rating}, usage={usage_type}, recommend={recommend}")
         return jsonify({"success": True, "message": "Thank you for your feedback!"})
     except Exception as e:
         logger.error(f"Failed to save feedback: {e}")
+        if conn:
+            conn.rollback()
         return jsonify({"success": False, "message": "An error occurred while saving feedback."}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            _db_pool.putconn(conn)
 
 @app.get("/api/feedback")
 def get_feedback():
+    if _db_pool is None:
+        return jsonify({"error": "Database not configured"}), 503
+    
+    conn = None
+    cur = None
     try:
         conn = get_db()
+        cur = conn.cursor()
 
-        rows = conn.execute(
-            """
+        cur.execute("""
             SELECT *
             FROM feedback
             ORDER BY id DESC
-            """
-        ).fetchall()
+        """)
 
-        conn.close()
+        rows = cur.fetchall()
 
-        return jsonify([
-            dict(row) for row in rows
-        ])
+        return jsonify(rows)
 
     except Exception as e:
         logger.error(f"Failed to fetch feedback: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch feedback"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            _db_pool.putconn(conn)
+
+
+# ─── Health Check ───────────────────────────────────────────────
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Render monitoring."""
+    return jsonify({
+        "status": "healthy",
+        "service": "VinFocus",
+        "database": "configured" if _db_pool is not None else "not configured"
+    }), 200
 
 
 # ─── Startup ────────────────────────────────────────────────────
 
+init_db_pool()
 init_db()
 
 if __name__ == "__main__":
     logger.info(f"Starting VinFocus in {'DEBUG' if Config.DEBUG else 'PRODUCTION'} mode")
-    app.run(debug=Config.DEBUG)
+    app.run(debug=Config.DEBUG, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))

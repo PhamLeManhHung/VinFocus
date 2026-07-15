@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: vinfocus
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: FLASK_DEBUG
+        value: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vinfocus_feedback
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+databases:
+  - name: vinfocus_feedback
+    plan: free
+    databaseName: vinfocus_feedback
+    user: vinfocus_feedback_user

@@ -46,13 +46,17 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - **Bilingual UI** — Full English and Vietnamese translations. Switch via the language selector in the top-right corner.
 - **Dark/Light theme** — Toggle between dark and light themes. Persisted to localStorage.
 - **Keyboard navigation** — Left/right arrow keys navigate between weeks (when no input is focused).
-- **In-app feedback form** — Rate VinFocus, share what you use it for, and suggest improvements. Feedback is stored in a SQLite database.
+- **In-app feedback form** — Rate VinFocus, share what you use it for, and suggest improvements. Feedback is stored in a PostgreSQL database.
 
 ## Tech Stack
 
 - **Python** — Backend logic and API
 - **Flask** — Web framework
+- **Flask-CORS** — Cross-origin resource sharing for frontend access
 - **Requests** — HTTP client for Canvas API
+- **psycopg2** — PostgreSQL database driver
+- **python-dotenv** — Environment variable management
+- **gunicorn** — Production WSGI server
 - **pytest** — Testing framework
 - **HTML / CSS / JavaScript** — Frontend
 
@@ -120,14 +124,10 @@ If you prefer to run the app on your own machine instead of using the hosted ver
 1. Install dependencies:
 
 ```bash
-pip install flask requests
+pip install -r requirements.txt
 ```
 
-For testing:
-
-```bash
-pip install pytest
-```
+This will install all required packages including Flask, Flask-CORS, psycopg2-binary, python-dotenv, gunicorn, and requests.
 
 2. Start the app:
 
@@ -157,7 +157,9 @@ The test suite covers:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `API_TOKEN` | — | Canvas API token (optional — can be set via the UI wizard instead) |
+| `DATABASE_URL` | — | PostgreSQL database URL (for feedback feature) |
 | `FLASK_DEBUG` | `"false"` | Enable Flask debug mode |
+| `PORT` | `5000` | Port for the development server |
 
 ## Future Plans
 

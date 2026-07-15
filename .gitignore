@@ -39,3 +39,7 @@ dist/
 
 # Database
 feedback.db
+
+.env
+
+test_fixes.py

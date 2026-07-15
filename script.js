@@ -21,7 +21,7 @@ const timetableHeader = document.querySelector(".timetable_header");
 
 const VINFOCUS_SCRIPT_VERSION = "2.0-fixed";
 console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
-const DEBUG = true;
+const DEBUG = false;
 function debugLog(...args) {
   if (DEBUG) console.log("[VinFocus Debug]", ...args);
 }
@@ -1389,7 +1389,7 @@ weekInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     const value = Number(weekInput.value);
-    if (!Number.isFinite(value) || value < 1) {
+    if (!Number.isFinite(value) || value < 0) {
       updateWeekNav();
       return;
     }
@@ -2047,7 +2047,6 @@ function openFeedbackForm() {
     star.className = "star";
     star.dataset.value = i;
     star.textContent = "★";
-    star.dataset.value = i;
     star.addEventListener("click", () => {
       selectedRating = i;
       starContainer.querySelectorAll(".star").forEach((s, idx) => {
