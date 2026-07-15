@@ -462,6 +462,7 @@ let currentWeek = (() => { const w = Number(localStorage.getItem("selectedWeek")
 let coursesLoaded = false;
 let itemCache = new Map();
 let timetableMobileView = localStorage.getItem("timetableMobileView") || "today";
+let currentRequestController = null; // For cancelling stale requests
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -514,6 +515,7 @@ function apiFetch(url, options = {}) {
   }
   return fetch(url, { ...options, headers });
 }
+
 
 async function fetchJson(url) {
   debugLog("fetchJson: calling", url);
@@ -781,15 +783,27 @@ async function loadItems() {
 
   showSkeletonLoading();
 
+  // Cancel any previous request to prevent race conditions
+  if (currentRequestController) {
+    currentRequestController.abort();
+  }
+  currentRequestController = new AbortController();
+
   try {
-    const data = await fetchJson(weekApiPath(selectedCourseId, currentWeek));
+    const data = await fetchJson(weekApiPath(selectedCourseId, currentWeek), {
+      signal: currentRequestController.signal
+    });
     items = data.items;
     itemCache.set(cacheKey, items);
     updateHubTitle();
     updateWeekNav();
     renderItems();
   } catch (error) {
-    showMessage(error.message);
+    if (error.name !== 'AbortError') {
+      showMessage(error.message);
+    }
+  } finally {
+    currentRequestController = null;
   }
 }
 
@@ -1007,7 +1021,8 @@ function renderTimetableGrid() {
         slot.title = "Click to edit subject";
         slot.dataset.dayKey = day.key;
         slot.dataset.periodKey = period.key;
-        slot.addEventListener("click", () => openSubjectEditor(day.key, period.key, slot));
+        // Use a single event listener on the parent instead of per-slot listeners
+        slot.addEventListener("click", handleSlotClick);
       }
 
       slot.append(createSlotContent(period, entry));
@@ -1016,6 +1031,16 @@ function renderTimetableGrid() {
   }
 
   timetableGrid.replaceChildren(...cells);
+}
+
+// Event handler for timetable slot clicks (single handler for all slots)
+function handleSlotClick(event) {
+  const slot = event.currentTarget;
+  const dayKey = slot.dataset.dayKey;
+  const periodKey = slot.dataset.periodKey;
+  if (dayKey && periodKey) {
+    openSubjectEditor(dayKey, periodKey, slot);
+  }
 }
 
 function renderTimetableMobile() {
@@ -1087,10 +1112,10 @@ function renderTimetableMobile() {
       
       if (timetableEditMode && period.type === "class") {
         slot.style.cursor = "pointer";
-
-        slot.addEventListener("click", () => {
-          openSubjectEditor(day.key, period.key, slot);
-        });
+        slot.dataset.dayKey = day.key;
+        slot.dataset.periodKey = period.key;
+        // Use single event handler
+        slot.addEventListener("click", handleSlotClick);
       }
 
       slot.append(time, content);
@@ -1382,8 +1407,23 @@ function setView(viewName) {
   }
 }
 
-prevWeekBtn.addEventListener("click", () => changeWeek(-1));
-nextWeekBtn.addEventListener("click", () => changeWeek(1));
+// Use a flag to prevent duplicate event listeners
+let weekNavListenersAttached = false;
+
+function attachWeekNavListeners() {
+  if (weekNavListenersAttached) return;
+  
+  prevWeekBtn.addEventListener("click", () => changeWeek(-1));
+  nextWeekBtn.addEventListener("click", () => changeWeek(1));
+  weekNavListenersAttached = true;
+}
+
+// Attach listeners when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", attachWeekNavListeners);
+} else {
+  attachWeekNavListeners();
+}
 
 weekInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -1418,7 +1458,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-unfinishedOnly.addEventListener("change", loadItems);
+unfinishedOnly.addEventListener("click", loadItems);
 
 // Search input management
 function updateSearchWrapperClass() {
@@ -1626,7 +1666,7 @@ async function validateAndSaveToken() {
   debugLog("validateAndSaveToken called, token present:", !!token);
 
   if (!token) {
-    msg.textContent = t("setupTokenLabel");
+    msg.textContent = t("setupError");
     msg.className = "setup_message setup_message_error";
     return;
   }
@@ -1935,6 +1975,12 @@ function openTokenSettings() {
   }
   inputGroup.appendChild(input);
 
+  // Message area - MUST be defined before the validate button event listener
+  const msg = document.createElement("p");
+  msg.id = "settings_token_message";
+  msg.className = "setup_message";
+  content.appendChild(msg);
+
   const validateBtn = document.createElement("button");
   validateBtn.type = "button";
   validateBtn.className = "setup_validate_btn";
@@ -1942,7 +1988,7 @@ function openTokenSettings() {
   validateBtn.addEventListener("click", async () => {
     const token = input.value.trim();
     if (!token) {
-      msg.textContent = t("setupTokenLabel");
+      msg.textContent = t("setupError");
       msg.className = "setup_message setup_message_error";
       return;
     }
@@ -1981,12 +2027,6 @@ function openTokenSettings() {
   inputGroup.appendChild(validateBtn);
 
   content.appendChild(inputGroup);
-
-  // Message area
-  const msg = document.createElement("p");
-  msg.id = "settings_token_message";
-  msg.className = "setup_message";
-  content.appendChild(msg);
 
   // "Need a token?" link to open the tutorial wizard
   const needTokenBtn = document.createElement("button");

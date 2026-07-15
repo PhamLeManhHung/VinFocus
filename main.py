@@ -4,6 +4,7 @@ import time
 import threading
 import logging
 import hashlib
+import hmac
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 from functools import lru_cache
@@ -82,12 +83,14 @@ def cache_get(key: str) -> Optional[Any]:
 def cache_set(key: str, data: Any) -> None:
     """Store a value in the cache with the current timestamp.
     
-    Implements LRU eviction if cache size exceeds MAX_CACHE_SIZE.
+    Implements FIFO eviction if cache size exceeds MAX_CACHE_SIZE.
+    Note: This is a simple FIFO eviction, not true LRU, due to Python dict
+    insertion order preservation in Python 3.7+.
     """
     with _cache_lock:
-        # Enforce cache size limit using simple LRU eviction
+        # Enforce cache size limit using FIFO eviction
         if len(_cache) >= Config.MAX_CACHE_SIZE:
-            # Remove oldest entries (simple FIFO eviction)
+            # Remove oldest 20% of entries (FIFO eviction)
             keys_to_remove = list(_cache.keys())[:int(Config.MAX_CACHE_SIZE * 0.2)]
             for old_key in keys_to_remove:
                 del _cache[old_key]
@@ -112,14 +115,15 @@ def styles():
 
 
 def token_hash(headers: Dict[str, str]) -> str:
-    """Generate a short hash from the authorization token for cache key namespacing.
+    """Generate a hash from the authorization token for cache key namespacing.
     
     This ensures cache entries are user-specific and prevents data leaks between users.
+    Uses full SHA256 hash to eliminate collision risk.
     """
     token = headers.get("Authorization", "")
     if token.startswith("Bearer "):
         token = token[7:]
-    return hashlib.sha256(token.encode()).hexdigest()[:12]
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def get_canvas_headers() -> Optional[Dict[str, str]]:
@@ -327,7 +331,10 @@ def get_course_name(course_id: int, headers: Dict[str, str]) -> str:
         return cached
 
     data, response = canvas_get(course_api_url(course_id), headers)
-    name = (data.get("name") if response is None else None) or f"Course {course_id}"
+    if response is not None or data is None:
+        name = f"Course {course_id}"
+    else:
+        name = data.get("name") or f"Course {course_id}"
     cache_set(cache_key, name)
     return name
 
@@ -418,9 +425,9 @@ def format_module_item(course_id: int, course_name: str, module: Dict[str, Any],
     return {
         "course_id": course_id,
         "course_name": course_name,
-        "module": module["name"],
-        "title": item.get("title"),
-        "type": item.get("type"),
+        "module": module.get("name", "Unnamed Module"),
+        "title": item.get("title", "Untitled"),
+        "type": item.get("type", "Unknown"),
         "completed": completion.get("completed", False),
         "module_item_id": item.get("id"),
         "url": item_url(course_id, item),
@@ -592,10 +599,15 @@ def list_course_weeks(course_id: int):
     has_general = False
     for module in modules:
         module_weeks = extract_weeks(module.get("name"))
-        if module_weeks:
-            weeks.update(module_weeks)
-        else:
+        if not module_weeks:
+            # Module has no week information at all
             has_general = True
+        else:
+            # Validate week numbers (reasonable bounds: 0-100)
+            validated_weeks = [w for w in module_weeks if 0 <= w <= 100]
+            if validated_weeks:
+                weeks.update(validated_weeks)
+            # If all week numbers were invalid (>100), don't count as general
 
     result = sorted(weeks)
     if has_general:
@@ -826,9 +838,11 @@ def get_feedback():
     
     Requires admin API key for authentication.
     """
-    # Check admin API key
+    # Check admin API key (use constant-time comparison to prevent timing attacks)
+    import hmac
     admin_key = request.headers.get("X-Admin-Key")
-    if not admin_key or admin_key != os.getenv("ADMIN_API_KEY"):
+    expected_key = os.getenv("ADMIN_API_KEY", "")
+    if not admin_key or not hmac.compare_digest(admin_key, expected_key):
         logger.warning("Unauthorized attempt to access feedback endpoint")
         return jsonify({"error": "Unauthorized. Admin access required."}), 401
     
