@@ -12,6 +12,9 @@ services:
         fromDatabase:
           name: vinfocus_feedback
           property: connectionString
+      - key: ADMIN_API_KEY
+        generateValue:
+          length: 32
     healthCheckPath: /health
     autoDeploy: true
 

@@ -822,6 +822,16 @@ def submit_feedback():
 
 @app.get("/api/feedback")
 def get_feedback():
+    """Get all feedback submissions.
+    
+    Requires admin API key for authentication.
+    """
+    # Check admin API key
+    admin_key = request.headers.get("X-Admin-Key")
+    if not admin_key or admin_key != os.getenv("ADMIN_API_KEY"):
+        logger.warning("Unauthorized attempt to access feedback endpoint")
+        return jsonify({"error": "Unauthorized. Admin access required."}), 401
+    
     if _db_pool is None:
         return jsonify({"error": "Database not configured"}), 503
     
