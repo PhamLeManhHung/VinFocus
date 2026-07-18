@@ -18,6 +18,7 @@ const tagline = document.getElementById("tagline");
 const timetableTitle = document.getElementById("timetable_title");
 const timetableNote = document.getElementById("timetable_note");
 const timetableHeader = document.querySelector(".timetable_header");
+const subjectLabelEditBtn = document.getElementById("subject_label_edit_btn");
 
 const VINFOCUS_SCRIPT_VERSION = "2.0-fixed";
 console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
@@ -67,9 +68,47 @@ function t(key) {
   return TRANSLATIONS[currentLanguage]?.[key] ?? key;
 }
 
+// ── Subject Label Override System ──────────────────────────────
+// Each entry: { label: string }
+
+function getCustomSubjectLabels() {
+  try {
+    const stored = localStorage.getItem("custom_subject_labels");
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCustomSubjectLabels(labels) {
+  localStorage.setItem("custom_subject_labels", JSON.stringify(labels));
+}
+
+function resetCustomSubjectLabels() {
+  localStorage.removeItem("custom_subject_labels");
+}
+
 function getSubjectLabel(subjectId) {
+  const customLabels = getCustomSubjectLabels();
+  const entry = customLabels[subjectId];
+  if (entry && entry.label && entry.label.trim()) {
+    return entry.label.trim();
+  }
   return SUBJECT_LABELS[currentLanguage]?.[subjectId] ?? subjectId;
 }
+
+function setSubjectCustomization(subjectId, label) {
+  const labels = getCustomSubjectLabels();
+  if (label && label.trim()) {
+    labels[subjectId] = { label: label.trim() };
+  } else {
+    delete labels[subjectId];
+  }
+  saveCustomSubjectLabels(labels);
+}
+
+// Subject label edit mode (rename only, no color)
+let subjectLabelEditMode = false;
 
 // Translation dictionaries
 const TRANSLATIONS = {
@@ -142,7 +181,7 @@ const TRANSLATIONS = {
     setupError: "Invalid token. Please check and try again.",
     setupTokenHelp: "Don't have a token yet? Follow the steps below.",
     setupSecurityTitle: "⚠️ Security Notice",
-    setupSecurityDesc: "Your Canvas API token is like a password. It grants full access to your Canvas account. VinFocus only uses this token to read your course data. It is never sent to any third party. • Never share your token with anyone • Never commit it to public code repositories • Your Canvas API token is stored only in your browser's local storage. VinFocus does not store your token on any server. The token is transmitted only as needed to authenticate requests to Canvas. • You can revoke it anytime from your Canvas Account Settings.",
+    setupSecurityDesc: "",
     setupStep1Title: "Log in to Vinschool Canvas",
     setupStep1Desc: "Go to lms.vinschool.edu.vn and log in with your school account.",
     setupStep2Title: "Open Account Settings",
@@ -155,7 +194,7 @@ const TRANSLATIONS = {
     setupStep5Desc: 'Set "Mục Đích" (Purpose) to "VinFocus" and select the latest possible date for "Ngày Hết Hạn" (Expiration Date).',
     setupStep5Note: "Each token lasts up to 4 months. You'll need to repeat this process about 2-3 times per school year.",
     setupStep6Title: "Copy and Paste Your Token",
-    setupStep6Desc: "Copy the generated API key and paste it into the field below.",
+    setupStep6Desc: "Copy the generated API key and paste it into the field at the final step.",
     setupScreenshot: "Screenshot coming soon",
     tokenExpiresSoon: "Your API token will expire in {days} days.",
     tokenExpired: "Your API token has expired. Please update it.",
@@ -171,6 +210,15 @@ const TRANSLATIONS = {
     settingsTitle: "Settings",
     settingsApiToken: "API Token Settings",
     settingsFeedback: "Send Feedback",
+    subjectLabelsTitle: "Custom Subject Labels",
+    subjectLabelsDesc: "Set custom labels for subject codes. These override the default names and persist across language changes. Leave a field empty to use the default.",
+    subjectLabelsReset: "Reset",
+    subjectLabelsResetConfirm: "Reset all custom labels to defaults?",
+    subjectLabelsSave: "Save",
+    subjectLabelsCancel: "Cancel",
+    subjectLabelsRename: "Rename",
+    subjectLabelsColor: "Color",
+    subjectLabelsDefault: "Default",
     feedbackTitle: "Send Feedback",
     feedbackRating: "How useful has VinFocus been?",
     feedbackUsage: "What do you use it for most?",
@@ -188,8 +236,62 @@ const TRANSLATIONS = {
     feedbackSubmitting: "Submitting...",
     feedbackSuccess: "Thank you for your feedback!",
     feedbackError: "Something went wrong. Please try again.",
+    
+    // Terms and Conditions
+    tcTitle: "Terms and Conditions",
+    tcSection1Title: "1. Independent Project",
+    tcSection1Text: "VinFocus is an independent student-created project and is not affiliated with, endorsed by, or operated by Vinschool, Canvas, or Instructure.",
+    tcSection2Title: "2. Use of API Tokens",
+    tcSection2Text: "Users are responsible for keeping their API tokens secure. VinFocus stores tokens locally in your browser and does not intentionally transmit them to third parties. Never share your API token with others.",
+    tcSection3Title: "3. Privacy",
+    tcSection3Text: "VinFocus may collect anonymous feedback submitted by users. Feedback may be stored and reviewed to improve the service. API tokens are not stored in the VinFocus database — they are stored only in your browser's local storage.",
+    tcSection4Title: "4. No Warranty",
+    tcSection4Text: "VinFocus is provided 'as is' without guarantees of availability, accuracy, or reliability. Course information displayed in VinFocus originates from Canvas and may be incomplete, outdated, or inaccurate.",
+    tcSection5Title: "5. Limitation of Liability",
+    tcSection5Text: "The creator of VinFocus is not responsible for missed assignments, lost data, academic consequences, or any damages resulting from the use of the service.",
+    tcSection6Title: "6. Service Changes",
+    tcSection6Text: "Features may be modified, suspended, or removed at any time without prior notice.",
+    tcSection7Title: "7. Contact",
+    tcSection7Text: "For questions or feedback about VinFocus, please use the feedback form available in the app.",
+    tcApiWarning: "Your Canvas API token is like a password — keep it private.",
+    tcAgreeCheckbox: "I agree to the Terms and Conditions",
+    tcViewTerms: "View Terms",
+    setupTcError: "Please agree to the Terms and Conditions before proceeding.",
+    
+    // Overview
+    overview: "Overview",
+    overviewLoading: "Loading overview...",
+    overviewTotal: "Total items",
+    overviewDone: "Done",
+    overviewUnfinished: "Unfinished",
+    overviewWeeks: "Weeks",
+    overviewNoData: "No overview data available.",
+    overviewWeekGeneral: "General",
   },
   vi: {
+    feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
+    
+    // Terms and Conditions
+    tcTitle: "Điều Khoản Dịch Vụ",
+    tcSection1Title: "1. Dự án Độc lập",
+    tcSection1Text: "VinFocus là một dự án độc lập do học sinh tạo ra và không liên kết, được chứng nhận, hoặc được vận hành bởi Vinschool, Canvas, hoặc Instructure.",
+    tcSection2Title: "2. Sử dụng Mã API",
+    tcSection2Text: "Người dùng chịu trách nhiệm giữ bảo mật mã API của họ. VinFocus lưu trữ mã cục bộ trong trình duyệt của bạn và không cố ý truyền chúng cho bên thứ ba. Không bao giờ chia sẻ mã API của bạn với người khác.",
+    tcSection3Title: "3. Quyền Riêng Tư",
+    tcSection3Text: "VinFocus có thể thu thập phản hồi ẩn danh do người dùng gửi. Phản hồi có thể được lưu trữ và xem xét để cải thiện dịch vụ. Mã API không được lưu trữ trong cơ sở dữ liệu VinFocus — chúng chỉ được lưu trữ trong bộ nhớ cục bộ của trình duyệt của bạn.",
+    tcSection4Title: "4. Không Có Bảo Hàng",
+    tcSection4Text: "VinFocus được cung cấp 'như hiện tại' mà không có đảm bảo về tính sẵn sàng, độ chính xác, hoặc độ tin cậy. Thông tin khóa học hiển thị trong VinFocus có nguồn gốc từ Canvas và có thể không đầy đủ, lỗi thời, hoặc không chính xác.",
+    tcSection5Title: "5. Giới Hạn Trách Nhiệm",
+    tcSection5Text: "Người tạo VinFocus không chịu trách nhiệm về bài tập bị bỏ lỡ, dữ liệu bị mất, hậu quả học tập, hoặc bất kỳ thiệt hại nào phát sinh từ việc sử dụng dịch vụ.",
+    tcSection6Title: "6. Thay Đổi Dịch Vụ",
+    tcSection6Text: "Các tính năng có thể được sửa đổi, tạm dừng, hoặc xóa bỏ bất kỳ lúc nào mà không cần thông báo trước.",
+    tcSection7Title: "7. Liên Hệ",
+    tcSection7Text: "Đối với câu hỏi hoặc phản hồi về VinFocus, vui lòng sử dụng biểu mẫu phản hồi có sẵn trong ứng dụng.",
+    tcApiWarning: "Mã API Canvas của bạn giống như mật khẩu — hãy giữ bảo mật.",
+    tcAgreeCheckbox: "Tôi đồng ý với Điều khoản Dịch vụ",
+    tcViewTerms: "Xem Điều khoản",
+    setupTcError: "Vui lòng đồng ý với Điều khoản Dịch vụ trước khi tiếp tục.",
+    
     monday: "Thứ Hai",
     tuesday: "Thứ Ba",
     wednesday: "Thứ Tư",
@@ -258,7 +360,7 @@ const TRANSLATIONS = {
     setupError: "Mã không hợp lệ. Vui lòng kiểm tra lại.",
     setupTokenHelp: "Chưa có mã? Làm theo các bước dưới đây.",
     setupSecurityTitle: "⚠️ Lưu ý Bảo Mật",
-    setupSecurityDesc: "Mã API Canvas của bạn giống như mật khẩu. Nó cấp quyền truy cập đầy đủ vào tài khoản Canvas của bạn. VinFocus chỉ sử dụng mã này để đọc dữ liệu khóa học của bạn. Mã không bao giờ được gửi cho bên thứ ba.\n\n• Không bao giờ chia sẻ mã của bạn với bất kỳ ai\n• Không bao giờ đưa nó vào kho mã nguồn công cộng\n• Mã API Canvas của bạn chỉ được lưu trữ trong bộ nhớ cục bộ của trình duyệt. VinFocus không lưu trữ mã của bạn trên bất kỳ máy chủ nào. Mã chỉ được truyền đi khi cần thiết để xác thực các yêu cầu tới Canvas.\n• Bạn có thể thu hồi mã bất cứ lúc nào từ Cài Đặt Tài Khoản Canvas.\n\n",
+    setupSecurityDesc: "",
     setupStep1Title: "Đăng nhập vào Vinschool Canvas",
     setupStep1Desc: "Truy cập lms.vinschool.edu.vn và đăng nhập bằng tài khoản trường của bạn.",
     setupStep2Title: "Mở Cài Đặt Tài Khoản",
@@ -271,7 +373,7 @@ const TRANSLATIONS = {
     setupStep5Desc: 'Đặt "Mục Đích" là "VinFocus" và chọn ngày xa nhất có thể cho "Ngày Hết Hạn".',
     setupStep5Note: "Mỗi token có thời hạn tối đa 4 tháng. Bạn sẽ cần làm lại quy trình này khoảng 2-3 lần mỗi năm học.",
     setupStep6Title: "Sao Chép và Dán Token",
-    setupStep6Desc: "Sao chép mã API được tạo và dán vào ô bên dưới.",
+    setupStep6Desc: "Sao chép mã API được tạo và dán vào ô ở bước cuối cùng.",
     setupScreenshot: "Ảnh chụp màn hình sẽ được cập nhật sau",
     tokenExpiresSoon: "Mã API của bạn sẽ hết hạn trong {days} ngày.",
     tokenExpired: "Mã API của bạn đã hết hạn. Vui lòng cập nhật.",
@@ -287,6 +389,15 @@ const TRANSLATIONS = {
     settingsTitle: "Cài Đặt",
     settingsApiToken: "Cài Đặt Mã API",
     settingsFeedback: "Gửi Phản Hồi",
+    subjectLabelsTitle: "Nhãn Môn Học Tùy Chỉnh",
+    subjectLabelsDesc: "Đặt nhãn tùy chỉnh cho mã môn học. Các nhãn này ghi đè tên mặc định và duy trì khi chuyển ngôn ngữ. Để trống để dùng nhãn mặc định.",
+    subjectLabelsReset: "Đặt Lại",
+    subjectLabelsResetConfirm: "Đặt lại tất cả nhãn tùy chỉnh về mặc định?",
+    subjectLabelsSave: "Lưu",
+    subjectLabelsCancel: "Hủy",
+    subjectLabelsRename: "Đổi tên",
+    subjectLabelsColor: "Màu",
+    subjectLabelsDefault: "Mặc định",
     feedbackTitle: "Gửi Phản Hồi",
     feedbackRating: "VinFocus hữu ích như thế nào?",
     feedbackUsage: "Bạn sử dụng VinFocus nhiều nhất để làm gì?",
@@ -304,6 +415,16 @@ const TRANSLATIONS = {
     feedbackSubmitting: "Đang gửi...",
     feedbackSuccess: "Cảm ơn bạn đã phản hồi!",
     feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
+    
+    // Overview
+    overview: "Tổng Quan",
+    overviewLoading: "Đang tải tổng quan...",
+    overviewTotal: "Tổng số",
+    overviewDone: "Hoàn Thành",
+    overviewUnfinished: "Chưa HT",
+    overviewWeeks: "Tuần",
+    overviewNoData: "Không có dữ liệu tổng quan.",
+    overviewWeekGeneral: "Chung",
   },
 };
 
@@ -461,8 +582,13 @@ let selectedCourseId = null;
 let currentWeek = (() => { const w = Number(localStorage.getItem("selectedWeek")); return Number.isFinite(w) ? w : 36; })();
 let coursesLoaded = false;
 let itemCache = new Map();
+let overviewCache = new Map();
 let timetableMobileView = localStorage.getItem("timetableMobileView") || "today";
 let currentRequestController = null; // For cancelling stale requests
+let currentOverviewController = null; // For cancelling stale overview requests
+
+// ── Overview state ─────────────────────────────────────────────
+let overviewData = null;
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -517,9 +643,9 @@ function apiFetch(url, options = {}) {
 }
 
 
-async function fetchJson(url) {
+async function fetchJson(url, options = {}) {
   debugLog("fetchJson: calling", url);
-  const response = await apiFetch(url);
+  const response = await apiFetch(url, options);
   debugLog("fetchJson: response status", response.status, "for", url);
 
   if (!response.ok) {
@@ -677,6 +803,7 @@ function renderCoursePills() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "course_pill";
+      
       button.textContent = courseShortLabel(course);
       button.title = course.name || course.course_code || "";
       button.setAttribute("aria-pressed", String(course.id === selectedCourseId));
@@ -685,10 +812,198 @@ function renderCoursePills() {
         button.classList.add("course_pill_active");
       }
 
-      button.addEventListener("click", () => selectCourse(course.id));
+      if (subjectLabelEditMode) {
+        // In edit mode, pills open the label editor instead of switching courses
+        button.style.cursor = "pointer";
+        const subjectKey = courseSubjectKey(course);
+        button.dataset.subjectKey = subjectKey || "";
+        button.dataset.courseId = course.id;
+        button.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const sk = button.dataset.subjectKey;
+          if (sk) {
+            openSubjectLabelEditor(sk, button);
+          }
+        });
+      } else {
+        button.addEventListener("click", () => selectCourse(course.id));
+      }
+      
       return button;
     })
   );
+  
+  // Show/hide reset all button in edit mode
+  updateSubjectLabelResetBtn();
+}
+
+function updateSubjectLabelResetBtn() {
+  const existing = document.getElementById("subject_label_reset_all");
+  if (existing) existing.remove();
+  
+  if (subjectLabelEditMode) {
+    const resetBtn = document.createElement("button");
+    resetBtn.id = "subject_label_reset_all";
+    resetBtn.type = "button";
+    resetBtn.className = "subject_label_reset_all_btn";
+    resetBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/>
+  <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/>
+</svg>`;
+    resetBtn.setAttribute("aria-label", t("subjectLabelsReset"));
+    resetBtn.title = t("subjectLabelsReset");
+    resetBtn.addEventListener("click", () => {
+      if (confirm(t("subjectLabelsResetConfirm"))) {
+        resetCustomSubjectLabels();
+        subjectLabelEditMode = false;
+        updateSubjectLabelEditBtn();
+        renderCoursePills();
+        renderAll();
+      }
+    });
+    const actionsContainer = document.getElementById("subject_label_actions");
+    if (actionsContainer) {
+      actionsContainer.appendChild(resetBtn);
+    }
+  }
+}
+
+function updateSubjectLabelEditBtn() {
+  if (subjectLabelEditBtn) {
+    subjectLabelEditBtn.classList.toggle("subject_label_edit_btn_active", subjectLabelEditMode);
+  }
+}
+
+function toggleSubjectLabelEditMode() {
+  subjectLabelEditMode = !subjectLabelEditMode;
+  updateSubjectLabelEditBtn();
+  renderCoursePills();
+}
+
+// Store references to event handlers for cleanup
+let popoverOutsideClickHandler = null;
+let popoverEscapeKeyHandler = null;
+
+function openSubjectLabelEditor(subjectKey, pillElement) {
+  // Close any existing editor
+  closeSubjectLabelEditor();
+
+  const currentCustom = getCustomSubjectLabels();
+  const entry = currentCustom[subjectKey] || {};
+  const currentLabel = entry.label || "";
+  const defaultLabel = SUBJECT_LABELS[currentLanguage]?.[subjectKey] || subjectKey;
+
+  const popover = document.createElement("div");
+  popover.className = "subject_label_popover";
+
+  // Rename input
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.className = "subject_label_inline_input";
+  nameInput.placeholder = defaultLabel;
+  nameInput.value = currentLabel;
+  nameInput.setAttribute("aria-label", `${t("subjectLabelsRename")} ${subjectKey}`);
+
+  // Buttons
+  const btnRow = document.createElement("div");
+  btnRow.className = "subject_label_inline_btns";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "timetable_editor_btn";
+  saveBtn.textContent = t("subjectLabelsSave");
+  saveBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const newLabel = nameInput.value.trim();
+    setSubjectCustomization(subjectKey, newLabel);
+    closeSubjectLabelEditor();
+    renderCoursePills();
+    renderAll();
+    // Re-enter edit mode after re-render
+    subjectLabelEditMode = true;
+    updateSubjectLabelEditBtn();
+    renderCoursePills();
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "timetable_editor_btn";
+  cancelBtn.textContent = t("subjectLabelsCancel");
+  cancelBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeSubjectLabelEditor();
+  });
+
+  btnRow.append(saveBtn, cancelBtn);
+  popover.append(nameInput, btnRow);
+
+  // Append to body and position
+  document.body.appendChild(popover);
+  positionPopoverBelow(popover, pillElement);
+
+  // Auto-focus the input
+  setTimeout(() => nameInput.focus(), 0);
+
+  // Setup click-outside and escape key handlers
+  setupPopoverCloseHandlers(popover, pillElement);
+}
+
+function positionPopoverBelow(popover, anchorElement) {
+  const rect = anchorElement.getBoundingClientRect();
+  
+  // Position below the anchor element
+  let top = rect.bottom + window.scrollY + 8;
+  let left = rect.left + window.scrollX;
+  
+  // Get popover width for boundary check (use estimated width since popover isn't rendered yet)
+  const estimatedWidth = 280;
+  
+  // Ensure popover doesn't go off-screen on the right
+  const maxLeft = window.innerWidth - estimatedWidth - 16;
+  if (left > maxLeft) {
+    left = Math.max(16, maxLeft);
+  }
+  
+  popover.style.top = `${top}px`;
+  popover.style.left = `${left}px`;
+}
+
+function setupPopoverCloseHandlers(popover, anchorElement) {
+  // Click outside to close
+  popoverOutsideClickHandler = function(e) {
+    if (!popover.contains(e.target) && e.target !== anchorElement) {
+      closeSubjectLabelEditor();
+    }
+  };
+  
+  // Escape key to close
+  popoverEscapeKeyHandler = function(e) {
+    if (e.key === "Escape") {
+      closeSubjectLabelEditor();
+    }
+  };
+  
+  // Add event listeners
+  document.addEventListener("mousedown", popoverOutsideClickHandler);
+  document.addEventListener("touchstart", popoverOutsideClickHandler);
+  document.addEventListener("keydown", popoverEscapeKeyHandler);
+}
+
+function closeSubjectLabelEditor() {
+  const popover = document.querySelector(".subject_label_popover");
+  if (popover) {
+    popover.remove();
+  }
+  // Remove event listeners
+  if (popoverOutsideClickHandler) {
+    document.removeEventListener("mousedown", popoverOutsideClickHandler);
+    document.removeEventListener("touchstart", popoverOutsideClickHandler);
+    popoverOutsideClickHandler = null;
+  }
+  if (popoverEscapeKeyHandler) {
+    document.removeEventListener("keydown", popoverEscapeKeyHandler);
+    popoverEscapeKeyHandler = null;
+  }
 }
 
 function updateWeekNav() {
@@ -744,6 +1059,8 @@ async function loadCourses() {
   renderCoursePills();
   await loadWeeks();
   await loadItems();
+
+  await loadOverview();
 }
 
 async function loadWeeks() {
@@ -808,11 +1125,14 @@ async function loadItems() {
 }
 
 async function selectCourse(courseId) {
+  if (subjectLabelEditMode) return; // Don't switch courses in edit mode
   selectedCourseId = courseId;
   localStorage.setItem("selectedCourseId", String(courseId));
   renderCoursePills();
   await loadWeeks();
   await loadItems();
+
+  await loadOverview();
 }
 
 function changeWeek(delta) {
@@ -917,16 +1237,19 @@ function createSlotContent(period, entry) {
   if (period.type === "break") {
     subject.textContent = t(period.labelKey);
   } else if (entry?.subject) {
-    // Extract subject ID and teacher info from strings like "ESL (GVVN)"
+    // Extract subject ID from the entry
     const subjectMatch = entry.subject.match(/^([A-Z]+)\s*(?:\(([^)]+)\))?$/);
+    let subjectId;
+    let teacherInfo;
     if (subjectMatch) {
-      const subjectId = subjectMatch[1];
-      const teacherInfo = subjectMatch[2];
-      const subjectLabel = getSubjectLabel(subjectId);
-      subject.textContent = teacherInfo ? `${subjectLabel} (${teacherInfo})` : subjectLabel;
+      subjectId = subjectMatch[1];
+      teacherInfo = subjectMatch[2];
     } else {
-      subject.textContent = getSubjectLabel(entry.subject);
+      subjectId = entry.subject;
+      teacherInfo = null;
     }
+    const subjectLabel = getSubjectLabel(subjectId);
+    subject.textContent = teacherInfo ? `${subjectLabel} (${teacherInfo})` : subjectLabel;
   } else {
     subject.textContent = t("free");
   }
@@ -1332,6 +1655,224 @@ function toggleTimetableEditMode() {
   renderTimetable();
 }
 
+// ── Overview ────────────────────────────────────────────────────
+
+async function loadOverview() {
+  if (!selectedCourseId) return;
+
+  const container = document.getElementById("overview_container");
+  if (!container) return;
+
+  const spinner = document.getElementById("overview_spinner");
+  
+  // Cancel any previous overview request to prevent race conditions
+  if (currentOverviewController) {
+    currentOverviewController.abort();
+  }
+  currentOverviewController = new AbortController();
+  const signal = currentOverviewController.signal;
+
+  // Check cache first
+  const cacheKey = `overview:${selectedCourseId}`;
+  const cached = overviewCache.get(cacheKey);
+  if (cached) {
+    overviewData = cached;
+    if (spinner) {
+      spinner.classList.remove("overview_spinner_visible");
+    }
+    renderOverview(overviewData);
+    return;
+  }
+
+  // Show spinner, hide previous content
+  if (spinner) {
+    spinner.classList.add("overview_spinner_visible");
+  }
+  container.innerHTML = "";
+
+  overviewData = null;
+
+  try {
+    // Reuse availableWeeks if already loaded, otherwise fetch them
+    let weeks = availableWeeks;
+    if (weeks.length === 0) {
+      const weeksData = await fetchJson(`/api/courses/${selectedCourseId}/weeks`, { signal });
+      weeks = weeksData.weeks || [];
+    }
+
+    // Get the course name
+    const course = courses.find(c => c.id === selectedCourseId);
+    const courseLabel = course ? courseShortLabel(course) : "Course";
+
+    // Fetch items for each week (both all and unfinished) in parallel
+    const weekSummaries = await Promise.all(
+      weeks.map(async (week) => {
+        try {
+          const [allItemsData, unfinishedData] = await Promise.all([
+            fetchJson(`/api/courses/${selectedCourseId}/week/${week}`, { signal }),
+            fetchJson(`/api/courses/${selectedCourseId}/week/${week}/unfinished`, { signal }),
+          ]);
+
+          // Cache items so subsequent navigation to that week is instant
+          const allCacheKey = `${selectedCourseId}:${week}:false`;
+          itemCache.set(allCacheKey, allItemsData.items);
+          const unfinCacheKey = `${selectedCourseId}:${week}:true`;
+          itemCache.set(unfinCacheKey, unfinishedData.items);
+
+          const allItems = allItemsData.items || [];
+          const unfinishedItems = unfinishedData.items || [];
+          const doneCount = allItems.length - unfinishedItems.length;
+
+          // Count by type
+          const typeCounts = {};
+          for (const item of allItems) {
+            typeCounts[item.type] = (typeCounts[item.type] || 0) + 1;
+          }
+
+          return {
+            week: week,
+            total: allItems.length,
+            done: doneCount,
+            unfinished: unfinishedItems.length,
+            typeCounts,
+          };
+        } catch {
+          // Skip weeks that fail to load
+          return {
+            week: week,
+            total: 0,
+            done: 0,
+            unfinished: 0,
+            typeCounts: {},
+          };
+        }
+      })
+    );
+
+    overviewData = {
+      courseName: courseLabel,
+      weeks: weekSummaries,
+    };
+
+    // Cache the overview data
+    overviewCache.set(cacheKey, overviewData);
+
+    // Hide spinner before rendering
+    if (spinner) {
+      spinner.classList.remove("overview_spinner_visible");
+    }
+    
+    renderOverview(overviewData);
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    // Hide spinner on error
+    if (spinner) {
+      spinner.classList.remove("overview_spinner_visible");
+    }
+    container.innerHTML = `<p class="empty_message">${t("overviewNoData")}</p>`;
+  } finally {
+    currentOverviewController = null;
+  }
+}
+
+function renderOverview(data) {
+  const container = document.getElementById("overview_container");
+  if (!container) return;
+
+  if (!data || !data.weeks || data.weeks.length === 0) {
+    container.innerHTML = `<p class="empty_message">${t("overviewNoData")}</p>`;
+    return;
+  }
+
+  const totalItems = data.weeks.reduce((sum, w) => sum + w.total, 0);
+  const totalDone = data.weeks.reduce((sum, w) => sum + w.done, 0);
+  const totalUnfinished = data.weeks.reduce((sum, w) => sum + w.unfinished, 0);
+
+  // Update donut chart
+  updateDonutChart(totalDone, totalItems);
+
+  container.replaceChildren();
+
+  // Summary card at top
+  const summary = document.createElement("div");
+  summary.className = "overview_summary";
+
+  const summaryItems = [
+    { label: t("overviewWeeks"), count: data.weeks.length },
+    { label: t("overviewTotal"), count: totalItems },
+    { label: t("overviewDone"), count: totalDone, className: "overview_done" },
+    { label: t("overviewUnfinished"), count: totalUnfinished, className: "overview_unfinished" },
+  ];
+
+  for (const item of summaryItems) {
+    const stat = document.createElement("div");
+    stat.className = `overview_stat ${item.className || ""}`;
+    stat.innerHTML = `
+      <span class="overview_stat_count">${item.count}</span>
+      <span class="overview_stat_label">${item.label}</span>
+    `;
+    summary.appendChild(stat);
+  }
+
+  container.appendChild(summary);
+
+  // Per-week breakdown
+  for (const weekSummary of data.weeks) {
+    const weekCard = document.createElement("div");
+    weekCard.className = "overview_week_card";
+    weekCard.setAttribute("data-week", weekSummary.week);
+    weekCard.tabIndex = 0;
+    weekCard.setAttribute("role", "button");
+    weekCard.title = `Go to ${t("week")} ${weekSummary.week === 0 ? t("general") : weekSummary.week}`;
+
+    // Click navigates to this week
+    weekCard.addEventListener("click", () => {
+      currentWeek = weekSummary.week;
+      localStorage.setItem("selectedWeek", String(currentWeek));
+      setView("work");
+    });
+
+    const weekLabel = weekSummary.week === 0 ? t("overviewWeekGeneral") : `${t("week")} ${weekSummary.week}`;
+
+    // Header row with week name, total count, and progress bar
+    const header = document.createElement("div");
+    header.className = "overview_week_header";
+
+    const name = document.createElement("span");
+    name.className = "overview_week_name";
+    name.textContent = weekLabel;
+
+    const progressPct = weekSummary.total > 0 ? Math.round((weekSummary.done / weekSummary.total) * 100) : 0;
+
+    const progress = document.createElement("div");
+    progress.className = "overview_progress";
+    progress.innerHTML = `
+      <div class="overview_progress_bar">
+        <div class="overview_progress_fill" style="width: ${progressPct}%"></div>
+      </div>
+      <span class="overview_progress_text">${weekSummary.done}/${weekSummary.total}</span>
+    `;
+
+    header.append(name, progress);
+
+    // Type counts row
+    const typeRow = document.createElement("div");
+    typeRow.className = "overview_type_row";
+
+    for (const type of TYPE_ORDER) {
+      const count = weekSummary.typeCounts[type] || 0;
+      if (count === 0) continue;
+      const chip = document.createElement("span");
+      chip.className = "overview_type_chip";
+      chip.textContent = `${TYPE_LABELS[type]} (${count})`;
+      typeRow.appendChild(chip);
+    }
+
+    weekCard.append(header, typeRow);
+    container.appendChild(weekCard);
+  }
+}
+
 function renderWorkView() {
   renderCoursePills();
   renderItems();
@@ -1339,19 +1880,49 @@ function renderWorkView() {
   updateWeekNav();
   
   // Update static text elements for work view
-  document.querySelector(".view_tab[data-view='work']").textContent = t("work");
-  document.getElementById("week_label").childNodes[0].textContent = `${t("week")} `;
+  const workTab = document.querySelector(".view_tab[data-view='work']");
+  if (workTab) workTab.textContent = t("work");
+  const weekLabel = document.getElementById("week_label");
+  if (weekLabel) weekLabel.childNodes[0].textContent = `${t("week")} `;
   searchInput.placeholder = t("searchPlaceholder");
-  document.querySelector(".filter_toggle span").textContent = t("unfinishedLabel");
+  const filterToggleSpan = document.querySelector(".filter_toggle span");
+  if (filterToggleSpan) filterToggleSpan.textContent = t("unfinishedLabel");
+  
+  // Load overview data when work view is rendered
+  if (selectedCourseId) {
+    loadOverview();
+  }
+}
+
+function updateDonutChart(done, total) {
+  const donutFill = document.querySelector(".donut-fill");
+  const donutCount = document.getElementById("donut_count");
+  
+  if (!donutFill || !donutCount) return;
+  
+  // Update the count text
+  donutCount.textContent = `${done}/${total}`;
+  
+  // Calculate percentage
+  const percentage = total > 0 ? done / total : 0;
+  
+  // SVG circle properties
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  
+  // Update stroke-dasharray to show the filled portion
+  const filledLength = circumference * percentage;
+  donutFill.style.strokeDasharray = `${filledLength} ${circumference}`;
 }
 
 function renderTimetableView() {
   renderTimetable();
   
   // Update static text elements for timetable view
-  document.querySelector(".view_tab[data-view='timetable']").textContent = t("timetable");
-  timetableTitle.textContent = t("timetableTitle");
-  timetableNote.textContent = t("timetableNote");
+  const timetableTab = document.querySelector(".view_tab[data-view='timetable']");
+  if (timetableTab) timetableTab.textContent = t("timetable");
+  if (timetableTitle) timetableTitle.textContent = t("timetableTitle");
+  if (timetableNote) timetableNote.textContent = t("timetableNote");
 }
 
 function renderAll() {
@@ -1359,28 +1930,46 @@ function renderAll() {
   renderTimetableView();
   
   // Update shared static text elements
-  tagline.textContent = t("tagline");
+  if (tagline) tagline.textContent = t("tagline");
   // Update about tab text
-  document.querySelector(".view_tab[data-view='about']").textContent = t("about");
+  const aboutTab = document.querySelector(".view_tab[data-view='about']");
+  if (aboutTab) aboutTab.textContent = t("about");
   // Update about page content
-  document.getElementById("about_title").textContent = t("aboutTitle");
-  document.getElementById("about_what_title").textContent = t("aboutWhatTitle");
-  document.getElementById("about_what_desc").textContent = t("aboutWhatDesc");
-  document.getElementById("about_why_title").textContent = t("aboutWhyTitle");
-  document.getElementById("about_why_desc").textContent = t("aboutWhyDesc");
-  document.getElementById("about_how_title").textContent = t("aboutHowTitle");
-  document.getElementById("about_how_1").textContent = t("aboutHow1");
-  document.getElementById("about_how_2").textContent = t("aboutHow2");
-  document.getElementById("about_how_3").textContent = t("aboutHow3");
-  document.getElementById("about_how_4").textContent = t("aboutHow4");
-  document.getElementById("about_how_5").textContent = t("aboutHow5");
-  document.getElementById("about_how_6").textContent = t("aboutHow6");
-  document.getElementById("about_how_7").textContent = t("aboutHow7");
-  document.getElementById("about_how_8").textContent = t("aboutHow8");
+  const aboutTitle = document.getElementById("about_title");
+  if (aboutTitle) aboutTitle.textContent = t("aboutTitle");
+  const aboutWhatTitle = document.getElementById("about_what_title");
+  if (aboutWhatTitle) aboutWhatTitle.textContent = t("aboutWhatTitle");
+  const aboutWhatDesc = document.getElementById("about_what_desc");
+  if (aboutWhatDesc) aboutWhatDesc.textContent = t("aboutWhatDesc");
+  const aboutWhyTitle = document.getElementById("about_why_title");
+  if (aboutWhyTitle) aboutWhyTitle.textContent = t("aboutWhyTitle");
+  const aboutWhyDesc = document.getElementById("about_why_desc");
+  if (aboutWhyDesc) aboutWhyDesc.textContent = t("aboutWhyDesc");
+  const aboutHowTitle = document.getElementById("about_how_title");
+  if (aboutHowTitle) aboutHowTitle.textContent = t("aboutHowTitle");
+  const aboutHow1 = document.getElementById("about_how_1");
+  if (aboutHow1) aboutHow1.textContent = t("aboutHow1");
+  const aboutHow2 = document.getElementById("about_how_2");
+  if (aboutHow2) aboutHow2.textContent = t("aboutHow2");
+  const aboutHow3 = document.getElementById("about_how_3");
+  if (aboutHow3) aboutHow3.textContent = t("aboutHow3");
+  const aboutHow4 = document.getElementById("about_how_4");
+  if (aboutHow4) aboutHow4.textContent = t("aboutHow4");
+  const aboutHow5 = document.getElementById("about_how_5");
+  if (aboutHow5) aboutHow5.textContent = t("aboutHow5");
+  const aboutHow6 = document.getElementById("about_how_6");
+  if (aboutHow6) aboutHow6.textContent = t("aboutHow6");
+  const aboutHow7 = document.getElementById("about_how_7");
+  if (aboutHow7) aboutHow7.textContent = t("aboutHow7");
+  const aboutHow8 = document.getElementById("about_how_8");
+  if (aboutHow8) aboutHow8.textContent = t("aboutHow8");
   // Update footer text
-  document.getElementById("footer_made_by").textContent = t("footerMadeBy");
-  document.getElementById("footer_feedback").textContent = t("footerFeedback");
-  document.getElementById("footer_copyright").textContent = t("footerCopyright");
+  const footerMadeBy = document.getElementById("footer_made_by");
+  if (footerMadeBy) footerMadeBy.textContent = t("footerMadeBy");
+  const footerFeedback = document.getElementById("footer_feedback");
+  if (footerFeedback) footerFeedback.textContent = t("footerFeedback");
+  const footerCopyright = document.getElementById("footer_copyright");
+  if (footerCopyright) footerCopyright.textContent = t("footerCopyright");
 }
 
 function setView(viewName) {
@@ -1390,6 +1979,7 @@ function setView(viewName) {
   workView.hidden = nextView !== "work";
   timetableView.hidden = nextView !== "timetable";
   aboutView.hidden = nextView !== "about";
+
   workView.classList.toggle("app_view_active", nextView === "work");
   timetableView.classList.toggle("app_view_active", nextView === "timetable");
   aboutView.classList.toggle("app_view_active", nextView === "about");
@@ -1448,6 +2038,10 @@ document.addEventListener("keydown", (event) => {
   if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.isContentEditable) {
     return;
   }
+
+  // Don't navigate weeks if the setup overlay is open
+  const overlay = document.getElementById("setup_overlay");
+  if (overlay && !overlay.hidden) return;
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
@@ -1529,13 +2123,13 @@ themeToggle.addEventListener("click", toggleTheme);
 // ── Setup Wizard ───────────────────────────────────────────────
 
 const SETUP_STEPS = [
-  { titleKey: "setupSecurityTitle", descKey: "setupSecurityDesc", isSecurity: true },
   { titleKey: "setupStep1Title", descKey: "setupStep1Desc" },
   { titleKey: "setupStep2Title", descKey: "setupStep2Desc" },
   { titleKey: "setupStep3Title", descKey: "setupStep3Desc" },
   { titleKey: "setupStep4Title", descKey: "setupStep4Desc" },
   { titleKey: "setupStep5Title", descKey: "setupStep5Desc", noteKey: "setupStep5Note" },
   { titleKey: "setupStep6Title", descKey: "setupStep6Desc" },
+  { titleKey: "setupSecurityTitle", descKey: "setupSecurityDesc", isSecurity: true },
 ];
 
 function renderSetupStep(stepIndex) {
@@ -1565,7 +2159,7 @@ function renderSetupStep(stepIndex) {
   // Screenshot — one per step, mapped 1:1 (step 1 → setup_step0.jpg, ..., step 7 → setup_step6.jpg)
   const screenshot = document.createElement("img");
   screenshot.className = "setup_screenshot";
-  screenshot.src = `/static/setup_step${stepIndex}.jpg`;
+  screenshot.src = `/static/setup_step${stepIndex + 1}.jpg`;
   screenshot.alt = t(step.titleKey);
   screenshot.loading = "lazy";
   content.appendChild(screenshot);
@@ -1584,8 +2178,28 @@ function renderSetupStep(stepIndex) {
     content.appendChild(note);
   }
 
-  // Step 6: Token input + validate
-  if (stepIndex === SETUP_STEPS.length - 1) {
+  // Navigation buttons (defined before if/else so both branches can use them)
+  const nav = document.createElement("div");
+  nav.className = "setup_nav";
+
+  // Step dots
+  const dots = document.createElement("div");
+  dots.className = "setup_dots";
+  for (let i = 0; i < SETUP_STEPS.length; i++) {
+    const dot = document.createElement("span");
+    dot.className = `setup_dot${i === stepIndex ? " setup_dot_active" : ""}`;
+    dot.addEventListener("click", () => renderSetupStep(i));
+    dots.appendChild(dot);
+  }
+
+  // Final step: Security notice + T&C agreement + token input
+  if (step.isSecurity) {
+    // Token input: let user paste their API token
+    const tokenLabel = document.createElement("p");
+    tokenLabel.className = "setup_step_desc";
+    tokenLabel.textContent = t("setupTokenLabel");
+    content.appendChild(tokenLabel);
+
     const inputGroup = document.createElement("div");
     inputGroup.className = "setup_token_group";
 
@@ -1602,55 +2216,102 @@ function renderSetupStep(stepIndex) {
     validateBtn.type = "button";
     validateBtn.className = "setup_validate_btn";
     validateBtn.textContent = t("setupValidate");
-    validateBtn.addEventListener("click", validateAndSaveToken);
+    validateBtn.addEventListener("click", () => {
+      if (!tcCheckbox.checked) {
+        msg.textContent = t("setupTcError");
+        msg.className = "setup_message setup_message_error";
+        msg.hidden = false;
+        return;
+      }
+      validateAndSaveToken();
+    });
     inputGroup.appendChild(validateBtn);
 
     content.appendChild(inputGroup);
 
-    // Message area
+    // API warning text
+    const apiWarning = document.createElement("p");
+    apiWarning.className = "setup_api_warning";
+    apiWarning.textContent = t("tcApiWarning");
+    content.appendChild(apiWarning);
+
+    // T&C agreement checkbox
+    const tcGroup = document.createElement("div");
+    tcGroup.className = "setup_tc_group";
+
+    const tcCheckbox = document.createElement("input");
+    tcCheckbox.type = "checkbox";
+    tcCheckbox.id = "setup_tc_checkbox";
+    tcCheckbox.className = "setup_tc_checkbox";
+
+    const tcLabel = document.createElement("label");
+    tcLabel.className = "setup_tc_label";
+    tcLabel.setAttribute("for", "setup_tc_checkbox");
+    
+    const tcLabelText = document.createElement("span");
+    tcLabelText.textContent = t("tcAgreeCheckbox");
+    
+    const tcLink = document.createElement("button");
+    tcLink.type = "button";
+    tcLink.className = "setup_tc_link";
+    tcLink.textContent = t("tcViewTerms");
+    tcLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      openTermsModal();
+    });
+    
+    tcLabel.append(tcLabelText, " ", tcLink);
+    tcGroup.append(tcCheckbox, tcLabel);
+    content.appendChild(tcGroup);
+
+    // Message area (hidden by default, shown when an error/success/info message is set)
     const msg = document.createElement("p");
     msg.id = "setup_message";
     msg.className = "setup_message";
+    msg.hidden = true;
     content.appendChild(msg);
-  }
 
-  // Navigation buttons
-  const nav = document.createElement("div");
-  nav.className = "setup_nav";
-
-  if (stepIndex > 0) {
-    const prevBtn = document.createElement("button");
-    prevBtn.type = "button";
-    prevBtn.className = "setup_nav_btn setup_nav_btn_prev";
-    prevBtn.textContent = t("setupPrev");
-    prevBtn.addEventListener("click", () => renderSetupStep(stepIndex - 1));
-    nav.appendChild(prevBtn);
+    tcCheckbox.addEventListener("change", () => {
+      validateBtn.disabled = !tcCheckbox.checked;
+    });
+    
+    // Build nav: Back button only
+    if (stepIndex > 0) {
+      const prevBtn = document.createElement("button");
+      prevBtn.type = "button";
+      prevBtn.className = "setup_nav_btn setup_nav_btn_prev";
+      prevBtn.textContent = t("setupPrev");
+      prevBtn.addEventListener("click", () => renderSetupStep(stepIndex - 1));
+      nav.appendChild(prevBtn);
+    }
+    
+    // Hide step dots on final step
+    dots.style.display = "none";
   } else {
-    // Spacer
-    const spacer = document.createElement("div");
-    nav.appendChild(spacer);
-  }
+    // Non-final steps: Back + Next navigation
+    if (stepIndex > 0) {
+      const prevBtn = document.createElement("button");
+      prevBtn.type = "button";
+      prevBtn.className = "setup_nav_btn setup_nav_btn_prev";
+      prevBtn.textContent = t("setupPrev");
+      prevBtn.addEventListener("click", () => renderSetupStep(stepIndex - 1));
+      nav.appendChild(prevBtn);
+    } else {
+      const spacer = document.createElement("div");
+      nav.appendChild(spacer);
+    }
 
-  if (stepIndex < SETUP_STEPS.length - 1) {
-    const nextBtn = document.createElement("button");
-    nextBtn.type = "button";
-    nextBtn.className = "setup_nav_btn setup_nav_btn_next";
-    nextBtn.textContent = t("setupNext");
-    nextBtn.addEventListener("click", () => renderSetupStep(stepIndex + 1));
-    nav.appendChild(nextBtn);
+    if (stepIndex < SETUP_STEPS.length - 1) {
+      const nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "setup_nav_btn setup_nav_btn_next";
+      nextBtn.textContent = t("setupNext");
+      nextBtn.addEventListener("click", () => renderSetupStep(stepIndex + 1));
+      nav.appendChild(nextBtn);
+    }
   }
 
   content.appendChild(nav);
-
-  // Step dots
-  const dots = document.createElement("div");
-  dots.className = "setup_dots";
-  for (let i = 0; i < SETUP_STEPS.length; i++) {
-    const dot = document.createElement("span");
-    dot.className = `setup_dot${i === stepIndex ? " setup_dot_active" : ""}`;
-    dot.addEventListener("click", () => renderSetupStep(i));
-    dots.appendChild(dot);
-  }
   content.appendChild(dots);
 
   // Focus token input if on step 6
@@ -1668,11 +2329,13 @@ async function validateAndSaveToken() {
   if (!token) {
     msg.textContent = t("setupError");
     msg.className = "setup_message setup_message_error";
+    msg.hidden = false;
     return;
   }
 
   msg.textContent = t("setupValidating");
   msg.className = "setup_message setup_message_info";
+  msg.hidden = false;
 
   try {
     debugLog("validateAndSaveToken: sending POST to /api/validate-token");
@@ -1768,13 +2431,35 @@ if (setupCloseBtn) {
   setupCloseBtn.addEventListener("click", attemptCloseSetup);
 }
 
-// Esc shortcut to exit the setup wizard (same warning behavior as the X button).
+// Arrow key shortcuts for the setup wizard (left = back, right = next)
 document.addEventListener("keydown", (event) => {
+  const overlay = document.getElementById("setup_overlay");
+  if (!overlay || overlay.hidden) return;
+  // Don't steal arrow keys while the user is typing in an input
+  if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.isContentEditable) return;
+  // Don't steal arrow keys while a modal is open on top of the wizard
+  if (document.querySelector(".token_settings_modal:not([hidden])")) return;
+
   if (event.key === "Escape") {
-    const overlay = document.getElementById("setup_overlay");
-    // Don't steal Esc while a modal is open on top of the wizard.
-    if (overlay && !overlay.hidden && !document.querySelector(".token_settings_modal")) {
-      attemptCloseSetup();
+    attemptCloseSetup();
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    // Find the current step index from the step indicator
+    const indicator = document.querySelector(".setup_step_indicator");
+    if (indicator) {
+      const currentStep = Number(indicator.getAttribute("data-step")) - 1;
+      if (currentStep > 0) {
+        renderSetupStep(currentStep - 1);
+      }
+    }
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    const indicator = document.querySelector(".setup_step_indicator");
+    if (indicator) {
+      const currentStep = Number(indicator.getAttribute("data-step")) - 1;
+      if (currentStep < SETUP_STEPS.length - 1) {
+        renderSetupStep(currentStep + 1);
+      }
     }
   }
 });
@@ -1785,6 +2470,7 @@ function reinitializeApp() {
   courses = [];
   items = [];
   itemCache = new Map();
+  overviewCache = new Map();
   availableWeeks = [];
   selectedCourseId = null;
 
@@ -1851,13 +2537,83 @@ function addModalCloseButton(content, onClose) {
   content.appendChild(closeBtn);
 }
 
-// Esc shortcut to close any open modal (Settings, API Token, Feedback).
+// Esc shortcut to close any open modal (Settings, API Token, Feedback, T&C).
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     const modal = document.querySelector(".token_settings_modal:not([hidden])");
-    if (modal) modal.remove();
+    if (modal) {
+      // #tc_modal is a static DOM element that should be hidden, not removed
+      if (modal.id === "tc_modal") {
+        modal.hidden = true;
+      } else {
+        modal.remove();
+      }
+    }
   }
 });
+
+// ── Terms and Conditions Modal ─────────────────────────────────
+
+function openTermsModal() {
+  const modal = document.getElementById("tc_modal");
+  if (!modal) return;
+
+  // Populate content
+  const titleEl = document.getElementById("tc_title");
+  const bodyEl = document.getElementById("tc_body");
+  
+  if (titleEl) titleEl.textContent = t("tcTitle");
+  if (bodyEl) {
+    bodyEl.innerHTML = "";
+    
+    // Create sections for each T&C item
+    for (let i = 1; i <= 7; i++) {
+      const section = document.createElement("div");
+      section.className = "tc_section";
+      
+      const title = document.createElement("h3");
+      title.textContent = t(`tcSection${i}Title`);
+      
+      const text = document.createElement("p");
+      text.textContent = t(`tcSection${i}Text`);
+      
+      section.append(title, text);
+      bodyEl.appendChild(section);
+    }
+  }
+
+  // Add close button
+  const content = modal.querySelector(".tc_content");
+  if (content) {
+    // Remove any existing close button first
+    const existingClose = content.querySelector(".setup_close_btn");
+    if (existingClose) existingClose.remove();
+    
+    // Create close button with proper event handling
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "setup_close_btn";
+    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.textContent = "✕";
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // Prevent backdrop click
+      modal.hidden = true;
+    });
+    content.appendChild(closeBtn);
+  }
+
+  // Close on backdrop click (use once flag to prevent multiple listeners)
+  if (!modal.hasAttribute("data-backdrop-listener")) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.hidden = true;
+      }
+    });
+    modal.setAttribute("data-backdrop-listener", "true");
+  }
+
+  modal.hidden = false;
+}
 
 // ── Settings Menu Modal ────────────────────────────────────────
 
@@ -1975,11 +2731,12 @@ function openTokenSettings() {
   }
   inputGroup.appendChild(input);
 
-  // Message area - MUST be defined before the validate button event listener
-  const msg = document.createElement("p");
-  msg.id = "settings_token_message";
-  msg.className = "setup_message";
-  content.appendChild(msg);
+    // Message area - hidden by default, shown when an error/success/info message is set
+    const msg = document.createElement("p");
+    msg.id = "settings_token_message";
+    msg.className = "setup_message";
+    msg.hidden = true;
+    content.appendChild(msg);
 
   const validateBtn = document.createElement("button");
   validateBtn.type = "button";
@@ -1990,12 +2747,14 @@ function openTokenSettings() {
     if (!token) {
       msg.textContent = t("setupError");
       msg.className = "setup_message setup_message_error";
+      msg.hidden = false;
       return;
     }
 
     validateBtn.disabled = true;
     msg.textContent = t("setupValidating");
     msg.className = "setup_message setup_message_info";
+    msg.hidden = false;
 
     try {
       const response = await fetch("/api/validate-token", {
@@ -2180,10 +2939,11 @@ function openFeedbackForm() {
   improveTextarea.rows = 3;
   content.appendChild(improveTextarea);
 
-  // Message area
+  // Message area (hidden by default, shown when an error/success/info message is set)
   const feedbackMsg = document.createElement("p");
   feedbackMsg.id = "feedback_message";
   feedbackMsg.className = "setup_message";
+  feedbackMsg.hidden = true;
   content.appendChild(feedbackMsg);
 
   // Submit button
@@ -2197,16 +2957,19 @@ function openFeedbackForm() {
     if (selectedRating === 0) {
       feedbackMsg.textContent = "Please select a rating.";
       feedbackMsg.className = "setup_message setup_message_error";
+      feedbackMsg.hidden = false;
       return;
     }
     if (!selectedUsage) {
       feedbackMsg.textContent = "Please select what you use it for.";
       feedbackMsg.className = "setup_message setup_message_error";
+      feedbackMsg.hidden = false;
       return;
     }
     if (!selectedRecommend) {
       feedbackMsg.textContent = "Please select a recommendation.";
       feedbackMsg.className = "setup_message setup_message_error";
+      feedbackMsg.hidden = false;
       return;
     }
 
@@ -2214,6 +2977,7 @@ function openFeedbackForm() {
     submitBtn.textContent = t("feedbackSubmitting");
     feedbackMsg.textContent = "";
     feedbackMsg.className = "setup_message";
+    feedbackMsg.hidden = true;
 
     try {
       const response = await fetch("/api/feedback", {
@@ -2231,18 +2995,21 @@ function openFeedbackForm() {
       if (data.success) {
         feedbackMsg.textContent = t("feedbackSuccess");
         feedbackMsg.className = "setup_message setup_message_success";
+        feedbackMsg.hidden = false;
         submitBtn.textContent = t("feedbackSubmit");
         submitBtn.disabled = true;
         setTimeout(() => modal.remove(), 2000);
       } else {
         feedbackMsg.textContent = data.message || t("feedbackError");
         feedbackMsg.className = "setup_message setup_message_error";
+        feedbackMsg.hidden = false;
         submitBtn.disabled = false;
         submitBtn.textContent = t("feedbackSubmit");
       }
     } catch (err) {
       feedbackMsg.textContent = t("feedbackError");
       feedbackMsg.className = "setup_message setup_message_error";
+      feedbackMsg.hidden = false;
       submitBtn.disabled = false;
       submitBtn.textContent = t("feedbackSubmit");
     }
@@ -2292,10 +3059,21 @@ document.addEventListener("DOMContentLoaded", () => {
     setView(initialView);
   }
 
+  // Terms and Conditions button
+  const tcBtn = document.getElementById("tc_btn");
+  if (tcBtn) {
+    tcBtn.addEventListener("click", openTermsModal);
+  }
+
   // Settings button - opens the settings menu
   const settingsBtn = document.getElementById("token_settings_btn");
   if (settingsBtn) {
     settingsBtn.addEventListener("click", openSettingsMenu);
+  }
+
+  // Subject label edit button
+  if (subjectLabelEditBtn) {
+    subjectLabelEditBtn.addEventListener("click", toggleSubjectLabelEditMode);
   }
 
   // Token expiry warning
@@ -2321,5 +3099,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Initialize language
-setLanguage(currentLanguage);
+// Initialize language selector value and render all text
+languageSelector.value = currentLanguage;
+renderAll();

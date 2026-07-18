@@ -4,7 +4,21 @@ VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for 
 
 ## Demo
 
-https://github.com/user-attachments/assets/4932d876-058c-41d3-b15a-f7abbc0a05ac
+https://github.com/user-attachments/assets/1dbd77f9-af79-47db-9f85-02e0fa4c710c
+
+## Screenshot
+
+### Setup Wizard
+![alt text](image-3.png)
+
+### Work view
+![alt text](image.png)
+
+### Overview Dashboard
+![alt text](image-1.png)
+
+### Timetable
+![alt text](image-2.png)
 
 ## Access
 
@@ -16,13 +30,11 @@ No installation or setup is required, just open the link, follow the setup wizar
 
 ## Why I Built This
 
-Vinschool's Canvas LMS contains all the information students need, but finding it is often more difficult than it should be. Checking a quiz or assignment can require navigating through multiple pages, opening modules manually, and searching through long lists of content. As a result, students sometimes miss activities, complete the wrong quiz, or spend unnecessary time looking for information instead of studying. When I realized this issue had become normal for many students and was unlikely to be addressed soon, I decided to solve it myself.
+Vinschool's Canvas LMS contains all the information students need, but finding it often requires navigating through multiple pages and module lists. As a result, students can spend more time searching for information than actually using it.
 
-I built VinFocus because I wanted a faster way to see what existed across my courses without repeatedly digging through the LMS interface. Rather than trying to replace Canvas, the goal was to make its information easier to access.
+I built VinFocus to make course content easier to access without replacing Canvas itself. It organizes modules into weeks and presents quizzes, assignments, files, and other resources in a single searchable view. It also highlights unfinished work and provides a timetable view, reducing the amount of navigation required.
 
-VinFocus organizes modules into weeks and presents quizzes, assignments, files, and other resources in a single, searchable view. It also highlights unfinished work and provides a timetable view, reducing the amount of navigation required to find relevant information.
-
-The dashboard intentionally does not tell students what they should do each day. Teachers may assign work verbally, lessons can span multiple weeks, and the LMS does not always contain enough context to determine priorities accurately. Instead, VinFocus is designed to answer questions such as:
+VinFocus is not designed to tell students what they should do each day. Instead, it helps answer questions such as:
 
 - What quizzes exist for this week?
 - What assignments exist for this week?
@@ -34,19 +46,24 @@ Students decide what to work on. VinFocus simply makes the information easier to
 
 ## Features
 
-- **Course browser** — Lists active Canvas courses from your account as clickable pills.
-- **Week navigation** — Browse modules filtered by week number (e.g. `TUẦN 36`). Use arrow keys or the prev/next buttons.
-- **General (Week 0)** — Modules without week information are grouped under a "General" category.
-- **Item grouping** — Shows quizzes, assignments, and files grouped by type with counts.
-- **Unfinished filter** — Filters to incomplete items using Canvas completion requirements.
-- **Search** — Real-time search across item titles, module names, types, and course names.
-- **Item importance** — Items matching keywords like `HKII`, `HKI`, `hệ số 1`, etc. are visually highlighted.
-- **Skeleton loading** — Placeholder UI while items are being fetched.
-- **Timetable view** — A weekly timetable with subject labels, room info, and edit mode. Highlights the current period and next period. Mobile view supports "Today" and "Full Week" toggles.
-- **Bilingual UI** — Full English and Vietnamese translations. Switch via the language selector in the top-right corner.
-- **Dark/Light theme** — Toggle between dark and light themes. Persisted to localStorage.
-- **Keyboard navigation** — Left/right arrow keys navigate between weeks (when no input is focused).
-- **In-app feedback form** — Rate VinFocus, share what you use it for, and suggest improvements. Feedback is stored in a PostgreSQL database.
+### Navigation
+- Course browser
+- Week navigation
+- Search
+
+### Productivity
+- Unfinished filter
+- Course overview dashboard
+- Item importance
+
+### Customization
+- Themes
+- Subject labels
+- Bilingual UI
+
+### Other
+- Timetable
+- Feedback
 
 ## Tech Stack
 
@@ -70,6 +87,18 @@ Students decide what to work on. VinFocus simply makes the information easier to
 | `GET /api/courses/<course_id>/weeks` | Week numbers found in module names. Week `0` is included if any modules have no week information. Returns `{ course_id, week_count, weeks: [int] }`. |
 | `GET /api/courses/<course_id>/week/<week>` | Quizzes, assignments, and files for a week. Returns `{ course_id, course_name, week, item_count, items: [...] }`. |
 | `GET /api/courses/<course_id>/week/<week>/unfinished` | Same items, filtered to incomplete Canvas work. Same response shape. |
+
+### Token Management
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/validate-token` | Validate a Canvas API token. Expects JSON body `{ "token": "..." }`. Returns `{ "valid": true/false, "message": "..." }`. |
+
+### Health Check
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check endpoint for monitoring. Returns `{ "status": "healthy", "service": "VinFocus", "database": "configured" or "not configured" }`. |
 
 ### Legacy routes (backward compatibility)
 
@@ -103,11 +132,16 @@ Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
 The Flask server in `main.py` proxies Canvas API requests. When you open the app for the first time, a setup wizard guides you through generating and pasting your Canvas API token. The token is sent with every request via the `Authorization` header, so no environment variable is needed for end users.
 
-**Privacy:** Your Canvas API token is stored only in your browser's local storage. VinFocus does not store your token on any server. The token is transmitted only as needed to authenticate requests to Canvas.
-
 Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
 
 The frontend in `script.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
+
+## Security
+
+- Tokens are stored only in browser localStorage
+- Tokens are never stored on VinFocus servers
+- Tokens are only sent to Canvas-authenticated endpoints
+- Users can revoke tokens at any time from Canvas
 
 ### Architecture notes
 
@@ -137,8 +171,8 @@ python main.py
 
 3. Open `http://127.0.0.1:5000` in your browser.
 
-4. On first launch, a setup wizard will appear. Follow the 6-step guide to generate and paste your Canvas API token. The token is stored in your browser and sent with each request — no server-side setup required.
-
+4. On first launch, a setup wizard will appear. Follow the 7-step guide to generate and paste your Canvas API token. The token is stored in your browser and sent with each request — no server-side setup required.
+ 
 > **Note:** Each token lasts up to 4 months. You'll need to repeat the setup about 2-3 times per school year. The app will warn you a week before the token expires.
 
 ## Running Tests
@@ -207,8 +241,18 @@ curl -H "X-Admin-Key: your-secret-key-here" http://127.0.0.1:5000/api/feedback
 
 ## Future Plans
 
-- Optional display of pages and discussions
+- Timetable Automation (will implement when school starts)
+- Global Search
 
 ## Notes
 
 This project needs a valid Canvas API token to load real data. Keep the token private and do not commit it to the repository.
+
+## Author
+
+Created by Phạm Lê Mạnh Hùng
+
+## Contact
+
+- Email: hung020121@gmail.com
+- GitHub: https://github.com/PhamLeManhHung

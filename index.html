@@ -22,13 +22,21 @@
             <button type="button" class="token_warning_dismiss" id="token_warning_dismiss" aria-label="Dismiss warning">✕</button>
         </div>
 
-        <!-- Token Settings Button (top-left) -->
-        <button type="button" id="token_settings_btn" class="token_settings_btn" aria-label="API Token Settings" title="API Token Settings">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-        </button>
+        <!-- Top-left buttons (Terms + Settings) -->
+        <div class="top_left_buttons">
+            <button type="button" id="token_settings_btn" class="token_settings_btn" aria-label="Settings" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-icon lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button type="button" id="tc_btn" class="token_settings_btn" aria-label="Terms and Conditions" title="Terms and Conditions">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+            </button>
+        </div>
 
         <!-- Top-right toolbar (language + theme) -->
         <div class="toolbar">
@@ -128,26 +136,52 @@
 
                 <div class="hub_title_section">
                     <h2 id="hub_title">Browse</h2>
+                    <div class="subject_label_actions" id="subject_label_actions">
+                        <button id="subject_label_edit_btn" type="button" class="subject_label_edit_btn" aria-label="Edit subject labels" title="Edit subject labels">
+                            <img src="/static/edit_icon.png" alt="" class="edit_icon">
+                        </button>
+                    </div>
                 </div>
 
                 <label class="filter_toggle">
-                    <input id="unfinished_only" type="checkbox">
+                    <input id="unfinished_only" type="checkbox" checked>
                     <span>Unfinished</span>
                 </label>
             </div>
 
-            <div id="course_pills" class="course_pills"></div>
+            <div class="hub_content">
+                <div class="work_content">
+                    <div id="course_pills" class="course_pills"></div>
 
-            <div id="item_list"></div>
+                    <div id="item_list"></div>
 
-            <div class="week_nav">
-                <button id="prev_week" type="button" class="week_nav_btn" aria-label="Previous week">
-                    ←
-                </button>
-                <span id="week_label" class="week_label">Week <input id="week_input" type="number" class="week_input_inline" placeholder="—" min="0" step="1"></span>
-                <button id="next_week" type="button" class="week_nav_btn" aria-label="Next week">
-                    →
-                </button>
+                    <div class="week_nav">
+                        <button id="prev_week" type="button" class="week_nav_btn" aria-label="Previous week">
+                            ←
+                        </button>
+                        <span id="week_label" class="week_label">Week <input id="week_input" type="number" class="week_input_inline" placeholder="—" min="0" step="1"></span>
+                        <button id="next_week" type="button" class="week_nav_btn" aria-label="Next week">
+                            →
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overview_sidebar">
+                    <div class="overview_header">
+                        <h2 id="overview_title">Overview</h2>
+                        <div class="overview_donut_container">
+                            <svg class="overview_donut" viewBox="0 0 100 100">
+                                <circle class="donut-bg" cx="50" cy="50" r="40"></circle>
+                                <circle class="donut-fill" cx="50" cy="50" r="40" style="stroke-dasharray: 0 251.2;"></circle>
+                            </svg>
+                            <div class="donut-text">
+                                <span class="donut_count" id="donut_count">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="overview_spinner" class="overview_spinner"></div>
+                    <div id="overview_container"></div>
+                </div>
             </div>
         </div>
         </main>
@@ -173,6 +207,70 @@
             <div id="timetable_mobile" class="timetable_mobile" aria-label="Weekly timetable by day"></div>
         </div>
         </main>
+
+
+        <!-- Terms and Conditions Modal -->
+        <div id="tc_modal" class="token_settings_modal" hidden>
+            <div class="token_settings_content tc_content">
+                <h2 id="tc_title"></h2>
+                <div id="tc_body"></div>
+            </div>
+        </div>
+
+        <!-- Settings Menu Modal (hidden, used as template) -->
+        <div id="settings_menu_modal" hidden>
+            <div class="token_settings_content">
+                <h2 id="settings_title"></h2>
+                <button class="settings_menu_option" id="settings_api_option">
+                    <span class="settings_menu_icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </span>
+                    <span class="settings_menu_label"></span>
+                </button>
+                <button class="settings_menu_option" id="settings_feedback_option">
+                    <span class="settings_menu_icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </span>
+                    <span class="settings_menu_label"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Token Settings Modal (hidden, used as template) -->
+        <div id="token_settings_modal" hidden>
+            <div class="token_settings_content">
+                <h2 id="token_settings_title"></h2>
+                <p class="token_settings_info" id="token_settings_info"></p>
+                <div class="setup_token_group">
+                    <input type="text" id="settings_token_input" class="setup_token_input" placeholder="">
+                    <button type="button" class="setup_validate_btn" id="settings_validate_btn"></button>
+                </div>
+                <p class="setup_message" id="settings_token_message" hidden></p>
+                <button type="button" class="setup_skip_btn" id="settings_need_token_btn"></button>
+            </div>
+        </div>
+
+        <!-- Feedback Modal (hidden, used as template) -->
+        <div id="feedback_modal" hidden>
+            <div class="token_settings_content feedback_form">
+                <h2 id="feedback_title"></h2>
+                <p class="feedback_question" id="feedback_rating_label"></p>
+                <div class="star_rating" id="feedback_star_rating"></div>
+                <p class="feedback_question" id="feedback_usage_label"></p>
+                <div class="feedback_radio_group" id="feedback_usage_group"></div>
+                <p class="feedback_question" id="feedback_recommend_label"></p>
+                <div class="feedback_radio_group" id="feedback_recommend_group"></div>
+                <p class="feedback_question" id="feedback_improve_label"></p>
+                <textarea class="feedback_textarea" id="feedback_improve_textarea" rows="3"></textarea>
+                <p class="setup_message" id="feedback_message" hidden></p>
+                <button type="button" class="setup_validate_btn" id="feedback_submit_btn" style="width: 100%; margin-top: 8px;"></button>
+            </div>
+        </div>
 
         <!-- Setup Overlay (first-run wizard) -->
         <div id="setup_overlay" class="setup_overlay" hidden>

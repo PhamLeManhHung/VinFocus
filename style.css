@@ -278,8 +278,31 @@ body {
 }
 
 .hub_container {
-    max-width: 1200px;
+    max-width: 1400px;
     text-align: left;
+}
+
+.hub_content {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    margin-top: 16px;
+}
+
+.work_content {
+    min-width: 0;
+}
+
+.overview_sidebar {
+    background: var(--bg-card-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
 .hub_header {
@@ -306,13 +329,71 @@ body {
     transform: translateX(-50%);
     text-align: center;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     min-width: 0;
     padding: 0 8px;
     margin: 0;
     margin-top: -15px
+}
+
+.subject_label_actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
+.subject_label_edit_btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    border: 1px solid var(--border-pill);
+    border-radius: 6px;
+    background: var(--bg-pill);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.subject_label_edit_btn:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+}
+
+.subject_label_edit_btn_active {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.subject_label_edit_btn_active:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.subject_label_reset_all_btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    border: 1px solid var(--border-pill);
+    border-radius: 6px;
+    background: var(--bg-pill);
+    color: var(--text-muted-strong);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.subject_label_reset_all_btn:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+    color: var(--text-primary);
 }
 
 #hub_title {
@@ -994,6 +1075,124 @@ body.light .edit_icon {
     font-size: 0.86rem;
 }
 
+/* ── Top-left Buttons ────────────────────────────────────────── */
+
+.top_left_buttons {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Terms and Conditions Modal ──────────────────────────────── */
+
+.tc_content.token_settings_content {
+    max-width: 950px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.tc_content h2 {
+    margin: 0 0 20px;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.tc_section {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-secondary);
+}
+
+.tc_section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.tc_section h3 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.tc_section p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+#tc_title {
+    font-size: 1.6rem
+}
+
+/* ── Setup Wizard - T&C Agreement ────────────────────────────── */
+
+.setup_api_warning {
+    padding: 12px 16px;
+    background: var(--bg-time-badge);
+    border: 1px solid #2d4f31;
+    border-radius: 8px;
+    color: var(--text-status-done);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.setup_tc_group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.setup_tc_checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+}
+
+.setup_tc_label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-wrap: wrap;
+}
+
+.setup_tc_link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s ease;
+}
+
+.setup_tc_link:hover {
+    color: var(--text-accent);
+}
+
+.setup_tc_link:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
 .weekend_message {
     text-align: center;
     padding: 40px 16px;
@@ -1136,7 +1335,7 @@ body.light .theme_icon_moon {
 
 /* ── Mobile responsive for toolbar ─────────────────────────── */
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
     .toolbar {
         top: 12px;
         right: 12px;
@@ -1246,6 +1445,16 @@ body.light .theme_icon_moon {
     .view_tab {
         flex: 1;
         min-width: 0;
+    }
+
+    .hub_content {
+        grid-template-columns: 1fr;
+    }
+
+    .overview_sidebar {
+        position: static;
+        max-height: none;
+        margin-top: 16px;
     }
 
     .timetable_header {
@@ -1707,25 +1916,28 @@ body.light .setup_step_note {
 
 .setup_token_group {
     display: flex;
-    gap: 8px;
-    margin-top: 12px;
+    justify-content: center;
+    margin-top: 0;
+    border: 1px solid var(--border-input);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
+}
+
+.setup_token_group:focus-within {
+    border-color: var(--accent);
 }
 
 .setup_token_input {
     flex: 1;
+    min-width: 0;
     padding: 12px 14px;
-    border: 1px solid var(--border-input);
-    border-radius: 10px;
+    border: none;
     background: var(--bg-input);
     color: var(--text-primary);
     font-size: 0.9rem;
     font-family: monospace;
     outline: none;
-    transition: border-color 0.15s ease;
-}
-
-.setup_token_input:focus {
-    border-color: var(--accent);
 }
 
 .setup_token_input::placeholder {
@@ -1736,7 +1948,6 @@ body.light .setup_step_note {
     flex-shrink: 0;
     padding: 12px 20px;
     border: none;
-    border-radius: 10px;
     background: var(--accent);
     color: #fff;
     font-size: 0.88rem;
@@ -1866,10 +2077,6 @@ body.light .setup_step_note {
 /* ── Token Settings Button (top-left) ─────────────────────────── */
 
 .token_settings_btn {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    z-index: 1001;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1896,8 +2103,6 @@ body.light .setup_step_note {
 
 @media (max-width: 720px) {
     .token_settings_btn {
-        top: 12px;
-        left: 12px;
         width: 36px;
         height: 36px;
         padding: 6px;
@@ -2074,6 +2279,11 @@ body.light .setup_step_note {
     padding: 20px;
 }
 
+/* Hide modal when hidden attribute is set */
+.token_settings_modal[hidden] {
+    display: none !important;
+}
+
 .token_settings_content {
     background: var(--bg-card);
     border: 1px solid var(--border-primary);
@@ -2087,6 +2297,35 @@ body.light .setup_step_note {
     flex-direction: column;
     gap: 12px;
     position: relative;
+}
+
+#token_settings_modal .token_settings_content {
+    gap: 0;
+}
+
+#token_settings_modal .token_settings_content h2 {
+    margin: 0 0 12px;
+}
+
+#token_settings_modal .token_settings_content .token_settings_info {
+    margin: 0 0 12px;
+}
+
+#token_settings_modal .setup_token_group {
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+#token_settings_modal .setup_message:empty {
+    display: none;
+}
+
+#token_settings_modal .setup_message {
+    margin: 12px 0 0;
+}
+
+#token_settings_modal .setup_skip_btn {
+    margin-top: 12px;
 }
 
 .token_settings_content h2 {
@@ -2116,5 +2355,377 @@ body.light .setup_step_note {
     }
     to {
         transform: translateY(0);
+    }
+}
+
+/* ── Overview View ──────────────────────────────────────────── */
+
+.overview_header {
+    text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.overview_header h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.overview_donut_container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.overview_donut {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.donut-bg {
+    fill: none;
+    stroke: var(--bg-pill);
+    stroke-width: 8;
+}
+
+.donut-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.5s ease, stroke-dashoffset 0.5s ease;
+}
+
+.donut-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.donut-count {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.overview_summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.overview_stat {
+    padding: 10px;
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    background: var(--bg-card);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.overview_stat_count {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.overview_stat_label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 600;
+}
+
+.overview_stat.overview_done .overview_stat_count {
+    color: var(--text-status-done);
+}
+
+.overview_stat.overview_unfinished .overview_stat_count {
+    color: var(--text-status-open);
+}
+
+.overview_week_card {
+    padding: 10px;
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    background: var(--bg-card);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.overview_week_card:hover {
+    border-color: var(--accent);
+    background: var(--bg-pill-hover);
+}
+
+.overview_week_card:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.overview_week_header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.overview_week_name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 60px;
+}
+
+.overview_progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 100px;
+}
+
+.overview_progress_bar {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--bg-pill);
+    overflow: hidden;
+    min-width: 50px;
+}
+
+.overview_progress_fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.overview_progress_text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted-strong);
+    white-space: nowrap;
+}
+
+.overview_type_row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-secondary);
+}
+
+.overview_type_chip {
+    padding: 2px 8px;
+    border: 1px solid var(--border-pill);
+    border-radius: 999px;
+    background: var(--bg-pill);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* ── Subject Labels Editor ──────────────────────────────────── */
+
+.subject_label_row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-secondary);
+}
+
+.subject_label_row:last-child {
+    border-bottom: none;
+}
+
+.subject_label_code {
+    flex-shrink: 0;
+    min-width: 90px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+}
+
+.subject_label_input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border-input);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.subject_label_input:focus {
+    border-color: var(--accent);
+}
+
+.subject_label_input::placeholder {
+    color: var(--text-placeholder);
+    font-style: italic;
+}
+
+/* ── Subject Label Edit Button (next to page title) ──────────── */
+
+.subject_label_edit_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    border: 1px solid var(--border-pill);
+    border-radius: 6px;
+    background: var(--bg-pill);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.subject_label_edit_btn:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+}
+
+.subject_label_edit_btn_active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.subject_label_edit_btn_active:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.subject_label_edit_btn .edit_icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+    pointer-events: none;
+    filter: invert(1);
+}
+
+body.light .subject_label_edit_btn .edit_icon {
+    filter: invert(0);
+}
+
+.subject_label_edit_btn_active .edit_icon {
+    filter: invert(1) !important;
+}
+
+/* ── Subject Label Popover ───────────────────────────────────── */
+
+.subject_label_popover {
+    position: fixed;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-card);
+    max-width: 280px;
+    min-width: 200px;
+}
+
+.subject_label_inline_input {
+    padding: 8px 10px;
+    border: 1px solid var(--border-input);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.subject_label_inline_input:focus {
+    border-color: var(--accent);
+}
+
+.subject_label_inline_input::placeholder {
+    color: var(--text-placeholder);
+    font-style: italic;
+}
+
+.subject_label_inline_btns {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.subject_label_inline_btns .timetable_editor_btn {
+    padding: 6px 14px;
+    font-size: 0.82rem;
+}
+
+/* ── Old modal-based subject labels (no longer used, keep for reference) ── */
+
+#subject_labels_modal .token_settings_content {
+    max-width: 500px;
+    text-align: left;
+}
+
+.subject_label_btn_row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-secondary);
+}
+
+/* ── Overview Spinner ─────────────────────────────────────────── */
+
+.overview_spinner {
+    display: none;
+    width: 40px;
+    height: 40px;
+    margin: 40px auto;
+    border: 3px solid var(--border-primary);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: overview-spin 0.8s linear infinite;
+}
+
+.overview_spinner_visible {
+    display: block;
+}
+
+@keyframes overview-spin {
+    to {
+        transform: rotate(360deg);
     }
 }
