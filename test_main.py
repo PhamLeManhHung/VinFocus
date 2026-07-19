@@ -1,7 +1,7 @@
 import json
 import pytest
 from unittest.mock import patch, MagicMock
-from main import app, extract_weeks
+from main import app, extract_weeks, get_item_completion, format_module_item
 
 
 @pytest.fixture
@@ -396,6 +396,146 @@ class TestGetCourseWeek:
                 assert response.status_code == 200
                 data = response.get_json()
                 assert data["week"] == 0
+
+
+# ──────────────────────────────────────────────
+# Unit tests for get_item_completion (three-state)
+# ──────────────────────────────────────────────
+
+class TestGetItemCompletion:
+    """Tests for the get_item_completion() function."""
+
+    def test_no_completion_requirement(self):
+        """Item without completion_requirement should be unknown (None, False)."""
+        item = {"id": 1, "title": "Quiz 1"}
+        completed, has_tracking = get_item_completion(item)
+        assert completed is None
+        assert has_tracking is False
+
+    def test_completed_true(self):
+        """Item with completion_requirement and completed=True."""
+        item = {"id": 1, "title": "Quiz 1", "completion_requirement": {"type": "must_submit", "completed": True}}
+        completed, has_tracking = get_item_completion(item)
+        assert completed is True
+        assert has_tracking is True
+
+    def test_completed_false(self):
+        """Item with completion_requirement and completed=False."""
+        item = {"id": 1, "title": "Quiz 1", "completion_requirement": {"type": "must_submit", "completed": False}}
+        completed, has_tracking = get_item_completion(item)
+        assert completed is False
+        assert has_tracking is True
+
+    def test_empty_completion_requirement(self):
+        """Item with empty completion_requirement dict should be unknown."""
+        item = {"id": 1, "title": "Quiz 1", "completion_requirement": {}}
+        completed, has_tracking = get_item_completion(item)
+        assert completed is None
+        assert has_tracking is False
+
+
+class TestFormatModuleItem:
+    """Tests for format_module_item() with three-state completion."""
+
+    def test_item_with_tracking_completed(self):
+        item = {"id": 1, "title": "Done Quiz", "type": "Quiz", "completion_requirement": {"type": "must_submit", "completed": True}}
+        result = format_module_item(1, "Course", {"id": 10, "name": "Module 1"}, item)
+        assert result["completed"] is True
+        assert result["has_tracking"] is True
+
+    def test_item_with_tracking_unfinished(self):
+        item = {"id": 2, "title": "Unfinished Quiz", "type": "Quiz", "completion_requirement": {"type": "must_submit", "completed": False}}
+        result = format_module_item(1, "Course", {"id": 10, "name": "Module 1"}, item)
+        assert result["completed"] is False
+        assert result["has_tracking"] is True
+
+    def test_item_without_tracking(self):
+        item = {"id": 3, "title": "Unknown Quiz", "type": "Quiz"}
+        result = format_module_item(1, "Course", {"id": 10, "name": "Module 1"}, item)
+        assert result["completed"] is None
+        assert result["has_tracking"] is False
+
+
+# ──────────────────────────────────────────────
+# Integration tests for Overview endpoint
+# ──────────────────────────────────────────────
+
+class TestCourseOverview:
+    @patch("main.get_canvas_headers")
+    @patch("main.get_all_course_items")
+    def test_overview_success(self, mock_get_all_items, mock_get_headers, client):
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        # Mock get_all_course_items to return week groups with mixed completion states
+        mock_get_all_items.return_value = (
+            {
+                36: [
+                    {"course_id": 1, "course_name": "Test", "module": "Tuần 36", "title": "Quiz 1", "type": "Quiz", "completed": True, "has_tracking": True},
+                    {"course_id": 1, "course_name": "Test", "module": "Tuần 36", "title": "Quiz 2", "type": "Quiz", "completed": False, "has_tracking": True},
+                    {"course_id": 1, "course_name": "Test", "module": "Tuần 36", "title": "Quiz 3", "type": "Quiz", "completed": None, "has_tracking": False},
+                ],
+                37: [
+                    {"course_id": 1, "course_name": "Test", "module": "Tuần 37", "title": "Assignment 1", "type": "Assignment", "completed": True, "has_tracking": True},
+                ],
+            },
+            None,
+        )
+
+        response = client.get("/api/courses/1/overview")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["course_id"] == 1
+        assert data["week_count"] == 2
+        assert len(data["weeks"]) == 2
+
+        # Check week 36 stats
+        week36 = data["weeks"][0]
+        assert week36["week"] == 36
+        assert week36["total"] == 3
+        assert week36["done"] == 1
+        assert week36["unfinished"] == 1
+        assert week36["unknown"] == 1
+
+        # Check week 37 stats
+        week37 = data["weeks"][1]
+        assert week37["week"] == 37
+        assert week37["total"] == 1
+        assert week37["done"] == 1
+        assert week37["unfinished"] == 0
+        assert week37["unknown"] == 0
+
+        # Check totals
+        assert data["totals"]["total"] == 4
+        assert data["totals"]["done"] == 2
+        assert data["totals"]["unfinished"] == 1
+        assert data["totals"]["unknown"] == 1
+
+    @patch("main.get_canvas_headers")
+    def test_overview_missing_token(self, mock_get_headers, client):
+        mock_get_headers.return_value = None
+        response = client.get("/api/courses/1/overview")
+        assert response.status_code == 401
+
+    @patch("main.get_canvas_headers")
+    @patch("main.get_all_course_items")
+    def test_overview_api_failure(self, mock_get_all_items, mock_get_headers, client):
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        mock_get_all_items.return_value = (None, MagicMock(status_code=500, text="Error"))
+        response = client.get("/api/courses/1/overview")
+        assert response.status_code == 500
+        data = response.get_json()
+        assert "error" in data
+
+    @patch("main.get_canvas_headers")
+    @patch("main.get_all_course_items")
+    def test_overview_empty_course(self, mock_get_all_items, mock_get_headers, client):
+        mock_get_headers.return_value = {"Authorization": "Bearer test"}
+        mock_get_all_items.return_value = ({}, None)
+        response = client.get("/api/courses/1/overview")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["week_count"] == 0
+        assert data["weeks"] == []
+        assert data["totals"]["total"] == 0
 
 
 class TestLegacyRoutes:

@@ -671,6 +671,63 @@ body.light .item_row_important {
     color: var(--text-status-open);
 }
 
+.status_unknown {
+    background: var(--bg-card-secondary);
+    color: var(--text-muted);
+    border: 1px dashed var(--border-dashed);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.status_manual {
+    border: 1px solid var(--text-status-done);
+}
+
+.item_badge_group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.manual_done_btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border-primary);
+    background: var(--bg-card);
+    color: var(--text-muted-strong);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.manual_done_btn:hover {
+    background: var(--bg-status-done);
+    color: var(--text-status-done);
+    border-color: var(--text-status-done);
+}
+
+.manual_done_btn_undo {
+    font-size: 0.9rem;
+}
+
+.manual_done_btn_undo:hover {
+    background: var(--bg-status-open);
+    color: var(--text-status-open);
+    border-color: var(--text-status-open);
+}
+
 .about_container {
     text-align: left;
     max-width: 900px;
@@ -2460,6 +2517,10 @@ body.light .setup_step_note {
 
 .overview_stat.overview_unfinished .overview_stat_count {
     color: var(--text-status-open);
+}
+
+.overview_stat.overview_unknown .overview_stat_count {
+    color: var(--text-muted);
 }
 
 .overview_week_card {

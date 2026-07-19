@@ -122,6 +122,7 @@ const TRANSLATIONS = {
     free: "Free",
     done: "Done",
     unfinished: "Unfinished",
+    unknown: "Unknown",
     loadingCourses: "Loading courses...",
     loadingItems: "Loading items...",
     noActiveCourses: "No active courses found.",
@@ -262,6 +263,7 @@ const TRANSLATIONS = {
     overview: "Overview",
     overviewLoading: "Loading overview...",
     overviewTotal: "Total items",
+    overviewUnknown: "Unknown",
     overviewDone: "Done",
     overviewUnfinished: "Unfinished",
     overviewWeeks: "Weeks",
@@ -420,6 +422,7 @@ const TRANSLATIONS = {
     overview: "Tổng Quan",
     overviewLoading: "Đang tải tổng quan...",
     overviewTotal: "Tổng số",
+    overviewUnknown: "Chưa rõ",
     overviewDone: "Hoàn Thành",
     overviewUnfinished: "Chưa HT",
     overviewWeeks: "Tuần",
@@ -582,7 +585,6 @@ let selectedCourseId = null;
 let currentWeek = (() => { const w = Number(localStorage.getItem("selectedWeek")); return Number.isFinite(w) ? w : 36; })();
 let coursesLoaded = false;
 let itemCache = new Map();
-let overviewCache = new Map();
 let timetableMobileView = localStorage.getItem("timetableMobileView") || "today";
 let currentRequestController = null; // For cancelling stale requests
 let currentOverviewController = null; // For cancelling stale overview requests
@@ -721,6 +723,63 @@ function isItemImportant(item) {
   return IMPORTANT_KEYWORDS.some((keyword) => text.includes(keyword.toLowerCase()));
 }
 
+// ── Manual Completion Override System ──────────────────────────
+// Stores a map of item key -> true (manually marked done)
+// Item key format: `${course_id}:${module_item_id}`
+
+function getManualCompletions() {
+  try {
+    const stored = localStorage.getItem("manual_completions");
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveManualCompletion(itemKey, completed) {
+  const completions = getManualCompletions();
+  if (completed) {
+    completions[itemKey] = true;
+  } else {
+    delete completions[itemKey];
+  }
+  localStorage.setItem("manual_completions", JSON.stringify(completions));
+}
+
+function isManuallyCompleted(item) {
+  const completions = getManualCompletions();
+  const key = `${item.course_id}:${item.module_item_id}`;
+  return completions[key] === true;
+}
+
+function getEffectiveCompletion(item) {
+  // Manual override takes precedence
+  if (isManuallyCompleted(item)) {
+    return true;
+  }
+  return item.completed;
+}
+
+function refreshOverviewFromState() {
+  if (!overviewData) return;
+  renderOverview(applyManualCompletionsToOverview(overviewData));
+}
+
+function normalizeOverviewWeek(weekSummary) {
+  return {
+    ...weekSummary,
+    typeCounts: weekSummary.typeCounts || weekSummary.type_counts || {},
+  };
+}
+
+function normalizeOverviewData(data) {
+  return {
+    courseName: data.courseName || data.course_name,
+    weeks: (data.weeks || []).map(normalizeOverviewWeek),
+    totals: data.totals || {},
+  };
+}
+
 function createItemRow(item) {
   const row = document.createElement("div");
   row.className = "item_row";
@@ -750,20 +809,80 @@ function createItemRow(item) {
   meta.className = "item_meta";
   meta.textContent = item.module;
 
-  const badge = document.createElement("span");
-  badge.className = `status_badge ${item.completed ? "status_done" : "status_open"}`;
-  badge.textContent = item.completed ? t("done") : t("unfinished");
-
   content.append(title, meta);
-  row.append(content, badge);
+
+  // Badge and manual toggle container
+  const badgeGroup = document.createElement("div");
+  badgeGroup.className = "item_badge_group";
+
+  const effectiveCompleted = getEffectiveCompletion(item);
+  const isUnknown = item.completed === null && !isManuallyCompleted(item);
+
+  const badge = document.createElement("span");
+  if (isManuallyCompleted(item)) {
+    badge.className = "status_badge status_done status_manual";
+    badge.textContent = t("done");
+  } else if (effectiveCompleted) {
+    badge.className = "status_badge status_done";
+    badge.textContent = t("done");
+  } else if (isUnknown) {
+    badge.className = "status_badge status_unknown";
+    badge.textContent = "?";
+    badge.title = t("unknown");
+  } else {
+    badge.className = "status_badge status_open";
+    badge.textContent = t("unfinished");
+  }
+
+  // Manual toggle button (only for items without tracking or not completed)
+  if (!effectiveCompleted) {
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "manual_done_btn";
+    toggleBtn.textContent = "✓";
+    toggleBtn.title = "Mark as done";
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = `${item.course_id}:${item.module_item_id}`;
+      saveManualCompletion(key, true);
+      // Re-render the current items
+      renderItems();
+      updateHubTitle();
+      refreshOverviewFromState();
+    });
+    badgeGroup.append(badge, toggleBtn);
+  } else if (isManuallyCompleted(item)) {
+    // Allow undoing manual completion
+    const undoBtn = document.createElement("button");
+    undoBtn.type = "button";
+    undoBtn.className = "manual_done_btn manual_done_btn_undo";
+    undoBtn.textContent = "↩";
+    undoBtn.title = "Undo manual completion";
+    undoBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = `${item.course_id}:${item.module_item_id}`;
+      saveManualCompletion(key, false);
+      renderItems();
+      updateHubTitle();
+      refreshOverviewFromState();
+    });
+    badgeGroup.append(badge, undoBtn);
+  } else {
+    badgeGroup.appendChild(badge);
+  }
+
+  row.append(content, badgeGroup);
   return row;
 }
 
 function renderItems() {
   const searchQuery = searchInput.value.trim().toLowerCase();
-  const visibleItems = items.filter((item) => itemMatchesSearch(item, searchQuery));
+  const scopedItems = unfinishedOnly.checked
+    ? items.filter((item) => getEffectiveCompletion(item) !== true)
+    : items;
+  const visibleItems = scopedItems.filter((item) => itemMatchesSearch(item, searchQuery));
 
-  if (items.length === 0) {
+  if (scopedItems.length === 0) {
     showMessage(t("noItemsWeek"));
     return;
   }
@@ -1029,13 +1148,21 @@ function weekApiPath(courseId, week) {
 function updateHubTitle() {
   const course = courses.find((entry) => entry.id === selectedCourseId);
   const courseLabel = course ? courseShortLabel(course) : "Course";
-  const scope = unfinishedOnly.checked ? t("unfinished") : `${items.length} ${t("items")}`;
+  const itemCount = unfinishedOnly.checked
+    ? items.filter((item) => getEffectiveCompletion(item) !== true).length
+    : items.length;
+  const scope = unfinishedOnly.checked ? t("unfinished") : `${itemCount} ${t("items")}`;
   const weekLabel = currentWeek === 0 ? t("general") : `${t("week")} ${currentWeek}`;
   hubTitle.textContent = `${courseLabel} · ${weekLabel} · ${scope}`;
 }
 
 async function loadCourses() {
   if (coursesLoaded) {
+    // Keep the work view in sync when returning from overview cards, tabs, or language changes.
+    if (selectedCourseId) {
+      await loadItems();
+      await loadOverview();
+    }
     return;
   }
 
@@ -1060,6 +1187,7 @@ async function loadCourses() {
   await loadWeeks();
   await loadItems();
 
+  // Load overview after courses and items are loaded
   await loadOverview();
 }
 
@@ -1657,6 +1785,82 @@ function toggleTimetableEditMode() {
 
 // ── Overview ────────────────────────────────────────────────────
 
+function applyManualCompletionsToOverview(overviewData) {
+  // Adjust overview counts based on manual completions in localStorage
+  const manualCompletions = getManualCompletions();
+  const manualKeys = Object.keys(manualCompletions);
+  if (manualKeys.length === 0) return overviewData;
+
+  const adjustments = {}; // week -> {done_adj, unfinished_adj, unknown_adj}
+  const seenManualKeys = new Set();
+  
+  function adjustForItem(week, item) {
+    if (item.course_id !== selectedCourseId || !item.module_item_id) return;
+
+    const key = `${item.course_id}:${item.module_item_id}`;
+    if (!manualCompletions[key] || seenManualKeys.has(key)) return;
+    seenManualKeys.add(key);
+
+    if (!adjustments[week]) {
+      adjustments[week] = { done_adj: 0, unfinished_adj: 0, unknown_adj: 0 };
+    }
+
+    // The item was previously not-done (unfinished or unknown), now manually done.
+    if (item.completed === null) {
+      adjustments[week].unknown_adj -= 1;
+      adjustments[week].done_adj += 1;
+    } else if (item.completed === false) {
+      adjustments[week].unfinished_adj -= 1;
+      adjustments[week].done_adj += 1;
+    }
+  }
+
+  for (const weekSummary of overviewData.weeks || []) {
+    for (const item of weekSummary.items || []) {
+      adjustForItem(weekSummary.week, item);
+    }
+  }
+
+  // Older overview responses did not include item ids. Fall back to loaded weeks.
+  for (const key of manualKeys) {
+    if (seenManualKeys.has(key)) continue;
+
+    for (const [cacheKey, cachedItems] of itemCache.entries()) {
+      // cacheKey format: `${courseId}:${week}:${unfinishedOnly}`
+      const [cId, week, _unf] = cacheKey.split(":").map(x => isNaN(Number(x)) ? x : Number(x));
+      if (cId !== selectedCourseId) continue;
+
+      for (const item of cachedItems) {
+        const itemKey = `${item.course_id}:${item.module_item_id}`;
+        if (itemKey === key) {
+          adjustForItem(week, item);
+          break;
+        }
+      }
+    }
+  }
+
+  if (Object.keys(adjustments).length === 0) return overviewData;
+
+  // Apply adjustments to a deep copy of the overview data
+  const adjusted = JSON.parse(JSON.stringify(overviewData));
+  for (const weekSummary of adjusted.weeks) {
+    const adj = adjustments[weekSummary.week];
+    if (adj) {
+      weekSummary.done += adj.done_adj;
+      weekSummary.unfinished += adj.unfinished_adj;
+      weekSummary.unknown += adj.unknown_adj;
+    }
+  }
+  // Recompute totals
+  adjusted.totals.total = adjusted.weeks.reduce((s, w) => s + w.total, 0);
+  adjusted.totals.done = adjusted.weeks.reduce((s, w) => s + w.done, 0);
+  adjusted.totals.unfinished = adjusted.weeks.reduce((s, w) => s + w.unfinished, 0);
+  adjusted.totals.unknown = adjusted.weeks.reduce((s, w) => s + w.unknown, 0);
+  
+  return adjusted;
+}
+
 async function loadOverview() {
   if (!selectedCourseId) return;
 
@@ -1672,18 +1876,6 @@ async function loadOverview() {
   currentOverviewController = new AbortController();
   const signal = currentOverviewController.signal;
 
-  // Check cache first
-  const cacheKey = `overview:${selectedCourseId}`;
-  const cached = overviewCache.get(cacheKey);
-  if (cached) {
-    overviewData = cached;
-    if (spinner) {
-      spinner.classList.remove("overview_spinner_visible");
-    }
-    renderOverview(overviewData);
-    return;
-  }
-
   // Show spinner, hide previous content
   if (spinner) {
     spinner.classList.add("overview_spinner_visible");
@@ -1693,82 +1885,28 @@ async function loadOverview() {
   overviewData = null;
 
   try {
-    // Reuse availableWeeks if already loaded, otherwise fetch them
-    let weeks = availableWeeks;
-    if (weeks.length === 0) {
-      const weeksData = await fetchJson(`/api/courses/${selectedCourseId}/weeks`, { signal });
-      weeks = weeksData.weeks || [];
-    }
+    // Use the dedicated overview endpoint for a single efficient call
+    const data = await fetchJson(`/api/courses/${selectedCourseId}/overview`, { signal });
 
-    // Get the course name
-    const course = courses.find(c => c.id === selectedCourseId);
-    const courseLabel = course ? courseShortLabel(course) : "Course";
-
-    // Fetch items for each week (both all and unfinished) in parallel
-    const weekSummaries = await Promise.all(
-      weeks.map(async (week) => {
-        try {
-          const [allItemsData, unfinishedData] = await Promise.all([
-            fetchJson(`/api/courses/${selectedCourseId}/week/${week}`, { signal }),
-            fetchJson(`/api/courses/${selectedCourseId}/week/${week}/unfinished`, { signal }),
-          ]);
-
-          // Cache items so subsequent navigation to that week is instant
-          const allCacheKey = `${selectedCourseId}:${week}:false`;
-          itemCache.set(allCacheKey, allItemsData.items);
-          const unfinCacheKey = `${selectedCourseId}:${week}:true`;
-          itemCache.set(unfinCacheKey, unfinishedData.items);
-
-          const allItems = allItemsData.items || [];
-          const unfinishedItems = unfinishedData.items || [];
-          const doneCount = allItems.length - unfinishedItems.length;
-
-          // Count by type
-          const typeCounts = {};
-          for (const item of allItems) {
-            typeCounts[item.type] = (typeCounts[item.type] || 0) + 1;
-          }
-
-          return {
-            week: week,
-            total: allItems.length,
-            done: doneCount,
-            unfinished: unfinishedItems.length,
-            typeCounts,
-          };
-        } catch {
-          // Skip weeks that fail to load
-          return {
-            week: week,
-            total: 0,
-            done: 0,
-            unfinished: 0,
-            typeCounts: {},
-          };
-        }
-      })
-    );
-
-    overviewData = {
-      courseName: courseLabel,
-      weeks: weekSummaries,
-    };
-
-    // Cache the overview data
-    overviewCache.set(cacheKey, overviewData);
+    overviewData = normalizeOverviewData(data);
 
     // Hide spinner before rendering
     if (spinner) {
       spinner.classList.remove("overview_spinner_visible");
     }
     
-    renderOverview(overviewData);
+    // Apply manual completions before rendering
+    const adjusted = applyManualCompletionsToOverview(overviewData);
+    renderOverview(adjusted);
   } catch (error) {
     if (error.name === 'AbortError') return;
     // Hide spinner on error
     if (spinner) {
       spinner.classList.remove("overview_spinner_visible");
     }
+    // Don't show "no data" immediately - the overview might still be loading.
+    // Instead, show a subtle loading message that will be replaced on retry.
+    // The overview will be retried when the user switches courses or the data loads.
     container.innerHTML = `<p class="empty_message">${t("overviewNoData")}</p>`;
   } finally {
     currentOverviewController = null;
@@ -1787,6 +1925,7 @@ function renderOverview(data) {
   const totalItems = data.weeks.reduce((sum, w) => sum + w.total, 0);
   const totalDone = data.weeks.reduce((sum, w) => sum + w.done, 0);
   const totalUnfinished = data.weeks.reduce((sum, w) => sum + w.unfinished, 0);
+  const totalUnknown = data.weeks.reduce((sum, w) => sum + (w.unknown || 0), 0);
 
   // Update donut chart
   updateDonutChart(totalDone, totalItems);
@@ -1799,7 +1938,7 @@ function renderOverview(data) {
 
   const summaryItems = [
     { label: t("overviewWeeks"), count: data.weeks.length },
-    { label: t("overviewTotal"), count: totalItems },
+    { label: t("overviewUnknown"), count: totalUnknown, className: "overview_unknown" },
     { label: t("overviewDone"), count: totalDone, className: "overview_done" },
     { label: t("overviewUnfinished"), count: totalUnfinished, className: "overview_unfinished" },
   ];
@@ -1818,6 +1957,7 @@ function renderOverview(data) {
 
   // Per-week breakdown
   for (const weekSummary of data.weeks) {
+    const typeCounts = weekSummary.typeCounts || weekSummary.type_counts || {};
     const weekCard = document.createElement("div");
     weekCard.className = "overview_week_card";
     weekCard.setAttribute("data-week", weekSummary.week);
@@ -1860,7 +2000,7 @@ function renderOverview(data) {
     typeRow.className = "overview_type_row";
 
     for (const type of TYPE_ORDER) {
-      const count = weekSummary.typeCounts[type] || 0;
+      const count = typeCounts[type] || 0;
       if (count === 0) continue;
       const chip = document.createElement("span");
       chip.className = "overview_type_chip";
@@ -1887,11 +2027,6 @@ function renderWorkView() {
   searchInput.placeholder = t("searchPlaceholder");
   const filterToggleSpan = document.querySelector(".filter_toggle span");
   if (filterToggleSpan) filterToggleSpan.textContent = t("unfinishedLabel");
-  
-  // Load overview data when work view is rendered
-  if (selectedCourseId) {
-    loadOverview();
-  }
 }
 
 function updateDonutChart(done, total) {
@@ -1928,6 +2063,7 @@ function renderTimetableView() {
 function renderAll() {
   renderWorkView();
   renderTimetableView();
+  refreshOverviewFromState();
   
   // Update shared static text elements
   if (tagline) tagline.textContent = t("tagline");
@@ -2470,7 +2606,6 @@ function reinitializeApp() {
   courses = [];
   items = [];
   itemCache = new Map();
-  overviewCache = new Map();
   availableWeeks = [];
   selectedCourseId = null;
 

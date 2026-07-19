@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from functools import lru_cache
 
 import requests
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, make_response, request, send_from_directory
 from flask_cors import CORS
 
 import psycopg2
@@ -47,6 +47,7 @@ class Config:
     REQUEST_TIMEOUT = 10
     PER_PAGE = 100
     CACHE_TTL = 300  # seconds (5 minutes)
+    OVERVIEW_CACHE_TTL = 0  # overview data should reflect recent Canvas/manual changes
     MAX_CACHE_SIZE = 1000  # Maximum number of cached items
     
     # Get debug mode from environment variable (default to False for safety)
@@ -80,6 +81,15 @@ def cache_get(key: str) -> Optional[Any]:
         return None
 
 
+def cache_get_ttl(key: str, ttl: int) -> Optional[Any]:
+    """Return cached value with a custom TTL."""
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry and time.time() - entry["ts"] < ttl:
+            return entry["data"]
+        return None
+
+
 def cache_set(key: str, data: Any) -> None:
     """Store a value in the cache with the current timestamp.
     
@@ -101,17 +111,23 @@ def cache_set(key: str, data: Any) -> None:
 
 @app.get("/")
 def index():
-    return send_from_directory(".", "index.html")
+    return no_store_response(send_from_directory(".", "index.html"))
 
 
 @app.get("/script.js")
 def script():
-    return send_from_directory(".", "script.js")
+    return no_store_response(send_from_directory(".", "script.js"))
 
 
 @app.get("/style.css")
 def styles():
-    return send_from_directory(".", "style.css")
+    return no_store_response(send_from_directory(".", "style.css"))
+
+
+def no_store_response(response):
+    response = make_response(response)
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    return response
 
 
 def token_hash(headers: Dict[str, str]) -> str:
@@ -418,9 +434,25 @@ def item_url(course_id: int, item: Dict[str, Any]) -> Optional[str]:
     return item.get("html_url")
 
 
+def get_item_completion(item: Dict[str, Any]) -> Tuple[bool, bool]:
+    """Determine completion status of a Canvas module item.
+    
+    Returns:
+        Tuple of (is_completed, has_tracking).
+        - is_completed: True if item has completion tracking and is completed
+                        False if item has completion tracking and is not completed
+                        None if item has no completion tracking (unknown)
+        - has_tracking: True if Canvas reports a completion_requirement for this item
+    """
+    completion = item.get("completion_requirement")
+    if not completion:
+        return (None, False)
+    return (completion.get("completed", False), True)
+
+
 def format_module_item(course_id: int, course_name: str, module: Dict[str, Any], item: Dict[str, Any]) -> Dict[str, Any]:
     """Format a module item into a consistent structure for the frontend."""
-    completion = item.get("completion_requirement") or {}
+    is_completed, has_tracking = get_item_completion(item)
 
     return {
         "course_id": course_id,
@@ -428,16 +460,22 @@ def format_module_item(course_id: int, course_name: str, module: Dict[str, Any],
         "module": module.get("name", "Unnamed Module"),
         "title": item.get("title", "Untitled"),
         "type": item.get("type", "Unknown"),
-        "completed": completion.get("completed", False),
+        "completed": is_completed,
+        "has_tracking": has_tracking,
         "module_item_id": item.get("id"),
         "url": item_url(course_id, item),
     }
 
 
 def is_incomplete(item: Dict[str, Any]) -> bool:
-    """Check if a Canvas item is incomplete."""
+    """Check if a Canvas item is incomplete (explicitly tracked and not completed).
+    
+    Items without completion tracking return False (they are "unknown", not "incomplete").
+    """
     completion = item.get("completion_requirement")
-    return bool(completion) and completion.get("completed") is False
+    if not completion:
+        return False
+    return completion.get("completed") is False
 
 
 def fetch_items_for_module(course_id: int, module: Dict[str, Any], headers: Dict[str, str]) -> Tuple[Dict[str, Any], Optional[List[Dict]]]:
@@ -460,7 +498,7 @@ def get_week_items(
         course_id: The Canvas course ID
         week: The week number to fetch
         headers: Authentication headers
-        unfinished_only: If True, only return incomplete items
+        unfinished_only: If True, only return explicitly-incomplete items (not unknown)
         
     Returns:
         Tuple of (items, course_name, error_response)
@@ -500,6 +538,75 @@ def get_week_items(
 
     logger.info(f"Found {len(items)} items for course {course_id}, week {week}")
     return items, course_name, None
+
+
+def get_all_course_items(
+    course_id: int,
+    headers: Dict[str, str]
+) -> Tuple[Optional[Dict[int, List[Dict]]], Optional[requests.Response]]:
+    """Fetch ALL items for a course, grouped by week number.
+    
+    This is the workhorse for the overview endpoint. It:
+    1. Fetches all modules once
+    2. Fetches all module items in parallel
+    3. Groups items by the week numbers extracted from module names
+    
+    Returns:
+        Tuple of (week_groups, error_response) where week_groups is a dict
+        mapping week number -> list of formatted items.
+        Module items without week info are grouped under week 0 (General).
+    """
+    modules, response = get_course_modules(course_id, headers)
+    if response is not None:
+        return None, response
+
+    course_name = get_course_name(course_id, headers)
+
+    # Build week-to-modules mapping
+    week_modules: Dict[int, List[Dict]] = {}
+    for module in modules:
+        weeks = extract_weeks(module.get("name"))
+        if not weeks:
+            # No week info -> General category (week 0)
+            week_modules.setdefault(0, []).append(module)
+        else:
+            for w in weeks:
+                if 0 <= w <= 100:
+                    week_modules.setdefault(w, []).append(module)
+
+    # Fetch all module items in parallel across ALL modules
+    all_module_ids = list(set(m["id"] for mod_list in week_modules.values() for m in mod_list))
+    
+    module_items_map: Dict[int, Optional[List[Dict]]] = {}
+    if all_module_ids:
+        with ThreadPoolExecutor(max_workers=min(len(all_module_ids), 8) or 1) as executor:
+            futures = {
+                executor.submit(get_module_items, course_id, mod_id, headers): mod_id
+                for mod_id in all_module_ids
+            }
+            for future in as_completed(futures):
+                mod_id = futures[future]
+                try:
+                    items, error = future.result()
+                    module_items_map[mod_id] = items if error is None else None
+                except Exception:
+                    module_items_map[mod_id] = None
+
+    # Group items by week
+    week_groups: Dict[int, List[Dict]] = {}
+    for week, mod_list in week_modules.items():
+        items_for_week: List[Dict] = []
+        for module in mod_list:
+            module_items = module_items_map.get(module["id"])
+            if module_items is None:
+                continue
+            for item in module_items:
+                if item.get("type") not in ALLOWED_ITEM_TYPES:
+                    continue
+                items_for_week.append(format_module_item(course_id, course_name, module, item))
+        week_groups[week] = items_for_week
+
+    return week_groups, None
 
 
 # ─── Token Management Endpoints ─────────────────────────────────
@@ -663,6 +770,78 @@ def get_course_week_unfinished(course_id: int, week: int):
         "item_count": len(items),
         "items": items,
     })
+
+
+@app.get("/api/courses/<int:course_id>/overview")
+def get_course_overview(course_id: int):
+    """Get overview data for a course: all weeks with their item counts and completion stats.
+    
+    This is a dedicated, efficient endpoint that fetches ALL course data in one pass,
+    replacing the previous approach of making N*2 individual week requests.
+    """
+    headers, error = require_headers()
+    if error:
+        return error
+
+    course_name = get_course_name(course_id, headers)
+    
+    week_groups, response = get_all_course_items(course_id, headers)
+    if response is not None:
+        return api_error("Failed to fetch course items for overview", response)
+
+    # Build overview summary for each week
+    week_summaries = []
+    for week in sorted(week_groups.keys()):
+        items_list = week_groups[week]
+        total = len(items_list)
+        done = sum(1 for item in items_list if item["completed"] is True)
+        unfinished = sum(1 for item in items_list if item["completed"] is False)
+        unknown = sum(1 for item in items_list if item["completed"] is None)
+        
+        # Count by type
+        type_counts = {}
+        for item in items_list:
+            item_type = item["type"]
+            type_counts[item_type] = type_counts.get(item_type, 0) + 1
+
+        week_summaries.append({
+            "week": week,
+            "total": total,
+            "done": done,
+            "unfinished": unfinished,
+            "unknown": unknown,
+            "type_counts": type_counts,
+            "items": [
+                {
+                    "course_id": item["course_id"],
+                    "module_item_id": item.get("module_item_id"),
+                    "completed": item["completed"],
+                }
+                for item in items_list
+            ],
+        })
+
+    # Build course-wide totals
+    total_all = sum(ws["total"] for ws in week_summaries)
+    total_done = sum(ws["done"] for ws in week_summaries)
+    total_unfinished = sum(ws["unfinished"] for ws in week_summaries)
+    total_unknown = sum(ws["unknown"] for ws in week_summaries)
+
+    response_data = {
+        "course_id": course_id,
+        "course_name": course_name,
+        "week_count": len(week_summaries),
+        "weeks": week_summaries,
+        "totals": {
+            "total": total_all,
+            "done": total_done,
+            "unfinished": total_unfinished,
+            "unknown": total_unknown,
+        },
+    }
+
+    logger.info(f"Returning overview for course {course_id}: {len(week_summaries)} weeks, {total_all} items")
+    return jsonify(response_data)
 
 
 @app.get("/api/week/<int:week>")
