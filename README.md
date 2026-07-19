@@ -9,16 +9,16 @@ https://github.com/user-attachments/assets/1dbd77f9-af79-47db-9f85-02e0fa4c710c
 ## Screenshot
 
 ### Setup Wizard
-![alt text](image-3.png)
+![alt text](static/image-3.png)
 
 ### Work view
-![alt text](image.png)
+![alt text](static/image.png)
 
 ### Overview Dashboard
-![alt text](image-1.png)
+![alt text](static/image-1.png)
 
 ### Timetable
-![alt text](image-2.png)
+![alt text](static/image-2.png)
 
 ## Access
 
