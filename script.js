@@ -2,6 +2,7 @@ const itemList = document.getElementById("item_list");
 const searchInput = document.getElementById("search_input");
 const coursePills = document.getElementById("course_pills");
 const unfinishedOnly = document.getElementById("unfinished_only");
+const unknownOnly = document.getElementById("unknown_only");
 const hubTitle = document.getElementById("hub_title");
 const prevWeekBtn = document.getElementById("prev_week");
 const nextWeekBtn = document.getElementById("next_week");
@@ -877,9 +878,12 @@ function createItemRow(item) {
 
 function renderItems() {
   const searchQuery = searchInput.value.trim().toLowerCase();
-  const scopedItems = unfinishedOnly.checked
-    ? items.filter((item) => getEffectiveCompletion(item) !== true)
-    : items;
+  let scopedItems = items;
+  if (unfinishedOnly.checked) {
+    scopedItems = items.filter((item) => getEffectiveCompletion(item) !== true);
+  } else if (unknownOnly.checked) {
+    scopedItems = items.filter((item) => item.completed === null && !isManuallyCompleted(item));
+  }
   const visibleItems = scopedItems.filter((item) => itemMatchesSearch(item, searchQuery));
 
   if (scopedItems.length === 0) {
@@ -1141,17 +1145,26 @@ function updateWeekNav() {
 }
 
 function weekApiPath(courseId, week) {
-  const suffix = unfinishedOnly.checked ? "/unfinished" : "";
+  let suffix = "";
+  if (unfinishedOnly.checked) suffix = "/unfinished";
+  else if (unknownOnly.checked) suffix = "/unknown";
   return `/api/courses/${courseId}/week/${week}${suffix}`;
 }
 
 function updateHubTitle() {
   const course = courses.find((entry) => entry.id === selectedCourseId);
   const courseLabel = course ? courseShortLabel(course) : "Course";
-  const itemCount = unfinishedOnly.checked
-    ? items.filter((item) => getEffectiveCompletion(item) !== true).length
-    : items.length;
-  const scope = unfinishedOnly.checked ? t("unfinished") : `${itemCount} ${t("items")}`;
+  let itemCount = items.length;
+  let scope;
+  if (unfinishedOnly.checked) {
+    itemCount = items.filter((item) => getEffectiveCompletion(item) !== true).length;
+    scope = t("unfinished");
+  } else if (unknownOnly.checked) {
+    itemCount = items.filter((item) => item.completed === null && !isManuallyCompleted(item)).length;
+    scope = t("unknown");
+  } else {
+    scope = `${itemCount} ${t("items")}`;
+  }
   const weekLabel = currentWeek === 0 ? t("general") : `${t("week")} ${currentWeek}`;
   hubTitle.textContent = `${courseLabel} · ${weekLabel} · ${scope}`;
 }
@@ -1873,8 +1886,9 @@ async function loadOverview() {
   if (currentOverviewController) {
     currentOverviewController.abort();
   }
-  currentOverviewController = new AbortController();
-  const signal = currentOverviewController.signal;
+  const thisOverviewController = new AbortController();
+  currentOverviewController = thisOverviewController;
+  const signal = thisOverviewController.signal;
 
   // Show spinner, hide previous content
   if (spinner) {
@@ -2189,6 +2203,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 unfinishedOnly.addEventListener("click", loadItems);
+unknownOnly.addEventListener("click", loadItems);
 
 // Search input management
 function updateSearchWrapperClass() {
@@ -2672,6 +2687,20 @@ function addModalCloseButton(content, onClose) {
   content.appendChild(closeBtn);
 }
 
+async function getCsrfToken() {
+  const response = await fetch("/api/csrf-token");
+  if (!response.ok) {
+    throw new Error("Failed to get CSRF token.");
+  }
+
+  const data = await response.json();
+  if (!data.csrf_token) {
+    throw new Error("Missing CSRF token.");
+  }
+
+  return data.csrf_token;
+}
+
 // Esc shortcut to close any open modal (Settings, API Token, Feedback, T&C).
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
@@ -3115,9 +3144,13 @@ function openFeedbackForm() {
     feedbackMsg.hidden = true;
 
     try {
+      const csrfToken = await getCsrfToken();
       const response = await fetch("/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
         body: JSON.stringify({
           rating: selectedRating,
           usage_type: selectedUsage,

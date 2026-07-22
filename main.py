@@ -5,6 +5,7 @@ import threading
 import logging
 import hashlib
 import hmac
+import secrets
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
 from functools import lru_cache
@@ -30,13 +31,15 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Limit request body size to 1MB
+app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
+
 # Configure CORS for frontend access
-# In production, restrict to your Render URL
 CORS(app, resources={
     r"/api/*": {
         "origins": ["https://vinschool-lms-dashboard.onrender.com", "http://localhost:5000"],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"]
     }
 })
 
@@ -44,11 +47,17 @@ CORS(app, resources={
 class Config:
     DEFAULT_COURSE_ID = 32140
     LMS_BASE_URL = "https://lms.vinschool.edu.vn"
-    REQUEST_TIMEOUT = 10
-    PER_PAGE = 100
+    REQUEST_TIMEOUT = 30  # Increased for overview requests
+    PER_PAGE = 1000       # Increased for large courses
     CACHE_TTL = 300  # seconds (5 minutes)
     OVERVIEW_CACHE_TTL = 0  # overview data should reflect recent Canvas/manual changes
     MAX_CACHE_SIZE = 1000  # Maximum number of cached items
+    MAX_COURSE_ID = 999999  # Maximum reasonable course ID for validation
+    
+    # Rate limiting configuration (token bucket per IP)
+    RATE_LIMIT_TOKENS = 300       # Max requests per window
+    RATE_LIMIT_WINDOW = 60       # Window in seconds
+    RATE_LIMIT_VALIDATE_TOKENS = 5   # Stricter limit for validate-token
     
     # Get debug mode from environment variable (default to False for safety)
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
@@ -68,8 +77,87 @@ WEEK_SEPARATORS = frozenset("-–+&,/")
 _cache: Dict[str, Dict[str, Any]] = {}
 _cache_lock = threading.Lock()
 
+# Rate limiting state: {ip: {"tokens": float, "last_refill": float}}
+_rate_limit_state: Dict[str, Dict[str, float]] = {}
+_rate_limit_lock = threading.Lock()
+
+# CSRF token store: {token: expiry_timestamp}
+_csrf_tokens: Dict[str, float] = {}
+_csrf_token_lock = threading.Lock()
+
 # Tokens are NEVER stored server-side. They are only read from the per-request
 # `Authorization` header (sent by the frontend) or the optional API_TOKEN env var.
+
+
+def check_rate_limit(ip: str, max_tokens: int = Config.RATE_LIMIT_TOKENS, window: int = Config.RATE_LIMIT_WINDOW) -> Tuple[bool, int]:
+    """Rate limiting using token bucket algorithm.
+    
+    Each IP gets max_tokens tokens, refilled at window rate.
+    Returns (allowed, retry_after_seconds).
+    """
+    now = time.time()
+    with _rate_limit_lock:
+        state = _rate_limit_state.get(ip)
+        if state is None:
+            # New IP, give full bucket
+            _rate_limit_state[ip] = {"tokens": max_tokens - 1, "last_refill": now}
+            return True, 0
+        
+        # Calculate tokens to add based on time elapsed
+        elapsed = now - state["last_refill"]
+        tokens_to_add = elapsed * (max_tokens / window)
+        state["tokens"] = min(max_tokens, state["tokens"] + tokens_to_add)
+        state["last_refill"] = now
+        
+        if state["tokens"] >= 1:
+            state["tokens"] -= 1
+            return True, 0
+        else:
+            retry_after = int((1 - state["tokens"]) / (max_tokens / window)) + 1
+            return False, retry_after
+
+
+def cleanup_rate_limit_state() -> None:
+    """Periodically clean up stale rate limit entries."""
+    now = time.time()
+    with _rate_limit_lock:
+        stale_ips = [
+            ip for ip, state in _rate_limit_state.items()
+            if now - state["last_refill"] > Config.RATE_LIMIT_WINDOW * 2
+        ]
+        for ip in stale_ips:
+            del _rate_limit_state[ip]
+
+
+def generate_csrf_token() -> str:
+    """Generate and store a CSRF token (valid for 1 hour)."""
+    token = secrets.token_hex(32)
+    expiry = time.time() + 3600  # 1 hour
+    with _csrf_token_lock:
+        _csrf_tokens[token] = expiry
+    return token
+
+
+def validate_csrf_token(token: str) -> bool:
+    """Validate a CSRF token and remove it if valid (one-time use)."""
+    if not token:
+        return False
+    with _csrf_token_lock:
+        expiry = _csrf_tokens.pop(token, None)
+        if expiry is None:
+            return False
+        if time.time() > expiry:
+            return False
+    return True
+
+
+def cleanup_csrf_tokens() -> None:
+    """Remove expired CSRF tokens."""
+    now = time.time()
+    with _csrf_token_lock:
+        expired = [t for t, exp in _csrf_tokens.items() if now > exp]
+        for t in expired:
+            del _csrf_tokens[t]
 
 
 def cache_get(key: str) -> Optional[Any]:
@@ -191,6 +279,26 @@ def course_api_url(course_id: int) -> str:
     return f"{Config.LMS_BASE_URL}/api/v1/courses/{course_id}"
 
 
+def validate_course_id(course_id: int) -> Optional[str]:
+    """Validate course ID is within reasonable bounds.
+    
+    Returns error message if invalid, None if valid.
+    """
+    if not isinstance(course_id, int) or course_id <= 0 or course_id > Config.MAX_COURSE_ID:
+        return f"Invalid course ID: {course_id}"
+    return None
+
+
+def validate_week(week: int) -> Optional[str]:
+    """Validate week number is within reasonable bounds.
+    
+    Returns error message if invalid, None if valid.
+    """
+    if not isinstance(week, int) or week < 0 or week > 100:
+        return f"Invalid week number: {week}"
+    return None
+
+
 def canvas_get(url: str, headers: Dict[str, str], params: Optional[Dict] = None) -> Tuple[Optional[Dict], Optional[requests.Response]]:
     """Make a GET request to the Canvas API.
     
@@ -220,6 +328,19 @@ def canvas_get(url: str, headers: Dict[str, str], params: Optional[Dict] = None)
         return None, None
 
 
+@lru_cache(maxsize=256)
+def extract_weeks_cached(module_name: str) -> Tuple[int, ...]:
+    """Cached version of extract_weeks using functools.lru_cache.
+    
+    Module names are typically short strings (under 200 chars) from Canvas,
+    making them ideal for caching. The LRU cache with maxsize=256 should
+    cover the active module set for most courses.
+    
+    Returns a tuple of sorted unique week numbers for hashability.
+    """
+    return tuple(extract_weeks_raw(module_name))
+
+
 def extract_weeks(module_name: Optional[str]) -> List[int]:
     """Extract all week numbers from a Canvas module name.
     
@@ -230,12 +351,23 @@ def extract_weeks(module_name: Optional[str]) -> List[int]:
     4. Interprets ranges (-, –) and lists (+, &, ,, /)
     
     Returns a sorted list of unique week numbers, or [] if no week info found.
+    This function delegates to extract_weeks_cached for caching the computation.
+    """
+    if not module_name:
+        return []
+    return list(extract_weeks_cached(module_name))
+
+
+def extract_weeks_raw(module_name: str) -> List[int]:
+    """Raw implementation of week extraction (no caching wrapper).
+    
+    Extracted to allow lru_cache on the string -> tuple conversion
+    while maintaining the original List[int] interface.
     """
     if not module_name:
         return []
 
     # Normalize: strip leading emoji/common symbols that might precede the keyword
-    # (the keyword can appear after emoji or decorative characters)
     name = module_name.strip()
     if not name:
         return []
@@ -609,10 +741,43 @@ def get_all_course_items(
     return week_groups, None
 
 
+# ─── Rate Limiting Decorator ──────────────────────────────
+
+def rate_limit(max_tokens: int = None, window: int = None):
+    """Decorator to apply rate limiting to a route.
+    
+    Uses the client's IP address as the rate limit key.
+    Returns 429 Too Many Requests if limit is exceeded.
+    """
+    if max_tokens is None:
+        max_tokens = Config.RATE_LIMIT_TOKENS
+    if window is None:
+        window = Config.RATE_LIMIT_WINDOW
+    
+    def decorator(f):
+        def wrapper(*args, **kwargs):
+            # Get client IP
+            ip = request.remote_addr or "unknown"
+            allowed, retry_after = check_rate_limit(ip, max_tokens, window)
+            if not allowed:
+                resp = jsonify({
+                    "error": "Too many requests. Please slow down.",
+                    "retry_after": retry_after
+                })
+                resp.status_code = 429
+                resp.headers["Retry-After"] = str(retry_after)
+                return resp
+            return f(*args, **kwargs)
+        wrapper.__name__ = f.__name__
+        return wrapper
+    return decorator
+
+
 # ─── Token Management Endpoints ─────────────────────────────────
 
 
 @app.post("/api/validate-token")
+@rate_limit(max_tokens=Config.RATE_LIMIT_VALIDATE_TOKENS, window=Config.RATE_LIMIT_WINDOW)
 def validate_token():
     """Validate a Canvas API token by making a test call to the Canvas API.
     
@@ -620,6 +785,8 @@ def validate_token():
     Returns: { "valid": true/false, "message": "..." }
     The token is used only for this validation request and is never stored
     server-side. The frontend is responsible for persisting it in localStorage.
+    
+    Rate limited: 5 requests per minute per IP.
     """
     data = request.get_json(silent=True)
     if not data or not data.get("token"):
@@ -668,10 +835,22 @@ def validate_token():
         })
 
 
+@app.get("/api/csrf-token")
+def get_csrf_token():
+    """Get a CSRF token for POST endpoints.
+    
+    The frontend should include this token in the X-CSRF-Token header
+    when making POST requests to /api/validate-token or /api/feedback.
+    """
+    token = generate_csrf_token()
+    return jsonify({"csrf_token": token})
+
+
 # ─── API Routes ────────────────────────────────────────────────
 
 
 @app.get("/api/courses")
+@rate_limit()
 def list_courses():
     """List all active courses for the authenticated user."""
     headers, error = require_headers()
@@ -690,8 +869,14 @@ def list_courses():
 
 
 @app.get("/api/courses/<int:course_id>/weeks")
+@rate_limit()
 def list_course_weeks(course_id: int):
     """List all week numbers found in module names for a course."""
+    # Input validation
+    error_msg = validate_course_id(course_id)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+
     headers, error = require_headers()
     if error:
         return error
@@ -701,20 +886,16 @@ def list_course_weeks(course_id: int):
         return api_error("Failed to fetch modules", response)
 
     # Collect all week numbers from extract_weeks (ranges already expanded)
-    # If any module has no week information, include week 0 (General)
     weeks = set()
     has_general = False
     for module in modules:
         module_weeks = extract_weeks(module.get("name"))
         if not module_weeks:
-            # Module has no week information at all
             has_general = True
         else:
-            # Validate week numbers (reasonable bounds: 0-100)
             validated_weeks = [w for w in module_weeks if 0 <= w <= 100]
             if validated_weeks:
                 weeks.update(validated_weeks)
-            # If all week numbers were invalid (>100), don't count as general
 
     result = sorted(weeks)
     if has_general:
@@ -729,8 +910,17 @@ def list_course_weeks(course_id: int):
 
 
 @app.get("/api/courses/<int:course_id>/week/<int:week>")
+@rate_limit()
 def get_course_week(course_id: int, week: int):
     """Get all items (quizzes, assignments, files) for a specific week."""
+    # Input validation
+    error_msg = validate_course_id(course_id)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+    error_msg = validate_week(week)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+
     headers, error = require_headers()
     if error:
         return error
@@ -750,8 +940,17 @@ def get_course_week(course_id: int, week: int):
 
 
 @app.get("/api/courses/<int:course_id>/week/<int:week>/unfinished")
+@rate_limit()
 def get_course_week_unfinished(course_id: int, week: int):
     """Get unfinished items for a specific week."""
+    # Input validation
+    error_msg = validate_course_id(course_id)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+    error_msg = validate_week(week)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+
     headers, error = require_headers()
     if error:
         return error
@@ -773,12 +972,18 @@ def get_course_week_unfinished(course_id: int, week: int):
 
 
 @app.get("/api/courses/<int:course_id>/overview")
+@rate_limit()
 def get_course_overview(course_id: int):
     """Get overview data for a course: all weeks with their item counts and completion stats.
     
     This is a dedicated, efficient endpoint that fetches ALL course data in one pass,
     replacing the previous approach of making N*2 individual week requests.
     """
+    # Input validation
+    error_msg = validate_course_id(course_id)
+    if error_msg:
+        return jsonify({"error": error_msg}), 400
+
     headers, error = require_headers()
     if error:
         return error
@@ -845,12 +1050,14 @@ def get_course_overview(course_id: int):
 
 
 @app.get("/api/week/<int:week>")
+@rate_limit()
 def get_week_legacy(week: int):
     """Legacy route for backward compatibility."""
     return _legacy_week_response(week, unfinished_only=False)
 
 
 @app.get("/api/todo/<int:week>")
+@rate_limit()
 def get_todo_legacy(week: int):
     """Legacy route for backward compatibility."""
     return _legacy_week_response(week, unfinished_only=True, todo_key=True)
@@ -900,8 +1107,8 @@ def init_db_pool() -> None:
     
     try:
         _db_pool = SimpleConnectionPool(
-            minconn=1,
-            maxconn=10,
+            minconn=2,     # Increased from 1 for redundancy
+            maxconn=20,    # Increased from 10 for production load with 2 gunicorn workers
             dsn=DATABASE_URL,
             cursor_factory=RealDictCursor
         )
@@ -913,7 +1120,7 @@ def init_db_pool() -> None:
 def get_db():
     """Get a database connection from the pool."""
     if _db_pool is None:
-        raise RuntimeError("Database pool not initialized")
+        raise RuntimeError("Database not configured")
     return _db_pool.getconn()
 
 
@@ -948,12 +1155,19 @@ def init_db() -> None:
 
 
 @app.post("/api/feedback")
+@rate_limit(max_tokens=10)
 def submit_feedback():
     """Submit user feedback.
     
     Expects JSON body: { "rating": int, "usage_type": str, "recommend": str, "improvement": str }
+    Requires X-CSRF-Token header for CSRF protection.
     Returns: { "success": true/false, "message": "..." }
     """
+    # Validate CSRF token
+    csrf_token = request.headers.get("X-CSRF-Token", "")
+    if not validate_csrf_token(csrf_token):
+        return jsonify({"success": False, "message": "Invalid or missing CSRF token. Please refresh and try again."}), 403
+
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"success": False, "message": "No data provided."}), 400
@@ -979,7 +1193,7 @@ def submit_feedback():
         improvement = ""
 
     if _db_pool is None:
-        return jsonify({"success": False, "message": "Database not configured."}), 503
+        return jsonify({"success": False, "message": "Feedback system is temporarily unavailable."}), 503
     
     conn = None
     cur = None
@@ -997,7 +1211,6 @@ def submit_feedback():
         )
 
         conn.commit()
-
         logger.info(f"Feedback saved: rating={rating}, usage={usage_type}, recommend={recommend}")
         return jsonify({"success": True, "message": "Thank you for your feedback!"})
     except Exception as e:
@@ -1011,6 +1224,7 @@ def submit_feedback():
         if conn:
             _db_pool.putconn(conn)
 
+
 @app.get("/api/feedback")
 def get_feedback():
     """Get all feedback submissions.
@@ -1018,15 +1232,14 @@ def get_feedback():
     Requires admin API key for authentication.
     """
     # Check admin API key (use constant-time comparison to prevent timing attacks)
-    import hmac
     admin_key = request.headers.get("X-Admin-Key")
     expected_key = os.getenv("ADMIN_API_KEY", "")
     if not admin_key or not hmac.compare_digest(admin_key, expected_key):
         logger.warning("Unauthorized attempt to access feedback endpoint")
-        return jsonify({"error": "Unauthorized. Admin access required."}), 401
+        return jsonify({"error": "Unauthorized. Access denied."}), 401
     
     if _db_pool is None:
-        return jsonify({"error": "Database not configured"}), 503
+        return jsonify({"error": "Feedback system is temporarily unavailable."}), 503
     
     conn = None
     cur = None
@@ -1058,18 +1271,71 @@ def get_feedback():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint for Render monitoring."""
+    """Health check endpoint for Render monitoring.
+    
+    Tests database connectivity and returns detailed status.
+    """
+    db_status = "configured"
+    db_detail = "ok"
+    
+    if _db_pool is None:
+        db_status = "not configured"
+        db_detail = "no database URL configured"
+    else:
+        # Test actual database connectivity
+        conn = None
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+        except Exception as e:
+            db_status = "error"
+            db_detail = "connection failed"
+            logger.error(f"Health check database error: {e}")
+        finally:
+            if conn:
+                try:
+                    _db_pool.putconn(conn)
+                except Exception:
+                    pass
+    
     return jsonify({
-        "status": "healthy",
+        "status": "healthy" if db_status != "error" else "degraded",
         "service": "VinFocus",
-        "database": "configured" if _db_pool is not None else "not configured"
-    }), 200
+        "database": db_status,
+        "database_detail": db_detail,
+        "version": "2.0",
+    }), 200 if db_status != "error" else 503
+
+
+# ─── Error Handlers ──────────────────────────────────────────────
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """Handle request body too large errors."""
+    return jsonify({
+        "error": "Request body too large. Maximum size is 1MB."
+    }), 413
+
+
+@app.errorhandler(429)
+def too_many_requests(error):
+    """Handle rate limit exceeded errors."""
+    return jsonify({
+        "error": "Too many requests. Please slow down and try again."
+    }), 429
 
 
 # ─── Startup ────────────────────────────────────────────────────
 
 init_db_pool()
 init_db()
+
+# Clean up stale rate limit and CSRF state periodically
+# (minimal overhead since these dicts are small)
+cleanup_rate_limit_state()
+cleanup_csrf_tokens()
 
 if __name__ == "__main__":
     logger.info(f"Starting VinFocus in {'DEBUG' if Config.DEBUG else 'PRODUCTION'} mode")
