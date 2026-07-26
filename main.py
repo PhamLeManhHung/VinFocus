@@ -90,6 +90,23 @@ _csrf_token_lock = threading.Lock()
 # `Authorization` header (sent by the frontend) or the optional API_TOKEN env var.
 
 
+def get_client_ip() -> str:
+    """Get the real client IP address, handling Render's proxy headers.
+    
+    Render sends the real client IP in the X-Forwarded-For header.
+    Falls back to remote_addr if the header is not present.
+    """
+    # Check X-Forwarded-For header (set by Render's proxy)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2, ...)
+        # The first IP is the real client IP
+        return forwarded_for.split(",")[0].strip()
+    
+    # Fallback to remote_addr
+    return request.remote_addr or "unknown"
+
+
 def check_rate_limit(ip: str, max_tokens: int = Config.RATE_LIMIT_TOKENS, window: int = Config.RATE_LIMIT_WINDOW) -> Tuple[bool, int]:
     """Rate limiting using token bucket algorithm.
     
@@ -305,32 +322,53 @@ def validate_week(week: int) -> Optional[str]:
 
 
 def canvas_get(url: str, headers: Dict[str, str], params: Optional[Dict] = None) -> Tuple[Optional[Dict], Optional[requests.Response]]:
-    """Make a GET request to the Canvas API.
+    """Make a GET request to the Canvas API with retry logic for 429 errors.
+    
+    Implements exponential backoff when rate limited (429).
+    Maximum 3 retries with delays of 1s, 2s, 4s (capped at 60s).
     
     Returns:
         Tuple of (data, error_response). If successful, data contains the JSON response
         and error_response is None. If failed, data is None and error_response contains
         the response object.
     """
-    try:
-        response = requests.get(
-            url,
-            headers=headers,
-            params=params,
-            timeout=Config.REQUEST_TIMEOUT,
-        )
+    max_retries = 3
+    base_delay = 1  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=Config.REQUEST_TIMEOUT,
+            )
 
-        if response.status_code != 200:
-            logger.warning(f"Canvas API request failed: {response.status_code} for {url}")
-            return None, response
+            if response.status_code == 429:
+                # Rate limited - retry with exponential backoff
+                if attempt < max_retries - 1:
+                    delay = min(base_delay * (2 ** attempt), 60)
+                    logger.warning(f"Canvas API rate limited (429). Retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"Canvas API rate limited (429). Max retries exceeded for {url}")
+                    return None, response
 
-        return response.json(), None
-    except requests.exceptions.Timeout:
-        logger.error(f"Canvas API request timeout: {url}")
-        return None, None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Canvas API request error: {e} for {url}")
-        return None, None
+            if response.status_code != 200:
+                logger.warning(f"Canvas API request failed: {response.status_code} for {url}")
+                return None, response
+
+            return response.json(), None
+        except requests.exceptions.Timeout:
+            logger.error(f"Canvas API request timeout: {url}")
+            return None, None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Canvas API request error: {e} for {url}")
+            return None, None
+    
+    # Should not reach here, but just in case
+    return None, None
 
 
 @lru_cache(maxsize=256)
@@ -773,8 +811,8 @@ def rate_limit(max_tokens: int = None, window: int = None):
     
     def decorator(f):
         def wrapper(*args, **kwargs):
-            # Get client IP
-            ip = request.remote_addr or "unknown"
+            # Get client IP (handles Render proxy)
+            ip = get_client_ip()
             allowed, retry_after = check_rate_limit(ip, max_tokens, window)
             if not allowed:
                 resp = jsonify({
@@ -1356,6 +1394,9 @@ def too_many_requests(error):
 
 init_db_pool()
 init_db()
+
+# Log rate limiter configuration
+logger.info(f"Rate limiting configured: {Config.RATE_LIMIT_TOKENS} requests per {Config.RATE_LIMIT_WINDOW}s per IP")
 
 # Clean up stale rate limit and CSRF state periodically
 # (minimal overhead since these dicts are small)

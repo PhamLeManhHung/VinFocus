@@ -594,6 +594,11 @@ let timetableMobileView = localStorage.getItem("timetableMobileView") || "today"
 let currentRequestController = null; // For cancelling stale requests
 let currentOverviewController = null; // For cancelling stale overview requests
 
+// Client-side API response cache to reduce duplicate requests
+// Key: URL, Value: { data, timestamp }
+const apiResponseCache = new Map();
+const API_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // ── Overview state ─────────────────────────────────────────────
 let overviewData = null;
 
@@ -647,6 +652,16 @@ function apiFetch(url, options = {}) {
 
 async function fetchJson(url, options = {}) {
   debugLog("fetchJson: calling", url);
+  
+  // Check client-side cache first (only for GET requests)
+  if (options.method === undefined || options.method === "GET") {
+    const cached = apiResponseCache.get(url);
+    if (cached && Date.now() - cached.timestamp < API_CACHE_TTL) {
+      debugLog("fetchJson: cache hit for", url);
+      return cached.data;
+    }
+  }
+  
   const response = await apiFetch(url, options);
   debugLog("fetchJson: response status", response.status, "for", url);
 
@@ -666,6 +681,12 @@ async function fetchJson(url, options = {}) {
   }
 
   const data = await response.json();
+  
+  // Cache successful GET responses
+  if (options.method === undefined || options.method === "GET") {
+    apiResponseCache.set(url, { data, timestamp: Date.now() });
+  }
+  
   return data;
 }
 
@@ -763,6 +784,11 @@ function getEffectiveCompletion(item) {
 function refreshOverviewFromState() {
   if (!overviewData) return;
   renderOverview(applyManualCompletionsToOverview(overviewData));
+}
+
+function clearApiCache() {
+  apiResponseCache.clear();
+  debugLog("API response cache cleared");
 }
 
 function normalizeOverviewWeek(weekSummary) {
