@@ -53,10 +53,7 @@
 
         <!-- Top-right toolbar (language + theme) -->
         <div class="toolbar">
-            <select id="language_selector" class="language_selector" aria-label="Select language">
-                <option value="en">English</option>
-                <option value="vi">Tiếng Việt</option>
-            </select>
+            <button type="button" id="language_toggle" class="language_toggle" aria-label="Toggle language">EN</button>
 
             <button type="button" id="theme_toggle" class="toolbar_btn" aria-label="Toggle theme">
                 <svg class="theme_icon_sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -80,152 +77,155 @@
             <h1>VinFocus</h1>
             <p id="tagline" class="tagline">Vinschool LMS information hub — browse courses, weeks, and resources.</p>
             <nav class="app_nav" aria-label="App views">
+                <div class="view_tab_indicator" aria-hidden="true"></div>
                 <button type="button" class="view_tab view_tab_active" data-view="work">Work</button>
                 <button type="button" class="view_tab" data-view="timetable">Timetable</button>
                 <button type="button" class="view_tab" data-view="about">About</button>
             </nav>
         </div>
 
-        <main id="about_view" class="app_view">
-            <div class="card about_container">
-                <h2 id="about_title">About VinFocus</h2>
+        <div class="app_view_container">
+            <main id="about_view" class="app_view">
+                <div class="card about_container">
+                    <h2 id="about_title">About VinFocus</h2>
 
-                <section class="about_section">
-                    <h3 id="about_what_title"></h3>
-                    <p id="about_what_desc"></p>
-                </section>
+                    <section class="about_section">
+                        <h3 id="about_what_title"></h3>
+                        <p id="about_what_desc"></p>
+                    </section>
 
-                <section class="about_section">
-                    <h3 id="about_why_title"></h3>
-                    <p id="about_why_desc"></p>
-                </section>
+                    <section class="about_section">
+                        <h3 id="about_why_title"></h3>
+                        <p id="about_why_desc"></p>
+                    </section>
 
-                <section class="about_section">
-                    <h3 id="about_how_title"></h3>
-                    <ul id="about_how_list">
-                        <li id="about_how_1">Browse your active Canvas courses.</li>
-                        <li id="about_how_2">Navigate between weeks to view related modules and resources.</li>
-                        <li id="about_how_3">Search across courses, modules, quizzes, assignments, and files.</li>
-                        <li id="about_how_4">Filter unfinished items based on Canvas completion status.</li>
-                        <li id="about_how_5">View and manage your weekly timetable.</li>
-                        <li id="about_how_6">Switch between English and Vietnamese.</li>
-                        <li id="about_how_7">Toggle between dark and light themes.</li>
-                        <li id="about_how_8">For general modules that don't have a week number, go to Week 0.</li>
-                    </ul>
-                </section>
-            </div>
-        </main>
-
-        <main id="work_view" class="app_view app_view_active">
-        <div class="card hub_container" id="main_content">
-            <div class="hub_header">
-                <div class="input-wrapper">
-                    <button type="button" class="icon" aria-label="Focus search">
-                        <svg
-                            width="25px"
-                            height="25px"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                d="M11.5 21C16.7467 21 21 16.7467 21 11.5C21 6.25329 16.7467 2 11.5 2C6.25329 2 2 6.25329 2 11.5C2 16.7467 6.25329 21 11.5 21Z"
-                                stroke="currentColor"
-                                stroke-width="1.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            ></path>
-                            <path
-                                d="M22 22L20 20"
-                                stroke="currentColor"
-                                stroke-width="1.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            ></path>
-                        </svg>
-                    </button>
-                    <input id="search_input" type="search" class="input" placeholder="Search items">
+                    <section class="about_section">
+                        <h3 id="about_how_title"></h3>
+                        <ul id="about_how_list">
+                            <li id="about_how_1">Browse your active Canvas courses.</li>
+                            <li id="about_how_2">Navigate between weeks to view related modules and resources.</li>
+                            <li id="about_how_3">Search across courses, modules, quizzes, assignments, and files.</li>
+                            <li id="about_how_4">Filter unfinished items based on Canvas completion status.</li>
+                            <li id="about_how_5">View and manage your weekly timetable.</li>
+                            <li id="about_how_6">Switch between English and Vietnamese.</li>
+                            <li id="about_how_7">Toggle between dark and light themes.</li>
+                            <li id="about_how_8">For general modules that don't have a week number, go to Week 0.</li>
+                        </ul>
+                    </section>
                 </div>
+            </main>
 
-                <div class="hub_title_section">
-                    <h2 id="hub_title">Browse</h2>
-                    <div class="subject_label_actions" id="subject_label_actions">
-                        <button id="subject_label_edit_btn" type="button" class="subject_label_edit_btn" aria-label="Edit subject labels" title="Edit subject labels">
-                            <img src="/static/edit_icon.png" alt="" class="edit_icon">
-                        </button>
-                    </div>
-                </div>
-
-                <div class="filter_toggles">
-                    <label class="filter_toggle">
-                        <input id="unfinished_only" type="checkbox">
-                        <span>Unfinished</span>
-                    </label>
-                    <label class="filter_toggle">
-                        <input id="unknown_only" type="checkbox">
-                        <span>Unknown</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="hub_content">
-                <div class="work_content">
-                    <div id="course_pills" class="course_pills"></div>
-
-                    <div id="item_list"></div>
-
-                    <div class="week_nav">
-                        <button id="prev_week" type="button" class="week_nav_btn" aria-label="Previous week">
-                            ←
-                        </button>
-                        <span id="week_label" class="week_label">Week <input id="week_input" type="number" class="week_input_inline" placeholder="—" min="0" step="1"></span>
-                        <button id="next_week" type="button" class="week_nav_btn" aria-label="Next week">
-                            →
-                        </button>
-                    </div>
-                </div>
-
-                <div class="overview_sidebar">
-                    <div class="overview_header">
-                        <h2 id="overview_title">Overview</h2>
-                        <div class="overview_donut_container">
-                            <svg class="overview_donut" viewBox="0 0 100 100">
-                                <circle class="donut-bg" cx="50" cy="50" r="40"></circle>
-                                <circle class="donut-fill" cx="50" cy="50" r="40" style="stroke-dasharray: 0 251.2;"></circle>
+            <main id="work_view" class="app_view app_view_active">
+            <div class="card hub_container" id="main_content">
+                <div class="hub_header">
+                    <div class="input-wrapper">
+                        <button type="button" class="icon" aria-label="Focus search">
+                            <svg
+                                width="25px"
+                                height="25px"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M11.5 21C16.7467 21 21 16.7467 21 11.5C21 6.25329 16.7467 2 11.5 2C6.25329 2 2 6.25329 2 11.5C2 16.7467 6.25329 21 11.5 21Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                ></path>
+                                <path
+                                    d="M22 22L20 20"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                ></path>
                             </svg>
-                            <div class="donut-text">
-                                <span class="donut_count" id="donut_count">-</span>
-                            </div>
+                        </button>
+                        <input id="search_input" type="search" class="input" placeholder="Search items">
+                    </div>
+
+                    <div class="hub_title_section">
+                        <h2 id="hub_title">Browse</h2>
+                        <div class="subject_label_actions" id="subject_label_actions">
+                            <button id="subject_label_edit_btn" type="button" class="subject_label_edit_btn" aria-label="Edit subject labels" title="Edit subject labels">
+                                <img src="/static/edit_icon.png" alt="" class="edit_icon">
+                            </button>
                         </div>
                     </div>
-                    <div id="overview_spinner" class="overview_spinner"></div>
-                    <div id="overview_container"></div>
+
+                    <div class="filter_toggles">
+                        <label class="filter_toggle">
+                            <input id="unfinished_only" type="checkbox">
+                            <span>Unfinished</span>
+                        </label>
+                        <label class="filter_toggle">
+                            <input id="unknown_only" type="checkbox">
+                            <span>Unknown</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hub_content">
+                    <div class="work_content">
+                        <div id="course_pills" class="course_pills"></div>
+
+                        <div id="item_list"></div>
+
+                        <div class="week_nav">
+                            <button id="prev_week" type="button" class="week_nav_btn" aria-label="Previous week">
+                                ←
+                            </button>
+                            <span id="week_label" class="week_label">Week <input id="week_input" type="number" class="week_input_inline" placeholder="—" min="0" step="1"></span>
+                            <button id="next_week" type="button" class="week_nav_btn" aria-label="Next week">
+                                →
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overview_sidebar">
+                        <div class="overview_header">
+                            <h2 id="overview_title">Overview</h2>
+                            <div class="overview_donut_container">
+                                <svg class="overview_donut" viewBox="0 0 100 100">
+                                    <circle class="donut-bg" cx="50" cy="50" r="40"></circle>
+                                    <circle class="donut-fill" cx="50" cy="50" r="40" style="stroke-dasharray: 0 251.2;"></circle>
+                                </svg>
+                                <div class="donut-text">
+                                    <span class="donut_count" id="donut_count">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="overview_spinner" class="overview_spinner"></div>
+                        <div id="overview_container"></div>
+                    </div>
                 </div>
             </div>
-        </div>
-        </main>
+            </main>
 
-        <main id="timetable_view" class="app_view" hidden>
-        <div class="card timetable_container">
-            <div class="timetable_header">
-                <div class="timetable_title_section">
-                    <h2 id="timetable_title">Weekly Timetable</h2>
-                    <p id="timetable_note" class="timetable_note">Manual schedule stored locally in this app.</p>
+            <main id="timetable_view" class="app_view">
+            <div class="card timetable_container">
+                <div class="timetable_header">
+                    <div class="timetable_title_section">
+                        <h2 id="timetable_title">Weekly Timetable</h2>
+                        <p id="timetable_note" class="timetable_note">Manual schedule stored locally in this app.</p>
+                    </div>
+                    <button id="timetable_edit_btn" type="button" class="timetable_edit_btn" aria-label="Edit timetable">
+                        <img src="/static/edit_icon.png" alt="" class="edit_icon">
+                    </button>
                 </div>
-                <button id="timetable_edit_btn" type="button" class="timetable_edit_btn" aria-label="Edit timetable">
-                    <img src="/static/edit_icon.png" alt="" class="edit_icon">
-                </button>
-            </div>
 
-            <div id="timetable_view_toggle" class="timetable_view_toggle">
-                <button type="button" class="timetable_view_toggle_btn timetable_view_toggle_btn_active" data-view="today">Today</button>
-                <button type="button" class="timetable_view_toggle_btn" data-view="week">Full Week</button>
-            </div>
+                <div id="timetable_view_toggle" class="timetable_view_toggle">
+                    <button type="button" class="timetable_view_toggle_btn timetable_view_toggle_btn_active" data-view="today">Today</button>
+                    <button type="button" class="timetable_view_toggle_btn" data-view="week">Full Week</button>
+                </div>
 
-            <div id="timetable_grid" class="timetable_grid" aria-label="Weekly timetable"></div>
-            <div id="timetable_mobile" class="timetable_mobile" aria-label="Weekly timetable by day"></div>
+                <div id="timetable_grid" class="timetable_grid" aria-label="Weekly timetable"></div>
+                <div id="timetable_mobile" class="timetable_mobile" aria-label="Weekly timetable by day"></div>
+            </div>
+            </main>
         </div>
-        </main>
 
 
         <!-- Terms and Conditions Modal -->

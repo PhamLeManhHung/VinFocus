@@ -103,25 +103,64 @@ body {
     background: var(--bg-body);
     color: var(--text-primary);
     position: relative;
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow-x: hidden;
 }
 
-.app_view {
-    display: none;
+.app_view_container {
+    position: relative;
     width: 100%;
 }
 
-.app_view_active {
+.app_view {
     display: block;
+    width: 100%;
+    opacity: 0;
+    transform: scale(0.98) translateY(8px);
+    pointer-events: none;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app_view_active {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    width: 100%;
+    visibility: visible;
+    height: auto;
+    overflow: visible;
+}
+
+.app_view_transitioning {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: auto;
+    overflow: visible;
+}
+
+.app_view_container:has(.app_view_transitioning) {
+    min-height: calc(100dvh - 180px);
+}
+
+.app_view_active,
+.app_view_transitioning {
+    visibility: visible;
 }
 
 .app_footer {
     text-align: center;
     padding: 24px 20px;
-    margin-top: auto;
+    margin-top: 12px;
     color: var(--text-muted);
     font-size: 0.85rem;
     line-height: 1.8;
@@ -196,34 +235,27 @@ body {
     color: var(--text-primary);
 }
 
-.language_selector {
-    padding: 8px 12px;
-    border: 1px solid var(--border-input);
+.language_toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    border: 1px solid var(--border-pill);
     border-radius: 10px;
-    background: var(--bg-input);
-    color: var(--text-primary);
+    background: var(--bg-pill);
+    color: var(--text-muted-strong);
     font-size: 0.85rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
-    min-width: 100px;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding-right: 32px;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.language_selector:hover {
-    border-color: var(--border-input-hover);
-    background-color: var(--bg-pill-hover);
-}
-
-.language_selector:focus {
-    outline: none;
-    border-color: var(--accent);
+.language_toggle:hover {
+    background: var(--bg-pill-hover);
+    border-color: var(--border-pill-hover);
+    color: var(--text-primary);
 }
 
 .card {
@@ -233,8 +265,6 @@ body {
     border-radius: 15px;
     box-shadow: var(--shadow-card);
     text-align: center;
-    max-width: 750px;
-    width: 100%;
     box-sizing: border-box;
     margin: 20px auto;
 }
@@ -253,6 +283,7 @@ body {
     border: 1px solid var(--border-primary);
     border-radius: 10px;
     background: var(--bg-nav);
+    position: relative;
 }
 
 .view_tab {
@@ -265,7 +296,9 @@ body {
     font: inherit;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: color 0.15s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .view_tab:hover {
@@ -273,8 +306,20 @@ body {
 }
 
 .view_tab_active {
-    background: var(--accent);
     color: #fff;
+}
+
+/* Sliding indicator for active tab */
+.view_tab_indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    background: var(--accent);
+    border-radius: 7px;
+    z-index: 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
 }
 
 .hub_container {
@@ -746,6 +791,7 @@ body.light .item_row_important {
 .about_container {
     text-align: left;
     max-width: 900px;
+    width: min(900px, 100%);
 }
 
 .about_container h2 {
@@ -886,6 +932,7 @@ body.light .item_row_important {
 .timetable_container {
     max-width: 1200px;
     text-align: left;
+    width: min(1200px, 100%);
 }
 
 .timetable_header {

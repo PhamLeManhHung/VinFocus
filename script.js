@@ -14,7 +14,7 @@ const timetableView = document.getElementById("timetable_view");
 const aboutView = document.getElementById("about_view");
 const timetableGrid = document.getElementById("timetable_grid");
 const timetableMobile = document.getElementById("timetable_mobile");
-const languageSelector = document.getElementById("language_selector");
+const languageToggle = document.getElementById("language_toggle");
 const tagline = document.getElementById("tagline");
 const timetableTitle = document.getElementById("timetable_title");
 const timetableNote = document.getElementById("timetable_note");
@@ -61,8 +61,13 @@ let currentLanguage = localStorage.getItem("language") || "en";
 function setLanguage(lang) {
   currentLanguage = lang;
   localStorage.setItem("language", lang);
-  languageSelector.value = lang;
+  if (languageToggle) {
+    languageToggle.textContent = lang === "vi" ? "VN" : "EN";
+  }
   renderAll();
+  requestAnimationFrame(() => {
+    refreshTabIndicator();
+  });
 }
 
 function t(key) {
@@ -2101,6 +2106,12 @@ function renderOverview(data) {
       currentWeek = weekSummary.week;
       localStorage.setItem("selectedWeek", String(currentWeek));
       setView("work");
+      // Scroll to top after view transition to show the work content (mobile only)
+      if (window.innerWidth <= 900) {
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }, 400);
+      }
     });
 
     const weekLabel = weekSummary.week === 0 ? t("overviewWeekGeneral") : `${t("week")} ${weekSummary.week}`;
@@ -2240,30 +2251,109 @@ function renderAll() {
   if (footerCopyright) footerCopyright.textContent = t("footerCopyright");
 }
 
+function updateTabIndicator(viewName) {
+  const indicator = document.querySelector(".view_tab_indicator");
+  if (!indicator) return;
+
+  const activeTab = document.querySelector(`.view_tab[data-view="${viewName}"]`);
+  if (!activeTab) return;
+
+  const nav = activeTab.parentElement;
+  const navRect = nav?.getBoundingClientRect();
+  const tabRect = activeTab.getBoundingClientRect();
+  if (!navRect || !tabRect) return;
+
+  indicator.style.width = `${tabRect.width}px`;
+  indicator.style.transform = `translateX(${tabRect.left - navRect.left}px)`;
+}
+
+function refreshTabIndicator() {
+  const activeView = document.querySelector(".app_view_active");
+  if (activeView) {
+    updateTabIndicator(activeView.id.replace("_view", ""));
+  }
+}
+
 function setView(viewName) {
   const nextView = viewName === "timetable" ? "timetable" : viewName === "about" ? "about" : "work";
   localStorage.setItem("selectedView", nextView);
 
-  workView.hidden = nextView !== "work";
-  timetableView.hidden = nextView !== "timetable";
-  aboutView.hidden = nextView !== "about";
+  const currentView = document.querySelector(".app_view_active");
+  const transitionDuration = 50;
 
-  workView.classList.toggle("app_view_active", nextView === "work");
-  timetableView.classList.toggle("app_view_active", nextView === "timetable");
-  aboutView.classList.toggle("app_view_active", nextView === "about");
+  // Always ensure data is loaded for work view, even if already active
+  if (nextView === "work" && currentView && currentView.id === "work_view") {
+    if (!coursesLoaded) {
+      loadCourses().catch((error) => showMessage(error.message));
+    } else if (selectedCourseId) {
+      Promise.all([
+        loadItems(),
+        loadOverview(),
+      ]).catch((error) => showMessage(error.message));
+    }
+    refreshTabIndicator();
+    return;
+  }
 
+  // Update tabs and indicator
   for (const tab of viewTabs) {
     const isActive = tab.dataset.view === nextView;
     tab.classList.toggle("view_tab_active", isActive);
     tab.setAttribute("aria-pressed", String(isActive));
   }
 
-  if (nextView === "work") {
-    loadCourses().catch((error) => showMessage(error.message));
-  } else if (nextView === "timetable") {
-    renderTimetable();
+  // Get the next view element and the container
+  const nextViewEl = nextView === "work" ? workView : nextView === "timetable" ? timetableView : aboutView;
+
+  // Switch views with animation
+  const switchToNext = () => {
+    // Hide the old view
+    if (currentView) {
+      currentView.classList.remove("app_view_active");
+      currentView.classList.remove("app_view_transitioning");
+    }
+    // Show the new view (position: absolute, so it overlaps where the old view was)
+    nextViewEl.classList.add("app_view_transitioning");
+    nextViewEl.classList.add("app_view_active");
+    refreshTabIndicator();
+
+    requestAnimationFrame(() => {
+      nextViewEl.classList.remove("app_view_transitioning");
+    });
+
+    // Load data for the work view
+    if (nextView === "work") {
+      if (selectedCourseId) {
+        Promise.all([
+          loadItems(),
+          loadOverview(),
+        ]).catch((error) => showMessage(error.message));
+      } else {
+        loadCourses().catch((error) => showMessage(error.message));
+      }
+    } else if (nextView === "timetable") {
+      renderTimetable();
+    }
+  };
+
+  if (currentView) {
+    // Remove active class from current view to start fade-out
+    currentView.classList.remove("app_view_active");
+    currentView.classList.add("app_view_transitioning");
+    // Wait for the fade-out to be visible before swapping panels.
+    window.setTimeout(() => {
+      switchToNext();
+    }, transitionDuration);
+  } else {
+    // No current view, just show the next one
+    switchToNext();
   }
+
 }
+
+window.addEventListener("resize", () => {
+  refreshTabIndicator();
+});
 
 // Use a flag to prevent duplicate event listeners
 let weekNavListenersAttached = false;
@@ -2370,8 +2460,9 @@ timetableViewToggleBtns.forEach((btn) => {
   });
 });
 
-languageSelector.addEventListener("change", (event) => {
-  setLanguage(event.target.value);
+languageToggle.addEventListener("click", () => {
+  const newLang = currentLanguage === "en" ? "vi" : "en";
+  setLanguage(newLang);
 });
 
 // Clear search input on page load to prevent persisted text
@@ -3376,6 +3467,7 @@ document.addEventListener("DOMContentLoaded", () => {
       || localStorage.getItem("selectedView")
       || "work";
     setView(initialView);
+    refreshTabIndicator();
   }
 
   // Terms and Conditions button
@@ -3418,6 +3510,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Initialize language selector value and render all text
-languageSelector.value = currentLanguage;
+// Initialize language toggle text and render all text
+if (languageToggle) {
+  languageToggle.textContent = currentLanguage === "vi" ? "VN" : "EN";
+}
 renderAll();
+refreshTabIndicator();
