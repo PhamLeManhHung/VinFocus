@@ -273,6 +273,11 @@ const TRANSLATIONS = {
     overviewWeekGeneral: "Unassigned Modules",
     uncategorizedWarning: "⚠️ {count} unfinished items in 'Unassigned Modules'",
     noItemsWithUncategorized: "No items found for this week.\n\nSome teachers post content without assigning a week.\nCheck 'Unassigned Modules' for uncategorized work.",
+    overviewStillLoading: "Canvas is still loading...",
+    overviewThinkingHard: "Canvas is thinking very hard.",
+    overviewDrinkWater: "Go drink a glass of water. It'll get there at some point.",
+    overviewTryRefresh: "If this continues, try refreshing the page.",
+    overviewBadDay: "Canvas may be having a bad day. Try again later.",
   },
   vi: {
     feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
@@ -435,6 +440,11 @@ const TRANSLATIONS = {
     overviewWeekGeneral: "Học phần chưa phân tuần",
     uncategorizedWarning: "⚠️ {count} mục chưa hoàn thành nằm trong 'Học phần chưa phân tuần'",
     noItemsWithUncategorized: "Không tìm thấy học phần cho tuần này.\n\nMột số giáo viên đăng nội dung mà không gắn tuần học.\nHãy kiểm tra mục 'Học phần chưa phân tuần'.",
+    overviewStillLoading: "Canvas vẫn đang tải...",
+    overviewThinkingHard: "Canvas đang suy nghĩ rất chậm.",
+    overviewDrinkWater: "Hãy đi uống một ly nước. Nó sẽ sớm xong thôi.",
+    overviewTryRefresh: "Nếu tình trạng này tiếp diễn, hãy thử làm mới trang.",
+    overviewBadDay: "Canvas có thể đang gặp sự cố. Hãy thử lại sau.",
   },
 };
 
@@ -593,6 +603,8 @@ let itemCache = new Map();
 let timetableMobileView = localStorage.getItem("timetableMobileView") || "today";
 let currentRequestController = null; // For cancelling stale requests
 let currentOverviewController = null; // For cancelling stale overview requests
+let overviewLoadingMessageTimer = null; // For progressive loading messages
+let overviewLoadStartTime = 0; // Tracks when overview loading started
 
 // Client-side API response cache to reduce duplicate requests
 // Key: URL, Value: { data, timestamp }
@@ -789,6 +801,38 @@ function refreshOverviewFromState() {
 function clearApiCache() {
   apiResponseCache.clear();
   debugLog("API response cache cleared");
+}
+
+function clearOverviewLoadingMessageTimer() {
+  if (overviewLoadingMessageTimer) {
+    clearTimeout(overviewLoadingMessageTimer);
+    overviewLoadingMessageTimer = null;
+  }
+}
+
+function showOverviewLoadingMessage() {
+  const container = document.getElementById("overview_container");
+  if (!container) return;
+
+  const elapsed = Date.now() - overviewLoadStartTime;
+  let messageKey = "overviewLoading";
+  
+  if (elapsed >= 40000) {
+    messageKey = "overviewBadDay";
+  } else if (elapsed >= 32000) {
+    messageKey = "overviewTryRefresh";
+  } else if (elapsed >= 24000) {
+    messageKey = "overviewDrinkWater";
+  } else if (elapsed >= 16000) {
+    messageKey = "overviewThinkingHard";
+  } else if (elapsed >= 8000) {
+    messageKey = "overviewStillLoading";
+  }
+
+  container.innerHTML = `<p class="empty_message">${t(messageKey)}</p>`;
+
+  // Schedule next update
+  overviewLoadingMessageTimer = setTimeout(showOverviewLoadingMessage, 1000);
 }
 
 function normalizeOverviewWeek(weekSummary) {
@@ -1206,8 +1250,11 @@ async function loadCourses() {
   if (coursesLoaded) {
     // Keep the work view in sync when returning from overview cards, tabs, or language changes.
     if (selectedCourseId) {
-      await loadItems();
-      await loadOverview();
+      // Run items and overview in parallel since they are independent
+      await Promise.all([
+        loadItems(),
+        loadOverview(),
+      ]);
     }
     return;
   }
@@ -1231,10 +1278,12 @@ async function loadCourses() {
 
   renderCoursePills();
   await loadWeeks();
-  await loadItems();
-
-  // Load overview after courses and items are loaded
-  await loadOverview();
+  
+  // Run items and overview in parallel since they are independent
+  await Promise.all([
+    loadItems(),
+    loadOverview(),
+  ]);
 }
 
 async function loadWeeks() {
@@ -1304,9 +1353,12 @@ async function selectCourse(courseId) {
   localStorage.setItem("selectedCourseId", String(courseId));
   renderCoursePills();
   await loadWeeks();
-  await loadItems();
-
-  await loadOverview();
+  
+  // Run items and overview in parallel since they are independent
+  await Promise.all([
+    loadItems(),
+    loadOverview(),
+  ]);
 }
 
 function changeWeek(delta) {
@@ -1939,6 +1991,11 @@ async function loadOverview() {
   container.innerHTML = "";
 
   overviewData = null;
+  overviewLoadStartTime = Date.now();
+  
+  // Start progressive loading messages
+  clearOverviewLoadingMessageTimer();
+  showOverviewLoadingMessage();
 
   try {
     // Use the dedicated overview endpoint for a single efficient call
@@ -1946,20 +2003,22 @@ async function loadOverview() {
 
     overviewData = normalizeOverviewData(data);
 
-    // Hide spinner before rendering
+    // Hide spinner and stop loading messages before rendering
     if (spinner) {
       spinner.classList.remove("overview_spinner_visible");
     }
+    clearOverviewLoadingMessageTimer();
     
     // Apply manual completions before rendering
     const adjusted = applyManualCompletionsToOverview(overviewData);
     renderOverview(adjusted);
   } catch (error) {
     if (error.name === 'AbortError') return;
-    // Hide spinner on error
+    // Hide spinner and stop loading messages on error
     if (spinner) {
       spinner.classList.remove("overview_spinner_visible");
     }
+    clearOverviewLoadingMessageTimer();
     // Don't show "no data" immediately - the overview might still be loading.
     // Instead, show a subtle loading message that will be replaced on retry.
     // The overview will be retried when the user switches courses or the data loads.
