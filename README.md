@@ -52,13 +52,15 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - Search
 
 ### Productivity
-- Unfinished filter
-- Course overview dashboard
-- Item importance
+- Unfinished filter — filter items to only those explicitly tracked as incomplete by Canvas
+- Unknown filter — filter items that have no completion tracking (Canvas doesn't report completion status)
+- Course overview dashboard — per-week item counts, completion stats, and type breakdowns
+- Item importance — items matching keywords like `HKII`, `HS1`, `cuối năm` are visually highlighted as important
+- Manual completion override — mark any item as done even without Canvas tracking; stored in browser localStorage
 
 ### Customization
 - Themes
-- Subject labels
+- Subject labels — rename-only (no color customization)
 - Bilingual UI
 
 ### Other
@@ -87,12 +89,21 @@ Students decide what to work on. VinFocus simply makes the information easier to
 | `GET /api/courses/<course_id>/weeks` | Week numbers found in module names. Week `0` is included if any modules have no week information. Returns `{ course_id, week_count, weeks: [int] }`. |
 | `GET /api/courses/<course_id>/week/<week>` | Quizzes, assignments, and files for a week. Returns `{ course_id, course_name, week, item_count, items: [...] }`. |
 | `GET /api/courses/<course_id>/week/<week>/unfinished` | Same items, filtered to incomplete Canvas work. Same response shape. |
+| `GET /api/courses/<course_id>/overview` | Overview data for a course: all weeks with item counts, completion stats (done/unfinished/unknown), and type breakdowns. Returns `{ course_id, course_name, week_count, weeks: [...], totals: { total, done, unfinished, unknown } }`. |
 
 ### Token Management
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/validate-token` | Validate a Canvas API token. Expects JSON body `{ "token": "..." }`. Returns `{ "valid": true/false, "message": "..." }`. |
+| `POST /api/validate-token` | Validate a Canvas API token. Expects JSON body `{ "token": "..." }`. Returns `{ "valid": true/false, "message": "..." }`. Rate limited: 5 requests/minute. |
+| `GET /api/csrf-token` | Get a CSRF token for POST endpoints. The frontend should include this token in the `X-CSRF-Token` header when making POST requests. Returns `{ "csrf_token": "..." }`. |
+
+### Feedback
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/feedback` | Get all feedback submissions. Requires `X-Admin-Key` header with the admin API key. |
+| `POST /api/feedback` | Submit user feedback. Expects JSON body `{ "rating": int (1-5), "usage_type": str, "recommend": str, "improvement": str }`. Requires `X-CSRF-Token` header. Rate limited: 10 requests/minute. |
 
 ### Health Check
 
@@ -121,10 +132,14 @@ Each item in the `items` array has the following fields:
   "title": "Quiz 1",
   "type": "Quiz",
   "completed": false,
+  "completion_requirement": true,
   "module_item_id": 456,
   "url": "https://lms.vinschool.edu.vn/courses/123/quizzes/789"
 }
 ```
+
+- `completed`: `true` if tracked and done, `false` if tracked and not done, `null` if no completion tracking exists (unknown).
+- `completion_requirement`: `true` if Canvas reports a completion requirement for this item, `false` otherwise.
 
 Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
@@ -142,14 +157,19 @@ The frontend in `script.js` loads courses, lets you pick a course and week, and 
 - Tokens are never stored on VinFocus servers
 - Tokens are only sent to Canvas-authenticated endpoints
 - Users can revoke tokens at any time from Canvas
+- POST endpoints require CSRF tokens obtained from `GET /api/csrf-token`
+- Feedback admin access requires an `X-Admin-Key` header with constant-time comparison
 
 ### Architecture notes
 
-- **Caching** — In-memory cache with a 5-minute TTL and LRU eviction (max 1000 entries). Thread-safe with a lock.
+- **Caching** — In-memory cache with a 5-minute TTL (2-minute TTL for overview data) and FIFO eviction (max 1000 entries). When the cache exceeds the limit, the oldest 20% of entries are evicted. Thread-safe with a lock. Cache keys include a SHA256 hash of the user's token to prevent data leaks between users.
 - **Concurrency** — Module items are fetched in parallel using `ThreadPoolExecutor` (up to 8 workers).
+- **Rate limiting** — Token bucket algorithm per IP address. General endpoints: 300 requests per 60-second window. Token validation: 5 requests per 60-second window. Feedback submission: 10 requests per minute.
 - **Logging** — Structured logging with timestamps, log levels, and module names.
-- **Week parsing** — A custom parser extracts week numbers from module names. Supports Vietnamese (`tuần`) and English (`week`) keywords, ranges (`-`, `–`), lists (`+`, `&`, `,`, `/`), and mixed formats.
-- **Course code parsing** — Course codes like `THCS.OP-MATHS-TEACHER` are parsed to extract subject keys for labeling and filtering. Hidden subjects (`MUS`, `PE`, `ART`) are excluded from the course list.
+- **Week parsing** — A custom parser extracts week numbers from module names. Supports Vietnamese (`tuần`) and English (`week`) keywords, ranges (`-`, `–`), lists (`+`, `&`, `,`, `/`), and mixed formats. Uses `functools.lru_cache` (maxsize=256) for caching parsed results.
+- **Course code parsing** — Course codes like `THCS.OP-MATHS-TEACHER` are parsed to extract subject keys for labeling and filtering.
+- **CSRF protection** — Server-generated tokens with 1-hour expiry, validated on POST endpoints. Stale tokens are cleaned up periodically.
+- **Request body limit** — Maximum request body size of 1MB.
 
 ## Running Locally
 
@@ -184,7 +204,7 @@ pytest test_main.py -v
 The test suite covers:
 
 - **Unit tests** for the `extract_weeks()` parser (single weeks, ranges, multi-week lists, edge cases, non-week modules).
-- **Integration tests** for all API endpoints (success, missing token, API failure, week 0/general, range expansion, legacy routes).
+- **Integration tests** for all API endpoints (success, missing token, API failure, week 0/general, range expansion, legacy routes, overview endpoint, three-state completion).
 
 ## Environment Variables
 
@@ -241,8 +261,8 @@ curl -H "X-Admin-Key: your-secret-key-here" http://127.0.0.1:5000/api/feedback
 
 ## Future Plans
 
-- Timetable Automation (will implement when school starts)
-- Global Search
+- Automatic timetable import from VSC Timetable (will implement when school starts)
+- Cross-course global search
 
 ## Notes
 

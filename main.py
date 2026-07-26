@@ -50,7 +50,7 @@ class Config:
     REQUEST_TIMEOUT = 30  # Increased for overview requests
     PER_PAGE = 1000       # Increased for large courses
     CACHE_TTL = 300  # seconds (5 minutes)
-    OVERVIEW_CACHE_TTL = 0  # overview data should reflect recent Canvas/manual changes
+    OVERVIEW_CACHE_TTL = 120  # overview data should reflect recent Canvas/manual changes
     MAX_CACHE_SIZE = 1000  # Maximum number of cached items
     MAX_COURSE_ID = 999999  # Maximum reasonable course ID for validation
     
@@ -68,9 +68,10 @@ app.config["DEBUG"] = Config.DEBUG
 ALLOWED_ITEM_TYPES = frozenset({"Quiz", "Assignment", "File", "Page"})
 
 # Detection: does the module name even mention weeks?
-WEEK_KEYWORD = re.compile(r"(?:tuần|week)", re.IGNORECASE)
+# Supports: tuần (accented), tuân (alternate accent), tuan (no accent), week
+WEEK_KEYWORD = re.compile(r"(?:tu[âầa]?n|week)", re.IGNORECASE)
 # Characters that separate week-number tokens inside a contiguous week expression
-WEEK_SEPARATORS = frozenset("-–+&,/")
+WEEK_SEPARATORS = frozenset("-–+&,/= >")
 
 # In-memory cache: key -> {"data": ..., "ts": float}
 # NOTE: Cache keys MUST include user-specific identifiers to prevent data leaks
@@ -204,12 +205,16 @@ def index():
 
 @app.get("/script.js")
 def script():
-    return no_store_response(send_from_directory(".", "script.js"))
+    response = make_response(send_from_directory(".", "script.js"))
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 @app.get("/style.css")
 def styles():
-    return no_store_response(send_from_directory(".", "style.css"))
+    response = make_response(send_from_directory(".", "style.css"))
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 def no_store_response(response):
@@ -426,7 +431,7 @@ def extract_weeks_raw(module_name: str) -> List[int]:
             continue
 
         num = int(val)
-        # Look ahead for a range
+        # Look ahead for a range: num - num, num – num, or num => num
         if i + 2 < len(tokens) and tokens[i + 1][0] == "sep" and tokens[i + 1][1] in "-–" and tokens[i + 2][0] == "num":
             end_num = int(tokens[i + 2][1])
             if num < end_num:
@@ -435,6 +440,18 @@ def extract_weeks_raw(module_name: str) -> List[int]:
                 weeks.append(num)
                 weeks.append(end_num)
             i += 3
+        # Handle "=>" range: num = > num (two consecutive sep tokens)
+        elif (i + 3 < len(tokens)
+              and tokens[i + 1][0] == "sep" and tokens[i + 1][1] == "="
+              and tokens[i + 2][0] == "sep" and tokens[i + 2][1] == ">"
+              and tokens[i + 3][0] == "num"):
+            end_num = int(tokens[i + 3][1])
+            if num < end_num:
+                weeks.extend(range(num, end_num + 1))
+            else:
+                weeks.append(num)
+                weeks.append(end_num)
+            i += 4
         else:
             weeks.append(num)
             i += 1
@@ -1032,6 +1049,13 @@ def get_course_overview(course_id: int):
     total_unfinished = sum(ws["unfinished"] for ws in week_summaries)
     total_unknown = sum(ws["unknown"] for ws in week_summaries)
 
+    # Count unfinished + unknown items in uncategorized (week 0) modules
+    uncategorized_unfinished_count = 0
+    for ws in week_summaries:
+        if ws["week"] == 0:
+            uncategorized_unfinished_count = ws["unfinished"] + ws["unknown"]
+            break
+
     response_data = {
         "course_id": course_id,
         "course_name": course_name,
@@ -1043,6 +1067,7 @@ def get_course_overview(course_id: int):
             "unfinished": total_unfinished,
             "unknown": total_unknown,
         },
+        "uncategorized_unfinished_count": uncategorized_unfinished_count,
     }
 
     logger.info(f"Returning overview for course {course_id}: {len(week_summaries)} weeks, {total_all} items")

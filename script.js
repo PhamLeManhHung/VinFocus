@@ -155,11 +155,12 @@ const TRANSLATIONS = {
     aboutHow5: "View and manage your weekly timetable.",
     aboutHow6: "Switch between English and Vietnamese.",
     aboutHow7: "Toggle between dark and light themes.",
-    aboutHow8: "For general modules that don't have a week number, go to Week 0.",
+    aboutHow8: "For modules that don't have a week number, go to Week 0.",
     week: "Week",
-    general: "General",
+    general: "Unassigned Modules",
     searchPlaceholder: "Search items",
     unfinishedLabel: "Unfinished",
+    unknownLabel: "Unknown",
     tagline: "Canvas information hub — browse courses, weeks, and resources.",
     timetableTitle: "Weekly Timetable",
     timetableNote: "Manual schedule stored locally in this app.",
@@ -269,7 +270,9 @@ const TRANSLATIONS = {
     overviewUnfinished: "Unfinished",
     overviewWeeks: "Weeks",
     overviewNoData: "No overview data available.",
-    overviewWeekGeneral: "General",
+    overviewWeekGeneral: "Unassigned Modules",
+    uncategorizedWarning: "⚠️ {count} unfinished items in 'Unassigned Modules'",
+    noItemsWithUncategorized: "No items found for this week.\n\nSome teachers post content without assigning a week.\nCheck 'Unassigned Modules' for uncategorized work.",
   },
   vi: {
     feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
@@ -337,9 +340,10 @@ const TRANSLATIONS = {
     aboutHow7: "Chuyển đổi giữa chủ đề tối và sáng.",
     aboutHow8: "Đối với các học phần chung không có số tuần, hãy chuyển đến Tuần 0.",
     week: "Tuần",
-    general: "Chung",
+    general: "Học phần chưa phân tuần",
     searchPlaceholder: "Tìm kiếm mục",
     unfinishedLabel: "Chưa Hoàn Thành",
+    unknownLabel: "Chưa rõ",
     tagline: "Trung tâm thông tin Canvas — duyệt khóa học, tuần và tài nguyên.",
     timetableTitle: "Thời Khóa Biểu Tuần",
     timetableNote: "Lịch học được lưu cục bộ trong ứng dụng này.",
@@ -428,7 +432,9 @@ const TRANSLATIONS = {
     overviewUnfinished: "Chưa HT",
     overviewWeeks: "Tuần",
     overviewNoData: "Không có dữ liệu tổng quan.",
-    overviewWeekGeneral: "Chung",
+    overviewWeekGeneral: "Học phần chưa phân tuần",
+    uncategorizedWarning: "⚠️ {count} mục chưa hoàn thành nằm trong 'Học phần chưa phân tuần'",
+    noItemsWithUncategorized: "Không tìm thấy học phần cho tuần này.\n\nMột số giáo viên đăng nội dung mà không gắn tuần học.\nHãy kiểm tra mục 'Học phần chưa phân tuần'.",
   },
 };
 
@@ -479,8 +485,6 @@ const SUBJECT_LABELS = {
     ART: "Mỹ Thuật",
   },
 };
-
-const HIDDEN_SUBJECTS = new Set(["MUS", "PE", "ART"]);
 
 const DEFAULT_TIMETABLE = {
   monday: [
@@ -596,11 +600,6 @@ let overviewData = null;
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
   return parts[0] === "THCS.OP" && parts.length >= 3 ? parts[1] : null;
-}
-
-function isCourseHidden(course) {
-  const key = courseSubjectKey(course);
-  return key !== null && HIDDEN_SUBJECTS.has(key);
 }
 
 function courseTeacherCode(course) {
@@ -778,6 +777,7 @@ function normalizeOverviewData(data) {
     courseName: data.courseName || data.course_name,
     weeks: (data.weeks || []).map(normalizeOverviewWeek),
     totals: data.totals || {},
+    uncategorized_unfinished_count: data.uncategorized_unfinished_count || 0,
   };
 }
 
@@ -887,7 +887,14 @@ function renderItems() {
   const visibleItems = scopedItems.filter((item) => itemMatchesSearch(item, searchQuery));
 
   if (scopedItems.length === 0) {
-    showMessage(t("noItemsWeek"));
+    // Check if there are uncategorized modules with items
+    const hasUncategorizedItems = overviewData && overviewData.weeks &&
+      overviewData.weeks.some(w => w.week === 0 && w.total > 0);
+    if (hasUncategorizedItems) {
+      showMessage(t("noItemsWithUncategorized"));
+    } else {
+      showMessage(t("noItemsWeek"));
+    }
     return;
   }
 
@@ -1182,7 +1189,7 @@ async function loadCourses() {
   showMessage(t("loadingCourses"));
 
   const data = await fetchJson("/api/courses");
-  courses = data.courses.filter((course) => !isCourseHidden(course));
+  courses = data.courses;
   coursesLoaded = true;
 
   if (courses.length === 0) {
@@ -1870,6 +1877,15 @@ function applyManualCompletionsToOverview(overviewData) {
   adjusted.totals.done = adjusted.weeks.reduce((s, w) => s + w.done, 0);
   adjusted.totals.unfinished = adjusted.weeks.reduce((s, w) => s + w.unfinished, 0);
   adjusted.totals.unknown = adjusted.weeks.reduce((s, w) => s + w.unknown, 0);
+
+  // Also adjust uncategorized_unfinished_count for week 0 (Unassigned Modules) items
+  const week0Adj = adjustments[0];
+  if (week0Adj) {
+    adjusted.uncategorized_unfinished_count = Math.max(
+      0,
+      adjusted.uncategorized_unfinished_count + week0Adj.unfinished_adj + week0Adj.unknown_adj
+    );
+  }
   
   return adjusted;
 }
@@ -1945,6 +1961,22 @@ function renderOverview(data) {
   updateDonutChart(totalDone, totalItems);
 
   container.replaceChildren();
+
+  // Unassigned work warning banner
+  if (data.uncategorized_unfinished_count > 0) {
+    const warningBanner = document.createElement("div");
+    warningBanner.className = "uncategorized_warning_banner";
+    warningBanner.setAttribute("role", "button");
+    warningBanner.tabIndex = 0;
+    warningBanner.title = t("uncategorizedWarning").replace("{count}", data.uncategorized_unfinished_count);
+    warningBanner.textContent = t("uncategorizedWarning").replace("{count}", data.uncategorized_unfinished_count);
+    warningBanner.addEventListener("click", () => {
+      currentWeek = 0;
+      localStorage.setItem("selectedWeek", "0");
+      setView("work");
+    });
+    container.appendChild(warningBanner);
+  }
 
   // Summary card at top
   const summary = document.createElement("div");
@@ -2039,8 +2071,9 @@ function renderWorkView() {
   const weekLabel = document.getElementById("week_label");
   if (weekLabel) weekLabel.childNodes[0].textContent = `${t("week")} `;
   searchInput.placeholder = t("searchPlaceholder");
-  const filterToggleSpan = document.querySelector(".filter_toggle span");
-  if (filterToggleSpan) filterToggleSpan.textContent = t("unfinishedLabel");
+  const filterToggleSpans = document.querySelectorAll(".filter_toggle span");
+  if (filterToggleSpans[0]) filterToggleSpans[0].textContent = t("unfinishedLabel");
+  if (filterToggleSpans[1]) filterToggleSpans[1].textContent = t("unknownLabel");
 }
 
 function updateDonutChart(done, total) {
@@ -2213,9 +2246,18 @@ function updateSearchWrapperClass() {
   }
 }
 
+// Search debounce timer (300ms)
+let searchDebounceTimer = null;
+
 searchInput.addEventListener("input", () => {
-  renderItems();
-  updateSearchWrapperClass();
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+  searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = null;
+    renderItems();
+    updateSearchWrapperClass();
+  }, 300);
 });
 
 document.querySelector(".icon").addEventListener("click", () => searchInput.focus());
@@ -2648,7 +2690,7 @@ function updateTokenWarning() {
     return;
   }
 
-  const maxAgeDays = 90; // ~3 months
+  const maxAgeDays = 120; // ~3 months
   const warningThreshold = 7; // Warn 1 week before
   const remaining = maxAgeDays - ageDays;
 

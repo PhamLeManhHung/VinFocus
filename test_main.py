@@ -131,6 +131,20 @@ class TestExtractWeeks:
     def test_week_mixed_case(self):
         assert extract_weeks("wEEk 36") == [36]
 
+    # Non-accented TUAN
+    def test_tuan_no_accent(self):
+        assert extract_weeks("TUAN 31") == [31]
+
+    def test_tuan_no_accent_lowercase(self):
+        assert extract_weeks("tuan 31") == [31]
+
+    # Arrow range => 
+    def test_tuan_arrow_range(self):
+        assert extract_weeks("TUẦN 30 => 33") == [30, 31, 32, 33]
+
+    def test_tuan_arrow_range_no_spaces(self):
+        assert extract_weeks("TUẦN 30=>33") == [30, 31, 32, 33]
+
     # Range in wrong direction (descending) still captures both ends
     def test_range_descending(self):
         result = extract_weeks("Tuần 40-36")
