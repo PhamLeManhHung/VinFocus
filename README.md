@@ -63,6 +63,12 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - Subject labels — rename-only (no color customization)
 - Bilingual UI
 
+### Notices & Banners
+- **Token expiry warning** — warns when your Canvas API token is about to expire or has already expired
+- **Consent banner** — asks for permission to use localStorage for token persistence; falls back to sessionStorage if declined
+- **Unassigned work warning** — in the overview dashboard, warns about unfinished items in modules without a week assignment
+- **Terms & Conditions** — modal with privacy and usage terms, accessible from the consent banner
+
 ### Other
 - Timetable
 - Feedback
@@ -72,8 +78,9 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - **Python** — Backend logic and API
 - **Flask** — Web framework
 - **Flask-CORS** — Cross-origin resource sharing for frontend access
+- **Flask-Talisman** — Security headers (Content Security Policy)
 - **Requests** — HTTP client for Canvas API
-- **psycopg2** — PostgreSQL database driver
+- **psycopg2-binary** — PostgreSQL database driver
 - **python-dotenv** — Environment variable management
 - **gunicorn** — Production WSGI server
 - **pytest** — Testing framework
@@ -104,12 +111,13 @@ Students decide what to work on. VinFocus simply makes the information easier to
 |----------|-------------|
 | `GET /api/feedback` | Get all feedback submissions. Requires `X-Admin-Key` header with the admin API key. |
 | `POST /api/feedback` | Submit user feedback. Expects JSON body `{ "rating": int (1-5), "usage_type": str, "recommend": str, "improvement": str }`. Requires `X-CSRF-Token` header. Rate limited: 10 requests/minute. |
+| `DELETE /api/feedback/<feedback_id>` | Delete a specific feedback entry by ID. Requires `X-Admin-Key` header. Returns `{ "success": true/false, "message": "..." }`. |
 
 ### Health Check
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /health` | Health check endpoint for monitoring. Returns `{ "status": "healthy", "service": "VinFocus", "database": "configured" or "not configured" }`. |
+| `GET /health` | Health check endpoint for monitoring. Returns `{ "status": "healthy", "service": "VinFocus", "database": "configured" or "not configured", "version": "2.0" }`. |
 
 ### Legacy routes (backward compatibility)
 
@@ -132,14 +140,14 @@ Each item in the `items` array has the following fields:
   "title": "Quiz 1",
   "type": "Quiz",
   "completed": false,
-  "completion_requirement": true,
+  "has_tracking": true,
   "module_item_id": 456,
   "url": "https://lms.vinschool.edu.vn/courses/123/quizzes/789"
 }
 ```
 
 - `completed`: `true` if tracked and done, `false` if tracked and not done, `null` if no completion tracking exists (unknown).
-- `completion_requirement`: `true` if Canvas reports a completion requirement for this item, `false` otherwise.
+- `has_tracking`: `true` if Canvas reports a completion requirement for this item, `false` otherwise.
 
 Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
@@ -153,7 +161,7 @@ The frontend in `script.js` loads courses, lets you pick a course and week, and 
 
 ## Security
 
-- Tokens are stored only in browser localStorage
+- Tokens are stored only in browser localStorage (or sessionStorage if consent is declined)
 - Tokens are never stored on VinFocus servers
 - Tokens are only sent to Canvas-authenticated endpoints
 - Users can revoke tokens at any time from Canvas
@@ -181,7 +189,7 @@ If you prefer to run the app on your own machine instead of using the hosted ver
 pip install -r requirements.txt
 ```
 
-This will install all required packages including Flask, Flask-CORS, psycopg2-binary, python-dotenv, gunicorn, and requests.
+This will install all required packages including Flask, Flask-CORS, Flask-Talisman, psycopg2-binary, python-dotenv, gunicorn, and requests.
 
 2. Start the app:
 

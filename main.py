@@ -52,6 +52,7 @@ csp = {
     "object-src": ["'none'"],
     "frame-ancestors": ["'none'"],
     "form-action": ["'self'"],
+    "base-uri": ["'self'"],
 }
 
 Talisman(app, content_security_policy=csp)
