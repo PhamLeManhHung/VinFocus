@@ -346,13 +346,6 @@ const TRANSLATIONS = {
     tcViewTerms: "View Terms",
     setupTcError: "Please agree to the Terms and Conditions before proceeding.",
     
-    tcSection8Title: "8. Data Retention and Deletion",
-    tcSection8Text: "Feedback data is retained indefinitely unless deletion is requested. To request deletion of your feedback, contact hung020121@gmail.com with the subject 'Data Deletion Request'. API tokens stored in your browser can be removed at any time by clearing your browser data or using the 'Clear Token' option in Settings.",
-    tcSection9Title: "9. Data Processing",
-    tcSection9Text: "VinFocus is hosted on Render.com. Feedback data is stored in a PostgreSQL database. Your Canvas API token is NEVER sent to our servers — it remains in your browser's local storage and is only used directly from your browser to authenticate with Canvas.",
-    tcSection10Title: "10. Your Rights (GDPR/CCPA)",
-    tcSection10Text: "You have the right to:\n- Access any personal data we hold about you\n- Request deletion of your data\n- Opt-out of data collection\n- Withdraw consent at any time\n\nTo exercise these rights, contact hung020121@gmail.com.",
-    
     // Overview
     overview: "Overview",
     overviewLoading: "Loading overview...",
@@ -1028,9 +1021,29 @@ function createItemRow(item) {
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const key = `${item.course_id}:${item.module_item_id}`;
+      
+      // Optimistic UI update - immediately show as done
+      const newBadge = document.createElement("span");
+      newBadge.className = "status_badge status_done status_manual";
+      newBadge.textContent = t("done");
+      
+      const undoBtn = document.createElement("button");
+      undoBtn.type = "button";
+      undoBtn.className = "manual_done_btn manual_done_btn_undo";
+      undoBtn.textContent = "↩";
+      undoBtn.title = "Undo manual completion";
+      undoBtn.addEventListener("click", (ue) => {
+        ue.stopPropagation();
+        saveManualCompletion(key, false);
+        renderItems();
+        updateHubTitle();
+        refreshOverviewFromState();
+      });
+      
+      badgeGroup.replaceChildren(newBadge, undoBtn);
+      
+      // Persist to localStorage in background
       saveManualCompletion(key, true);
-      // Re-render the current items
-      renderItems();
       updateHubTitle();
       refreshOverviewFromState();
     });
@@ -1045,8 +1058,48 @@ function createItemRow(item) {
     undoBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const key = `${item.course_id}:${item.module_item_id}`;
+      
+      // Optimistic UI update - immediately revert to original state
+      const newBadge = document.createElement("span");
+      newBadge.className = "status_badge status_open";
+      newBadge.textContent = t("unfinished");
+      
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.className = "manual_done_btn";
+      toggleBtn.textContent = "✓";
+      toggleBtn.title = "Mark as done";
+      toggleBtn.addEventListener("click", (te) => {
+        te.stopPropagation();
+        const k = `${item.course_id}:${item.module_item_id}`;
+        
+        const doneBadge = document.createElement("span");
+        doneBadge.className = "status_badge status_done status_manual";
+        doneBadge.textContent = t("done");
+        
+        const newUndoBtn = document.createElement("button");
+        newUndoBtn.type = "button";
+        newUndoBtn.className = "manual_done_btn manual_done_btn_undo";
+        newUndoBtn.textContent = "↩";
+        newUndoBtn.title = "Undo manual completion";
+        newUndoBtn.addEventListener("click", (ue2) => {
+          ue2.stopPropagation();
+          saveManualCompletion(k, false);
+          renderItems();
+          updateHubTitle();
+          refreshOverviewFromState();
+        });
+        
+        badgeGroup.replaceChildren(doneBadge, newUndoBtn);
+        saveManualCompletion(k, true);
+        updateHubTitle();
+        refreshOverviewFromState();
+      });
+      
+      badgeGroup.replaceChildren(newBadge, toggleBtn);
+      
+      // Persist to localStorage in background
       saveManualCompletion(key, false);
-      renderItems();
       updateHubTitle();
       refreshOverviewFromState();
     });
@@ -1448,17 +1501,30 @@ async function loadItems() {
     currentRequestController.abort();
   }
   currentRequestController = new AbortController();
+  
+  // Add a "still loading" message after 10 seconds for slow Canvas responses
+  const loadItemsTimeout = setTimeout(() => {
+    if (itemList.querySelector('.skeleton_item')) {
+      const stillLoading = document.createElement("p");
+      stillLoading.className = "empty_message";
+      stillLoading.textContent = t("overviewStillLoading");
+      stillLoading.style.marginTop = "12px";
+      itemList.appendChild(stillLoading);
+    }
+  }, 10000);
 
   try {
     const data = await fetchJson(weekApiPath(selectedCourseId, currentWeek), {
       signal: currentRequestController.signal
     });
+    clearTimeout(loadItemsTimeout);
     items = data.items;
     itemCache.set(cacheKey, items);
     updateHubTitle();
     updateWeekNav();
     renderItems();
   } catch (error) {
+    clearTimeout(loadItemsTimeout);
     if (error.name !== 'AbortError') {
       showMessage(error.message);
     }
@@ -1507,7 +1573,12 @@ function changeWeek(delta) {
 
   currentWeek = availableWeeks[targetIndex];
   storageSet("selectedWeek", String(currentWeek));
+  
+  // Load items and scroll to top after a short delay to let the render start
   loadItems();
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 }
 
 function timetableEntryFor(dayKey, periodKey) {
@@ -1709,6 +1780,19 @@ function handleSlotClick(event) {
   const periodKey = slot.dataset.periodKey;
   if (dayKey && periodKey) {
     openSubjectEditor(dayKey, periodKey, slot);
+  }
+}
+
+// Keyboard navigation for timetable slots (Enter/Space to open editor)
+function handleSlotKeydown(event) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    const slot = event.currentTarget;
+    const dayKey = slot.dataset.dayKey;
+    const periodKey = slot.dataset.periodKey;
+    if (dayKey && periodKey) {
+      openSubjectEditor(dayKey, periodKey, slot);
+    }
   }
 }
 
@@ -2221,11 +2305,13 @@ function renderOverview(data) {
       currentWeek = weekSummary.week;
       storageSet("selectedWeek", String(currentWeek));
       setView("work");
-      // Scroll to top after view transition to show the work content (mobile only)
-      if (window.innerWidth <= 900) {
-        setTimeout(() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }, 400);
+    });
+    
+    // Keyboard navigation for overview week cards
+    weekCard.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        weekCard.click();
       }
     });
 
@@ -2501,6 +2587,9 @@ weekInput.addEventListener("keydown", (event) => {
     currentWeek = value;
     storageSet("selectedWeek", String(currentWeek));
     loadItems();
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 });
 
@@ -2689,9 +2778,9 @@ function renderSetupStep(stepIndex) {
     inputGroup.className = "setup_token_group";
 
     const input = document.createElement("input");
-    input.type = "text";
+    input.type = "password";
     input.id = "setup_token_input";
-    input.className = "setup_token_input token_input_masked";
+    input.className = "setup_token_input";
     input.placeholder = t("setupTokenPlaceholder");
     input.autocomplete = "off";
     input.spellcheck = false;
@@ -2701,13 +2790,14 @@ function renderSetupStep(stepIndex) {
     const toggleBtn = document.createElement("button");
     toggleBtn.type = "button";
     toggleBtn.className = "token_toggle_btn";
-    toggleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`;
+    toggleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12-1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`;
     toggleBtn.setAttribute("aria-label", "Toggle token visibility");
     toggleBtn.addEventListener("click", () => {
-      const isMasked = input.classList.toggle("token_input_masked");
-      toggleBtn.innerHTML = isMasked
-        ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>`;
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      toggleBtn.innerHTML = isPassword
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12-1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`;
     });
     inputGroup.appendChild(toggleBtn);
 
@@ -3230,9 +3320,9 @@ function openTokenSettings() {
   inputGroup.style.marginTop = "8px";
 
   const input = document.createElement("input");
-  input.type = "text";
+  input.type = "password";
   input.id = "settings_token_input";
-  input.className = "setup_token_input token_input_masked";
+  input.className = "setup_token_input";
   input.placeholder = t("setupTokenPlaceholder");
   input.autocomplete = "off";
   input.spellcheck = false;
@@ -3243,13 +3333,14 @@ function openTokenSettings() {
   const toggleBtn = document.createElement("button");
   toggleBtn.type = "button";
   toggleBtn.className = "token_toggle_btn";
-  toggleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`;
+  toggleBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12-1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`;
   toggleBtn.setAttribute("aria-label", "Toggle token visibility");
   toggleBtn.addEventListener("click", () => {
-    const isMasked = input.classList.toggle("token_input_masked");
-    toggleBtn.innerHTML = isMasked
-      ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`
-      : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>`;
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    toggleBtn.innerHTML = isPassword
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12-1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>`;
   });
   inputGroup.appendChild(toggleBtn);
 
@@ -3678,5 +3769,51 @@ document.addEventListener("DOMContentLoaded", () => {
 if (languageToggle) {
   languageToggle.textContent = currentLanguage === "vi" ? "VN" : "EN";
 }
+
 renderAll();
 refreshTabIndicator();
+
+// Add swipe gesture for mobile timetable
+let touchStartX = 0;
+let touchEndX = 0;
+
+timetableMobile.addEventListener("touchstart", (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+timetableMobile.addEventListener("touchend", (e) => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipe();
+}, { passive: true });
+
+function handleSwipe() {
+  const swipeThreshold = 50;
+  const diff = touchStartX - touchEndX;
+  
+  if (Math.abs(diff) < swipeThreshold) return;
+  
+  const todayKey = todayDayKey();
+  if (!todayKey) return;
+  
+  // Swipe left: show full week, Swipe right: show today
+  if (diff > 0 && timetableMobileView === "today") {
+    // Swipe left - switch to full week
+    timetableMobileView = "week";
+    storageSet("timetableMobileView", "week");
+    updateTimetableViewToggleButtons();
+    renderTimetableMobile();
+  } else if (diff < 0 && timetableMobileView === "week") {
+    // Swipe right - switch to today
+    timetableMobileView = "today";
+    storageSet("timetableMobileView", "today");
+    updateTimetableViewToggleButtons();
+    renderTimetableMobile();
+  }
+}
+
+function updateTimetableViewToggleButtons() {
+  const btns = document.querySelectorAll(".timetable_view_toggle_btn");
+  btns.forEach((btn) => {
+    btn.classList.toggle("timetable_view_toggle_btn_active", btn.dataset.view === timetableMobileView);
+  });
+}
