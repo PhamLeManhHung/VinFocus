@@ -14,6 +14,8 @@ import requests
 from flask import Flask, jsonify, make_response, request, send_from_directory
 from flask_cors import CORS
 
+from flask_talisman import Talisman
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
@@ -41,6 +43,8 @@ class PrivacyFilter(logging.Filter):
 logger.addFilter(PrivacyFilter())
 
 app = Flask(__name__)
+
+Talisman(app)
 
 # Limit request body size to 1MB
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
