@@ -228,11 +228,25 @@
         </div>
 
 
+        <!-- Consent Banner -->
+        <div id="consent_banner" class="consent_banner" hidden>
+            <div class="consent_content">
+                <p class="consent_text" id="consent_text"></p>
+                <div class="consent_actions">
+                    <button type="button" class="consent_btn consent_btn_accept" id="consent_accept"></button>
+                    <button type="button" class="consent_btn consent_btn_reject" id="consent_reject"></button>
+                    <button type="button" class="consent_btn consent_btn_learn" id="consent_learn"></button>
+                </div>
+            </div>
+        </div>
+
         <!-- Terms and Conditions Modal -->
         <div id="tc_modal" class="token_settings_modal" hidden>
             <div class="token_settings_content tc_content">
-                <h2 id="tc_title"></h2>
-                <div id="tc_body"></div>
+                <div class="tc_header_sticky">
+                    <h2 id="tc_title"></h2>
+                </div>
+                <div id="tc_body" class="tc_body_scrollable"></div>
             </div>
         </div>
 

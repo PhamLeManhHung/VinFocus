@@ -21,46 +21,109 @@ const timetableNote = document.getElementById("timetable_note");
 const timetableHeader = document.querySelector(".timetable_header");
 const subjectLabelEditBtn = document.getElementById("subject_label_edit_btn");
 
-const VINFOCUS_SCRIPT_VERSION = "2.0-fixed";
+const VINFOCUS_SCRIPT_VERSION = "2.1";
 console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
 const DEBUG = false;
 function debugLog(...args) {
   if (DEBUG) console.log("[VinFocus Debug]", ...args);
 }
 
+// ── Consent-aware storage abstraction ────────────────────────
+// Uses localStorage when consent is given, sessionStorage otherwise.
+
+const STORAGE_CONSENT_KEY = "storage_consent";
+let storageConsent = null; // null = not decided, true = accepted, false = rejected
+
+function getStorageConsent() {
+    if (storageConsent === null) {
+        // Check localStorage first (accepted), then sessionStorage (rejected)
+        const storedLocal = localStorage.getItem(STORAGE_CONSENT_KEY);
+        const storedSession = sessionStorage.getItem(STORAGE_CONSENT_KEY);
+        const stored = storedLocal !== null ? storedLocal : storedSession;
+        storageConsent = stored === null ? null : stored === "true";
+    }
+    return storageConsent;
+}
+
+function setStorageConsent(value) {
+    storageConsent = value ? true : false;
+    if (value) {
+        // Migrate all existing sessionStorage data to localStorage
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key !== STORAGE_CONSENT_KEY) {
+                localStorage.setItem(key, sessionStorage.getItem(key));
+            }
+        }
+        localStorage.setItem(STORAGE_CONSENT_KEY, String(storageConsent));
+        sessionStorage.clear();
+    } else {
+        sessionStorage.setItem(STORAGE_CONSENT_KEY, String(storageConsent));
+        localStorage.removeItem(STORAGE_CONSENT_KEY);
+    }
+}
+
+function getStorageTarget() {
+    return getStorageConsent() === true ? localStorage : sessionStorage;
+}
+
+function storageGet(key) {
+    try {
+        return getStorageTarget().getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+function storageSet(key, value) {
+    try {
+        getStorageTarget().setItem(key, value);
+    } catch {
+        // ignore quota errors
+    }
+}
+
+function storageRemove(key) {
+    try {
+        getStorageTarget().removeItem(key);
+    } catch {
+        // ignore
+    }
+}
+
 // Token management
 function getToken() {
-  const token = localStorage.getItem("api_token") || "";
+  const token = storageGet("api_token") || "";
   debugLog("getToken():", token ? token.slice(0, 10) + "..." : "(empty)");
   return token;
 }
 
 function saveToken(token) {
   debugLog("saveToken called, token:", token ? token.slice(0, 10) + "..." : "(empty)");
-  localStorage.setItem("api_token", token);
-  localStorage.setItem("api_token_saved_at", String(Date.now()));
-  debugLog("saveToken: localStorage now has api_token =", (localStorage.getItem("api_token") || "").slice(0, 10) + "...");
+  storageSet("api_token", token);
+  storageSet("api_token_saved_at", String(Date.now()));
+  debugLog("saveToken: storage now has api_token =", (storageGet("api_token") || "").slice(0, 10) + "...");
 }
 
 function clearToken() {
   debugLog("clearToken called");
-  localStorage.removeItem("api_token");
-  localStorage.removeItem("api_token_saved_at");
-  debugLog("clearToken: api_token in localStorage =", localStorage.getItem("api_token"));
+  storageRemove("api_token");
+  storageRemove("api_token_saved_at");
+  debugLog("clearToken: api_token in storage =", storageGet("api_token"));
 }
 
 function getTokenAgeDays() {
-  const savedAt = localStorage.getItem("api_token_saved_at");
+  const savedAt = storageGet("api_token_saved_at");
   if (!savedAt) return null;
   return (Date.now() - Number(savedAt)) / (1000 * 60 * 60 * 24);
 }
 
 // Language state management
-let currentLanguage = localStorage.getItem("language") || "en";
+let currentLanguage = storageGet("language") || "en";
 
 function setLanguage(lang) {
   currentLanguage = lang;
-  localStorage.setItem("language", lang);
+  storageSet("language", lang);
   if (languageToggle) {
     languageToggle.textContent = lang === "vi" ? "VN" : "EN";
   }
@@ -79,7 +142,7 @@ function t(key) {
 
 function getCustomSubjectLabels() {
   try {
-    const stored = localStorage.getItem("custom_subject_labels");
+    const stored = storageGet("custom_subject_labels");
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};
@@ -87,11 +150,11 @@ function getCustomSubjectLabels() {
 }
 
 function saveCustomSubjectLabels(labels) {
-  localStorage.setItem("custom_subject_labels", JSON.stringify(labels));
+  storageSet("custom_subject_labels", JSON.stringify(labels));
 }
 
 function resetCustomSubjectLabels() {
-  localStorage.removeItem("custom_subject_labels");
+  storageRemove("custom_subject_labels");
 }
 
 function getSubjectLabel(subjectId) {
@@ -245,6 +308,12 @@ const TRANSLATIONS = {
     feedbackSuccess: "Thank you for your feedback!",
     feedbackError: "Something went wrong. Please try again.",
     
+    // Consent Banner
+    consentText: "We use localStorage to save your Canvas API token and preferences. This allows you to use the app without re-entering your token. Your token is stored only in your browser and never sent to our servers.",
+    consentAccept: "Accept & Save",
+    consentReject: "Use without saving",
+    consentLearn: "Learn more",
+    
     // Terms and Conditions
     tcTitle: "Terms and Conditions",
     tcSection1Title: "1. Independent Project",
@@ -261,10 +330,23 @@ const TRANSLATIONS = {
     tcSection6Text: "Features may be modified, suspended, or removed at any time without prior notice.",
     tcSection7Title: "7. Contact",
     tcSection7Text: "For questions or feedback about VinFocus, please use the feedback form available in the app.",
+    tcSection8Title: "8. Data Retention and Deletion",
+    tcSection8Text: "Feedback data is retained indefinitely unless deletion is requested. To request deletion of your feedback, contact hung020121@gmail.com with the subject 'Data Deletion Request'. API tokens stored in your browser can be removed at any time by clearing your browser data or using the 'Clear Token' option in Settings.",
+    tcSection9Title: "9. Data Processing",
+    tcSection9Text: "VinFocus is hosted on Render.com. Feedback data is stored in a PostgreSQL database. Your Canvas API token is NEVER sent to our servers — it remains in your browser's local storage and is only used directly from your browser to authenticate with Canvas.",
+    tcSection10Title: "10. Your Rights (GDPR/CCPA)",
+    tcSection10Text: "You have the right to:\n- Access any personal data we hold about you\n- Request deletion of your data\n- Opt-out of data collection\n- Withdraw consent at any time\n\nTo exercise these rights, contact hung020121@gmail.com.",
     tcApiWarning: "Your Canvas API token is like a password — keep it private.",
     tcAgreeCheckbox: "I agree to the Terms and Conditions",
     tcViewTerms: "View Terms",
     setupTcError: "Please agree to the Terms and Conditions before proceeding.",
+    
+    tcSection8Title: "8. Data Retention and Deletion",
+    tcSection8Text: "Feedback data is retained indefinitely unless deletion is requested. To request deletion of your feedback, contact hung020121@gmail.com with the subject 'Data Deletion Request'. API tokens stored in your browser can be removed at any time by clearing your browser data or using the 'Clear Token' option in Settings.",
+    tcSection9Title: "9. Data Processing",
+    tcSection9Text: "VinFocus is hosted on Render.com. Feedback data is stored in a PostgreSQL database. Your Canvas API token is NEVER sent to our servers — it remains in your browser's local storage and is only used directly from your browser to authenticate with Canvas.",
+    tcSection10Title: "10. Your Rights (GDPR/CCPA)",
+    tcSection10Text: "You have the right to:\n- Access any personal data we hold about you\n- Request deletion of your data\n- Opt-out of data collection\n- Withdraw consent at any time\n\nTo exercise these rights, contact hung020121@gmail.com.",
     
     // Overview
     overview: "Overview",
@@ -286,6 +368,12 @@ const TRANSLATIONS = {
   },
   vi: {
     feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
+    
+    // Consent Banner
+    consentText: "Chúng tôi sử dụng localStorage để lưu mã API Canvas và tùy chọn của bạn. Điều này cho phép bạn sử dụng ứng dụng mà không cần nhập lại mã. Mã của bạn chỉ được lưu trong trình duyệt và không bao giờ được gửi đến máy chủ của chúng tôi.",
+    consentAccept: "Chấp nhận & Lưu",
+    consentReject: "Sử dụng không lưu",
+    consentLearn: "Tìm hiểu thêm",
     
     // Terms and Conditions
     tcTitle: "Điều Khoản Dịch Vụ",
@@ -433,6 +521,13 @@ const TRANSLATIONS = {
     feedbackSuccess: "Cảm ơn bạn đã phản hồi!",
     feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
     
+    tcSection8Title: "8. Lưu trữ và Xóa Dữ liệu",
+    tcSection8Text: "Dữ liệu phản hồi được lưu trữ không giới hạn trừ khi có yêu cầu xóa. Để yêu cầu xóa phản hồi của bạn, liên hệ hung020121@gmail.com với chủ đề 'Yêu cầu Xóa Dữ liệu'. Mã API được lưu trong trình duyệt có thể được xóa bất cứ lúc nào bằng cách xóa dữ liệu trình duyệt hoặc sử dụng tùy chọn 'Xóa Mã' trong Cài Đặt.",
+    tcSection9Title: "9. Xử lý Dữ liệu",
+    tcSection9Text: "VinFocus được lưu trữ trên Render.com. Dữ liệu phản hồi được lưu trong cơ sở dữ liệu PostgreSQL. Mã API Canvas của bạn KHÔNG BAO GIỜ được gửi đến máy chủ của chúng tôi — nó nằm trong bộ nhớ cục bộ của trình duyệt và chỉ được sử dụng trực tiếp từ trình duyệt để xác thực với Canvas.",
+    tcSection10Title: "10. Quyền của Bạn (GDPR/CCPA)",
+    tcSection10Text: "Bạn có quyền:\n- Truy cập mọi dữ liệu cá nhân chúng tôi lưu giữ về bạn\n- Yêu cầu xóa dữ liệu của bạn\n- Từ chối thu thập dữ liệu\n- Rút lại sự đồng thuận bất cứ lúc nào\n\nĐể thực hiện các quyền này, liên hệ hung020121@gmail.com.",
+    
     // Overview
     overview: "Tổng Quan",
     overviewLoading: "Đang tải tổng quan...",
@@ -551,7 +646,7 @@ const DEFAULT_TIMETABLE = {
 
 function loadTimetable() {
   try {
-    const stored = localStorage.getItem("timetable");
+    const stored = storageGet("timetable");
     if (stored) {
       return JSON.parse(stored);
     }
@@ -562,7 +657,7 @@ function loadTimetable() {
 }
 
 function saveTimetable(timetable) {
-  localStorage.setItem("timetable", JSON.stringify(timetable));
+  storageSet("timetable", JSON.stringify(timetable));
 }
 
 let TIMETABLE = loadTimetable();
@@ -602,10 +697,10 @@ let courses = [];
 let subjectCounts = new Map();
 let availableWeeks = [];
 let selectedCourseId = null;
-let currentWeek = (() => { const w = Number(localStorage.getItem("selectedWeek")); return Number.isFinite(w) ? w : 36; })();
+let currentWeek = (() => { const w = Number(storageGet("selectedWeek")); return Number.isFinite(w) ? w : 36; })();
 let coursesLoaded = false;
 let itemCache = new Map();
-let timetableMobileView = localStorage.getItem("timetableMobileView") || "today";
+let timetableMobileView = storageGet("timetableMobileView") || "today";
 let currentRequestController = null; // For cancelling stale requests
 let currentOverviewController = null; // For cancelling stale overview requests
 let overviewLoadingMessageTimer = null; // For progressive loading messages
@@ -767,7 +862,7 @@ function isItemImportant(item) {
 
 function getManualCompletions() {
   try {
-    const stored = localStorage.getItem("manual_completions");
+    const stored = storageGet("manual_completions");
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};
@@ -781,7 +876,7 @@ function saveManualCompletion(itemKey, completed) {
   } else {
     delete completions[itemKey];
   }
-  localStorage.setItem("manual_completions", JSON.stringify(completions));
+  storageSet("manual_completions", JSON.stringify(completions));
 }
 
 function isManuallyCompleted(item) {
@@ -1278,7 +1373,7 @@ async function loadCourses() {
   rebuildSubjectCounts();
   courses.sort((a, b) => courseShortLabel(a).localeCompare(courseShortLabel(b)));
 
-  const savedCourseId = Number(localStorage.getItem("selectedCourseId"));
+  const savedCourseId = Number(storageGet("selectedCourseId"));
   selectedCourseId = courses.find((course) => course.id === savedCourseId)?.id ?? courses[0].id;
 
   renderCoursePills();
@@ -1302,7 +1397,7 @@ async function loadWeeks() {
 
     if (availableWeeks.length > 0 && !availableWeeks.includes(currentWeek)) {
       currentWeek = availableWeeks.at(-1);
-      localStorage.setItem("selectedWeek", String(currentWeek));
+      storageSet("selectedWeek", String(currentWeek));
     }
   } catch {
     availableWeeks = [];
@@ -1355,7 +1450,7 @@ async function loadItems() {
 async function selectCourse(courseId) {
   if (subjectLabelEditMode) return; // Don't switch courses in edit mode
   selectedCourseId = courseId;
-  localStorage.setItem("selectedCourseId", String(courseId));
+  storageSet("selectedCourseId", String(courseId));
   renderCoursePills();
   await loadWeeks();
   
@@ -1391,7 +1486,7 @@ function changeWeek(delta) {
   if (targetIndex < 0 || targetIndex >= availableWeeks.length) return;
 
   currentWeek = availableWeeks[targetIndex];
-  localStorage.setItem("selectedWeek", String(currentWeek));
+  storageSet("selectedWeek", String(currentWeek));
   loadItems();
 }
 
@@ -2062,7 +2157,7 @@ function renderOverview(data) {
     warningBanner.textContent = t("uncategorizedWarning").replace("{count}", data.uncategorized_unfinished_count);
     warningBanner.addEventListener("click", () => {
       currentWeek = 0;
-      localStorage.setItem("selectedWeek", "0");
+      storageSet("selectedWeek", "0");
       setView("work");
     });
     container.appendChild(warningBanner);
@@ -2104,7 +2199,7 @@ function renderOverview(data) {
     // Click navigates to this week
     weekCard.addEventListener("click", () => {
       currentWeek = weekSummary.week;
-      localStorage.setItem("selectedWeek", String(currentWeek));
+      storageSet("selectedWeek", String(currentWeek));
       setView("work");
       // Scroll to top after view transition to show the work content (mobile only)
       if (window.innerWidth <= 900) {
@@ -2207,6 +2302,7 @@ function renderAll() {
   renderWorkView();
   renderTimetableView();
   refreshOverviewFromState();
+  updateConsentBanner();
   
   // Update shared static text elements
   if (tagline) tagline.textContent = t("tagline");
@@ -2276,7 +2372,7 @@ function refreshTabIndicator() {
 
 function setView(viewName) {
   const nextView = viewName === "timetable" ? "timetable" : viewName === "about" ? "about" : "work";
-  localStorage.setItem("selectedView", nextView);
+  storageSet("selectedView", nextView);
 
   const currentView = document.querySelector(".app_view_active");
   const transitionDuration = 50;
@@ -2383,7 +2479,7 @@ weekInput.addEventListener("keydown", (event) => {
     }
 
     currentWeek = value;
-    localStorage.setItem("selectedWeek", String(currentWeek));
+    storageSet("selectedWeek", String(currentWeek));
     loadItems();
   }
 });
@@ -2450,7 +2546,7 @@ const timetableViewToggleBtns = document.querySelectorAll(".timetable_view_toggl
 timetableViewToggleBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
     timetableMobileView = btn.dataset.view;
-    localStorage.setItem("timetableMobileView", timetableMobileView);
+    storageSet("timetableMobileView", timetableMobileView);
     
     // Update active button state
     timetableViewToggleBtns.forEach((b) => b.classList.remove("timetable_view_toggle_btn_active"));
@@ -2480,11 +2576,11 @@ function applyTheme(theme) {
 function toggleTheme() {
   const isLight = document.body.classList.contains("light");
   const newTheme = isLight ? "dark" : "light";
-  localStorage.setItem("theme", newTheme);
+  storageSet("theme", newTheme);
   applyTheme(newTheme);
 }
 
-const savedTheme = localStorage.getItem("theme") || "dark";
+const savedTheme = storageGet("theme") || "dark";
 applyTheme(savedTheme);
 
 themeToggle.addEventListener("click", toggleTheme);
@@ -2857,7 +2953,7 @@ function reinitializeApp() {
   selectedCourseId = null;
 
   // Reload the app in-place
-  const currentView = localStorage.getItem("selectedView") || "work";
+  const currentView = storageGet("selectedView") || "work";
   setView(currentView);
   updateTokenWarning();
 }
@@ -2963,7 +3059,7 @@ function openTermsModal() {
     bodyEl.innerHTML = "";
     
     // Create sections for each T&C item
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 10; i++) {
       const section = document.createElement("div");
       section.className = "tc_section";
       
@@ -2978,11 +3074,11 @@ function openTermsModal() {
     }
   }
 
-  // Add close button
-  const content = modal.querySelector(".tc_content");
-  if (content) {
+  // Add close button to sticky header
+  const header = modal.querySelector(".tc_header_sticky");
+  if (header) {
     // Remove any existing close button first
-    const existingClose = content.querySelector(".setup_close_btn");
+    const existingClose = header.querySelector(".setup_close_btn");
     if (existingClose) existingClose.remove();
     
     // Create close button with proper event handling
@@ -2995,7 +3091,7 @@ function openTermsModal() {
       e.stopPropagation(); // Prevent backdrop click
       modal.hidden = true;
     });
-    content.appendChild(closeBtn);
+    header.appendChild(closeBtn);
   }
 
   // Close on backdrop click (use once flag to prevent multiple listeners)
@@ -3438,6 +3534,20 @@ function openFeedbackForm() {
   document.body.appendChild(modal);
 }
 
+// ── Consent Banner ─────────────────────────────────────────────
+
+function updateConsentBanner() {
+    const textEl = document.getElementById("consent_text");
+    const acceptBtn = document.getElementById("consent_accept");
+    const rejectBtn = document.getElementById("consent_reject");
+    const learnBtn = document.getElementById("consent_learn");
+    
+    if (textEl) textEl.textContent = t("consentText");
+    if (acceptBtn) acceptBtn.textContent = t("consentAccept");
+    if (rejectBtn) rejectBtn.textContent = t("consentReject");
+    if (learnBtn) learnBtn.textContent = t("consentLearn");
+}
+
 // ── Initialize ─────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -3464,11 +3574,45 @@ document.addEventListener("DOMContentLoaded", () => {
   // Only start the app if we have a token (overlay not shown)
   if (!showingSetup) {
     const initialView = new URLSearchParams(window.location.search).get("view")
-      || localStorage.getItem("selectedView")
+      || storageGet("selectedView")
       || "work";
     setView(initialView);
     refreshTabIndicator();
   }
+
+  // Consent banner handlers
+  const consentBanner = document.getElementById("consent_banner");
+  const consentAccept = document.getElementById("consent_accept");
+  const consentReject = document.getElementById("consent_reject");
+  const consentLearn = document.getElementById("consent_learn");
+  
+  if (consentAccept) {
+    consentAccept.addEventListener("click", () => {
+      setStorageConsent(true);
+      if (consentBanner) consentBanner.hidden = true;
+    });
+  }
+  
+  if (consentReject) {
+    consentReject.addEventListener("click", () => {
+      setStorageConsent(false);
+      if (consentBanner) consentBanner.hidden = true;
+    });
+  }
+  
+  if (consentLearn) {
+    consentLearn.addEventListener("click", () => {
+      openTermsModal();
+    });
+  }
+  
+  // Show consent banner if no decision has been made
+  if (consentBanner && getStorageConsent() === null) {
+    consentBanner.hidden = false;
+  }
+  
+  // Populate consent banner text
+  updateConsentBanner();
 
   // Terms and Conditions button
   const tcBtn = document.getElementById("tc_btn");

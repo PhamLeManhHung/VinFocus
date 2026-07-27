@@ -29,6 +29,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+class PrivacyFilter(logging.Filter):
+    def filter(self, record):
+        # Redact IP addresses from logs
+        if hasattr(record, 'msg'):
+            record.msg = re.sub(r'\d+\.\d+\.\d+\.\d+', '[REDACTED_IP]', str(record.msg))
+        if record.args:
+            record.args = tuple('[REDACTED_IP]' if isinstance(arg, str) and re.match(r'\d+\.\d+\.\d+\.\d+', arg) else arg for arg in record.args)
+        return True
+
+logger.addFilter(PrivacyFilter())
+
 app = Flask(__name__)
 
 # Limit request body size to 1MB
@@ -1323,6 +1334,51 @@ def get_feedback():
     except Exception as e:
         logger.error(f"Failed to fetch feedback: {e}")
         return jsonify({"error": "Failed to fetch feedback"}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            _db_pool.putconn(conn)
+
+
+@app.delete("/api/feedback/<int:feedback_id>")
+def delete_feedback(feedback_id: int):
+    """Delete a specific feedback entry by ID.
+    
+    Requires admin API key for authentication.
+    Returns: { "success": true/false, "message": "..." }
+    """
+    # Check admin API key (use constant-time comparison to prevent timing attacks)
+    admin_key = request.headers.get("X-Admin-Key")
+    expected_key = os.getenv("ADMIN_API_KEY", "")
+    if not admin_key or not hmac.compare_digest(admin_key, expected_key):
+        logger.warning("Unauthorized attempt to delete feedback")
+        return jsonify({"error": "Unauthorized. Access denied."}), 401
+    
+    if _db_pool is None:
+        return jsonify({"error": "Feedback system is temporarily unavailable."}), 503
+    
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+
+        # Check if feedback exists
+        cur.execute("SELECT id FROM feedback WHERE id = %s", (feedback_id,))
+        if cur.fetchone() is None:
+            return jsonify({"success": False, "message": "Feedback not found."}), 404
+
+        cur.execute("DELETE FROM feedback WHERE id = %s", (feedback_id,))
+        conn.commit()
+        
+        logger.info(f"Feedback deleted: id={feedback_id}")
+        return jsonify({"success": True, "message": "Feedback deleted successfully."})
+    except Exception as e:
+        logger.error(f"Failed to delete feedback: {e}")
+        if conn:
+            conn.rollback()
+        return jsonify({"success": False, "message": "An error occurred while deleting feedback."}), 500
     finally:
         if cur:
             cur.close()
