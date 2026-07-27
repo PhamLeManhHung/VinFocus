@@ -5,3 +5,4 @@ psycopg2-binary==2.9.12
 python-dotenv==1.2.2
 flask-cors==4.0.0
 flask_talisman==1.1.0
+flask-compress==1.24

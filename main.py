@@ -16,6 +16,8 @@ from flask_cors import CORS
 
 from flask_talisman import Talisman
 
+from flask_compress import Compress
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import SimpleConnectionPool
@@ -43,6 +45,8 @@ class PrivacyFilter(logging.Filter):
 logger.addFilter(PrivacyFilter())
 
 app = Flask(__name__)
+
+Compress(app)
 
 csp = {
     "default-src": ["'self'"],
