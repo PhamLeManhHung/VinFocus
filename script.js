@@ -141,19 +141,24 @@ function t(key) {
 // Each entry: { label: string }
 
 function getCustomSubjectLabels() {
-  try {
-    const stored = storageGet("custom_subject_labels");
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
+  if (_cachedCustomSubjectLabels === null) {
+    try {
+      const stored = storageGet("custom_subject_labels");
+      _cachedCustomSubjectLabels = stored ? JSON.parse(stored) : {};
+    } catch {
+      _cachedCustomSubjectLabels = {};
+    }
   }
+  return _cachedCustomSubjectLabels;
 }
 
 function saveCustomSubjectLabels(labels) {
+  _cachedCustomSubjectLabels = labels;
   storageSet("custom_subject_labels", JSON.stringify(labels));
 }
 
 function resetCustomSubjectLabels() {
+  _cachedCustomSubjectLabels = {};
   storageRemove("custom_subject_labels");
 }
 
@@ -706,6 +711,9 @@ let currentOverviewController = null; // For cancelling stale overview requests
 let overviewLoadingMessageTimer = null; // For progressive loading messages
 let overviewLoadStartTime = 0; // Tracks when overview loading started
 
+// Parsed storage caches (invalidated on writes)
+let _cachedCustomSubjectLabels = null;
+
 // Client-side API response cache to reduce duplicate requests
 // Key: URL, Value: { data, timestamp }
 const apiResponseCache = new Map();
@@ -860,13 +868,18 @@ function isItemImportant(item) {
 // Stores a map of item key -> true (manually marked done)
 // Item key format: `${course_id}:${module_item_id}`
 
+let _cachedManualCompletions = null;
+
 function getManualCompletions() {
-  try {
-    const stored = storageGet("manual_completions");
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
+  if (_cachedManualCompletions === null) {
+    try {
+      const stored = storageGet("manual_completions");
+      _cachedManualCompletions = stored ? JSON.parse(stored) : {};
+    } catch {
+      _cachedManualCompletions = {};
+    }
   }
+  return _cachedManualCompletions;
 }
 
 function saveManualCompletion(itemKey, completed) {
@@ -1006,7 +1019,7 @@ function createItemRow(item) {
   }
 
   // Manual toggle button (only for items without tracking or not completed)
-  if (!effectiveCompleted) {
+  if (!isManuallyCompleted(item) && !effectiveCompleted) {
     const toggleBtn = document.createElement("button");
     toggleBtn.type = "button";
     toggleBtn.className = "manual_done_btn";
@@ -1048,9 +1061,16 @@ function createItemRow(item) {
 
 function renderItems() {
   const searchQuery = searchInput.value.trim().toLowerCase();
+  
+  // Precompute effective completion once for all items to avoid redundant calls
+  const completionMap = new Map();
+  for (const item of items) {
+    completionMap.set(item, getEffectiveCompletion(item));
+  }
+  
   let scopedItems = items;
   if (unfinishedOnly.checked) {
-    scopedItems = items.filter((item) => getEffectiveCompletion(item) !== true);
+    scopedItems = items.filter((item) => completionMap.get(item) !== true);
   } else if (unknownOnly.checked) {
     scopedItems = items.filter((item) => item.completed === null && !isManuallyCompleted(item));
   }

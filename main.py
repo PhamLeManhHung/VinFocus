@@ -44,7 +44,17 @@ logger.addFilter(PrivacyFilter())
 
 app = Flask(__name__)
 
-Talisman(app)
+csp = {
+    "default-src": ["'self'"],
+    "script-src": ["'self'"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "img-src": ["'self'", "data:"],
+    "object-src": ["'none'"],
+    "frame-ancestors": ["'none'"],
+    "form-action": ["'self'"],
+}
+
+Talisman(app, content_security_policy=csp)
 
 # Limit request body size to 1MB
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
@@ -898,10 +908,10 @@ def validate_token():
             "valid": False,
             "message": "Connection timed out. Please check your internet connection.",
         })
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         return jsonify({
             "valid": False,
-            "message": f"Connection error: {str(e)}",
+            "message": "Connection error. Please check your internet connection.",
         })
 
 
@@ -1458,10 +1468,30 @@ init_db()
 # Log rate limiter configuration
 logger.info(f"Rate limiting configured: {Config.RATE_LIMIT_TOKENS} requests per {Config.RATE_LIMIT_WINDOW}s per IP")
 
-# Clean up stale rate limit and CSRF state periodically
-# (minimal overhead since these dicts are small)
+# Initial cleanup of stale rate limit and CSRF state
 cleanup_rate_limit_state()
 cleanup_csrf_tokens()
+
+# Start background cleanup thread
+_cleanup_thread_started = False
+
+def _start_cleanup_thread():
+    global _cleanup_thread_started
+    if _cleanup_thread_started:
+        return
+    _cleanup_thread_started = True
+    
+    def cleanup_loop():
+        while True:
+            time.sleep(300)  # Every 5 minutes
+            cleanup_rate_limit_state()
+            cleanup_csrf_tokens()
+    
+    thread = threading.Thread(target=cleanup_loop, daemon=True)
+    thread.start()
+    logger.info("Started background cleanup thread for rate limit and CSRF state")
+
+_start_cleanup_thread()
 
 if __name__ == "__main__":
     logger.info(f"Starting VinFocus in {'DEBUG' if Config.DEBUG else 'PRODUCTION'} mode")
