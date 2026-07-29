@@ -580,9 +580,21 @@ def get_course_name(course_id: int, headers: Dict[str, str]) -> str:
     return name
 
 
-def get_course_modules(course_id: int, headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
-    """Fetch all modules for a specific course."""
-    cache_key = f"modules:{token_hash(headers)}:{course_id}"
+def get_course_modules(course_id: int, headers: Dict[str, str], include_items: bool = False) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
+    """Fetch all modules for a specific course.
+    
+    Args:
+        course_id: The Canvas course ID
+        headers: Authentication headers
+        include_items: If True, include all module items inline using Canvas's
+            `include[]=items` parameter. This reduces API calls from N+1 to 1
+            for overview/week endpoints at the cost of a larger response body.
+    """
+    params = {"per_page": Config.PER_PAGE}
+    if include_items:
+        params["include[]"] = "items"
+
+    cache_key = f"modules:{token_hash(headers)}:{course_id}:include_items={include_items}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached, None
@@ -590,7 +602,7 @@ def get_course_modules(course_id: int, headers: Dict[str, str]) -> Tuple[Optiona
     data, response = canvas_get(
         f"{course_api_url(course_id)}/modules",
         headers,
-        params={"per_page": Config.PER_PAGE},
+        params=params,
     )
     if response is not None:
         return None, response
@@ -602,10 +614,13 @@ def get_course_modules(course_id: int, headers: Dict[str, str]) -> Tuple[Optiona
 def get_week_modules(course_id: int, week: int, headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
     """Fetch modules for a specific week in a course.
     
+    Uses `include_items=True` to fetch all module items in a single API call,
+    then filters modules by week from the cached response.
+    
     For week > 0: includes modules whose extracted weeks contain the requested week.
     For week == 0: includes modules with no week information (General category).
     """
-    modules, response = get_course_modules(course_id, headers)
+    modules, response = get_course_modules(course_id, headers, include_items=True)
     if response is not None:
         return None, response
 
@@ -627,7 +642,12 @@ def get_week_modules(course_id: int, week: int, headers: Dict[str, str]) -> Tupl
 
 
 def get_module_items(course_id: int, module_id: int, headers: Dict[str, str]) -> Tuple[Optional[List[Dict]], Optional[requests.Response]]:
-    """Fetch all items for a specific module."""
+    """Fetch all items for a specific module.
+    
+    NOTE: This is kept for backward compatibility and for use cases that need
+    items for a single module. For overview/week endpoints, prefer using
+    `get_course_modules(include_items=True)` to avoid N+1 API calls.
+    """
     cache_key = f"items:{token_hash(headers)}:{course_id}:{module_id}"
     cached = cache_get(cache_key)
     if cached is not None:
@@ -719,6 +739,9 @@ def get_week_items(
 ) -> Tuple[Optional[List[Dict]], Optional[str], Optional[requests.Response]]:
     """Fetch all items for a specific week in a course.
     
+    Uses `get_week_modules()` which fetches modules with embedded items in a
+    single API call, then iterates the cached items directly.
+    
     Args:
         course_id: The Canvas course ID
         week: The week number to fetch
@@ -735,31 +758,18 @@ def get_week_items(
     course_name = get_course_name(course_id, headers)
     items = []
 
-    # Fetch all module items in parallel
-    if week_modules:
-        with ThreadPoolExecutor(max_workers=min(len(week_modules), 8) or 1) as executor:
-            futures = {
-                executor.submit(fetch_items_for_module, course_id, module, headers): module
-                for module in week_modules
-            }
+    for module in week_modules:
+        # Items are embedded directly in the module response
+        module_items = module.get("items")
+        if not module_items:
+            continue
 
-            # Collect results; preserve module order for deterministic output
-            results = {}
-            for future in as_completed(futures):
-                module, module_items = future.result(timeout=Config.REQUEST_TIMEOUT)
-                results[module["id"]] = (module, module_items)
-
-        for module in week_modules:
-            _module, module_items = results[module["id"]]
-            if module_items is None:
+        for item in module_items:
+            if item.get("type") not in ALLOWED_ITEM_TYPES:
                 continue
-
-            for item in module_items:
-                if item.get("type") not in ALLOWED_ITEM_TYPES:
-                    continue
-                if unfinished_only and not is_incomplete(item):
-                    continue
-                items.append(format_module_item(course_id, course_name, _module, item))
+            if unfinished_only and not is_incomplete(item):
+                continue
+            items.append(format_module_item(course_id, course_name, module, item))
 
     logger.info(f"Found {len(items)} items for course {course_id}, week {week}")
     return items, course_name, None
@@ -771,66 +781,39 @@ def get_all_course_items(
 ) -> Tuple[Optional[Dict[int, List[Dict]]], Optional[requests.Response]]:
     """Fetch ALL items for a course, grouped by week number.
     
+    Uses `include_items=True` to fetch modules with embedded items in a single
+    API call, eliminating the need for parallel module-item fetches.
+    
     This is the workhorse for the overview endpoint. It:
-    1. Fetches all modules once
-    2. Fetches all module items in parallel
-    3. Groups items by the week numbers extracted from module names
+    1. Fetches all modules with embedded items in ONE API call
+    2. Groups items by the week numbers extracted from module names
     
     Returns:
         Tuple of (week_groups, error_response) where week_groups is a dict
         mapping week number -> list of formatted items.
         Module items without week info are grouped under week 0 (General).
     """
-    modules, response = get_course_modules(course_id, headers)
+    modules, response = get_course_modules(course_id, headers, include_items=True)
     if response is not None:
         return None, response
 
     course_name = get_course_name(course_id, headers)
 
-    # Build week-to-modules mapping
-    week_modules: Dict[int, List[Dict]] = {}
+    # Group items by week directly from the modules-with-items response
+    week_groups: Dict[int, List[Dict]] = {}
     for module in modules:
         weeks = extract_weeks(module.get("name"))
-        if not weeks:
-            # No week info -> General category (week 0)
-            week_modules.setdefault(0, []).append(module)
-        else:
-            for w in weeks:
-                if 0 <= w <= 100:
-                    week_modules.setdefault(w, []).append(module)
+        target_weeks = weeks if weeks else [0]
+        module_items = module.get("items") or []
 
-    # Fetch all module items in parallel across ALL modules
-    all_module_ids = list(set(m["id"] for mod_list in week_modules.values() for m in mod_list))
-    
-    module_items_map: Dict[int, Optional[List[Dict]]] = {}
-    if all_module_ids:
-        with ThreadPoolExecutor(max_workers=min(len(all_module_ids), 8) or 1) as executor:
-            futures = {
-                executor.submit(get_module_items, course_id, mod_id, headers): mod_id
-                for mod_id in all_module_ids
-            }
-            for future in as_completed(futures):
-                mod_id = futures[future]
-                try:
-                    items, error = future.result(timeout=Config.REQUEST_TIMEOUT)
-                    module_items_map[mod_id] = items if error is None else None
-                except Exception as e:
-                    logger.warning(f"Module items fetch timed out or failed for module {mod_id}: {e}")
-                    module_items_map[mod_id] = None
-
-    # Group items by week
-    week_groups: Dict[int, List[Dict]] = {}
-    for week, mod_list in week_modules.items():
-        items_for_week: List[Dict] = []
-        for module in mod_list:
-            module_items = module_items_map.get(module["id"])
-            if module_items is None:
+        for week in target_weeks:
+            if not (0 <= week <= 100):
                 continue
+            week_groups.setdefault(week, [])
             for item in module_items:
                 if item.get("type") not in ALLOWED_ITEM_TYPES:
                     continue
-                items_for_week.append(format_module_item(course_id, course_name, module, item))
-        week_groups[week] = items_for_week
+                week_groups[week].append(format_module_item(course_id, course_name, module, item))
 
     return week_groups, None
 
