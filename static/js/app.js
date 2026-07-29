@@ -2857,7 +2857,7 @@ function renderSetupStep(stepIndex) {
   // Screenshot — one per step, mapped 1:1 (step 1 → setup_step0.jpg, ..., step 7 → setup_step6.jpg)
   const screenshot = document.createElement("img");
   screenshot.className = "setup_screenshot";
-  screenshot.src = `/static/setup_step${stepIndex + 1}.jpg`;
+  screenshot.src = `/static/images/setup_step${stepIndex + 1}.jpg`;
   screenshot.alt = t(step.titleKey);
   screenshot.loading = "lazy";
   content.appendChild(screenshot);

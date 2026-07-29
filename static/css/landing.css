@@ -1,0 +1,40 @@
+.landing-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    text-align: center;
+}
+
+.landing-title {
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+}
+
+.landing-subtitle {
+    font-size: clamp(1rem, 3vw, 1.25rem);
+    color: #888;
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+.launch-btn {
+    display: inline-block;
+    padding: 14px 48px;
+    background: #1e4fa0;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+    text-decoration: none;
+}
+
+.launch-btn:hover {
+    background: #255fbf;
+}

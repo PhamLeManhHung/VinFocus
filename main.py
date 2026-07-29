@@ -11,11 +11,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from functools import lru_cache
 
 import requests
-from flask import Flask, jsonify, make_response, request, send_from_directory
+from flask import Flask, jsonify, make_response, request, send_from_directory, render_template
 from flask_cors import CORS
 
 from flask_talisman import Talisman
-
 from flask_compress import Compress
 
 import psycopg2
@@ -246,23 +245,16 @@ def cache_set(key: str, data: Any) -> None:
 
 
 @app.get("/")
-def index():
-    return no_store_response(send_from_directory(".", "index.html"))
+def landing():
+    return no_store_response(
+        make_response(render_template("landing.html"))
+    )
 
-
-@app.get("/script.js")
-def script():
-    response = make_response(send_from_directory(".", "script.js"))
-    response.headers["Cache-Control"] = "public, max-age=3600"
-    return response
-
-
-@app.get("/style.css")
-def styles():
-    response = make_response(send_from_directory(".", "style.css"))
-    response.headers["Cache-Control"] = "public, max-age=3600"
-    return response
-
+@app.get("/app")
+def app_page():
+    return no_store_response(
+        make_response(render_template("app.html"))
+    )
 
 @app.get("/static/<path:filename>")
 def static_files(filename):

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/images/favicon-96x96.png?v=1" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg?v=1" />
+    <link rel="shortcut icon" href="/static/images/favicon.ico?v=1" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/apple-touch-icon.png?v=1" />
+    <meta name="apple-mobile-web-app-title" content="VinFocus" />
+    <link rel="manifest" href="/static/images/site.webmanifest?v=1" />
+
+    <title>VinFocus</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body>
+    <div class="landing-container">
+        <h1 class="landing-title">VinFocus</h1>
+        <p class="landing-subtitle">A personal information hub for Vinschool's Canvas LMS.</p>
+        <a href="/app" class="launch-btn">Launch App</a>
+    </div>
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+</body>
+</html>

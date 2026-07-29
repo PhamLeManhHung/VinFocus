@@ -6,26 +6,27 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="description" content="VinFocus - A personal information hub for Vinschool's Canvas LMS. Browse courses, weeks, and resources in a cleaner interface.">
         <meta name="theme-color" content="#0d0d0d">
-        <link rel="icon" type="image/png" href="/static/favicon-96x96.png?v=1" sizes="96x96" />
-        <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=1" />
-        <link rel="shortcut icon" href="/static/favicon.ico?v=1" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png?v=1" />
+        <link rel="icon" type="image/png" href="/static/images/favicon-96x96.png?v=1" sizes="96x96" />
+        <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg?v=1" />
+        <link rel="shortcut icon" href="/static/images/favicon.ico?v=1" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/static/images/apple-touch-icon.png?v=1" />
         <meta name="apple-mobile-web-app-title" content="VinFocus" />
-        <link rel="manifest" href="/static/site.webmanifest?v=1" />
+        <link rel="manifest" href="/static/images/site.webmanifest?v=1" />
 
         <meta property="og:title" content="VinFocus">
         <meta property="og:description" content="A personal information hub for Vinschool's Canvas LMS.">
-        <meta property="og:image" content="https://vinfocus.onrender.com/static/image.png">
+        <meta property="og:image" content="https://vinfocus.onrender.com/static/images/image.png">
         <meta property="og:url" content="https://vinfocus.onrender.com">
         <meta property="og:type" content="website">
 
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="VinFocus">
         <meta name="twitter:description" content="A personal information hub for Vinschool's Canvas LMS.">
-        <meta name="twitter:image" content="https://vinfocus.onrender.com/static/image.png">
+        <meta name="twitter:image" content="https://vinfocus.onrender.com/static/images/image.png">
 
         <title>VinFocus</title>
-        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     </head>
     <body>
         <!-- Token Expiry Warning Banner -->
@@ -149,7 +150,7 @@
                         <h2 id="hub_title">Browse</h2>
                         <div class="subject_label_actions" id="subject_label_actions">
                             <button id="subject_label_edit_btn" type="button" class="subject_label_edit_btn" aria-label="Edit subject labels" title="Edit subject labels">
-                                <img src="/static/edit_icon.png" alt="" class="edit_icon">
+                                <img src="/static/images/edit_icon.png" alt="" class="edit_icon">
                             </button>
                         </div>
                     </div>
@@ -250,7 +251,7 @@
                         <p id="timetable_note" class="timetable_note">Manual schedule stored locally in this app.</p>
                     </div>
                     <button id="timetable_edit_btn" type="button" class="timetable_edit_btn" aria-label="Edit timetable">
-                        <img src="/static/edit_icon.png" alt="" class="edit_icon">
+                        <img src="/static/images/edit_icon.png" alt="" class="edit_icon">
                     </button>
                 </div>
 
@@ -367,6 +368,6 @@
             <p id="footer_copyright">© 2026 VinFocus</p>
         </footer>
 
-        <script src="script.js"></script>
+        <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     </body>
 </html>
