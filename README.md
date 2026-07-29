@@ -6,19 +6,19 @@ VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for 
 
 https://github.com/user-attachments/assets/c0bf2085-5e51-4b41-b13e-41436c0d9945
 
-## Screenshot
+## Screenshots
+
+### Landing Page
+![alt text](static/images/landing.png)
 
 ### Setup Wizard
-![alt text](static/image-3.png)
+![alt text](static/images/image-3.png)
 
 ### Work View
-![alt text](static/image-5.png)
-
-### Semester Progress Dashboard
-![alt text](static/image-4.png)
+![alt text](static/images/image-5.png)
 
 ### Timetable
-![alt text](static/image-2.png)
+![alt text](static/images/image-2.png)
 
 ## Access
 
@@ -158,7 +158,9 @@ The Flask server in `main.py` proxies Canvas API requests. When you open the app
 
 Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
 
-The frontend in `script.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
+The frontend in `static/js/app.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
+
+The landing page at `templates/landing.html` with styling in `static/css/landing.css` provides the public-facing homepage with feature highlights, screenshots, FAQ, and privacy information.
 
 ## Security
 
@@ -207,7 +209,7 @@ python main.py
 ## Running Tests
 
 ```bash
-pytest test_main.py -v
+pytest tests/ -v
 ```
 
 The test suite covers:
@@ -281,7 +283,7 @@ This project needs a valid Canvas API token to load real data. Keep the token pr
 ## Version
 
 - Backend API: `2.0`
-- Frontend script: `2.1`
+- Frontend app: `2.1`
 
 ## License
 
