@@ -4,18 +4,18 @@ VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for 
 
 ## Demo
 
-https://github.com/user-attachments/assets/1dbd77f9-af79-47db-9f85-02e0fa4c710c
+https://github.com/user-attachments/assets/c0bf2085-5e51-4b41-b13e-41436c0d9945
 
 ## Screenshot
 
 ### Setup Wizard
 ![alt text](static/image-3.png)
 
-### Work view
+### Work View
 ![alt text](static/image.png)
 
-### Overview Dashboard
-![alt text](static/image-1.png)
+### Semester Progress Dashboard
+![alt text](static/image-4.png)
 
 ### Timetable
 ![alt text](static/image-2.png)
@@ -24,7 +24,7 @@ https://github.com/user-attachments/assets/1dbd77f9-af79-47db-9f85-02e0fa4c710c
 
 The app is hosted and ready to use at:
 
-**https://vinschool-lms-dashboard.onrender.com/**
+**https://vinfocus.onrender.com/**
 
 No installation or setup is required, just open the link, follow the setup wizard to generate and paste your Canvas API token, and start browsing.
 
@@ -54,7 +54,7 @@ Students decide what to work on. VinFocus simply makes the information easier to
 ### Productivity
 - Unfinished filter — filter items to only those explicitly tracked as incomplete by Canvas
 - Unknown filter — filter items that have no completion tracking (Canvas doesn't report completion status)
-- Course overview dashboard — per-week item counts, completion stats, and type breakdowns
+- Semester progress dashboard — per-week item counts, completion stats, and type breakdowns
 - Item importance — items matching keywords like `HKII`, `HS1`, `cuối năm` are visually highlighted as important
 - Manual completion override — mark any item as done even without Canvas tracking; stored in browser localStorage
 
@@ -79,6 +79,7 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - **Flask** — Web framework
 - **Flask-CORS** — Cross-origin resource sharing for frontend access
 - **Flask-Talisman** — Security headers (Content Security Policy)
+- **Flask-Compress** — Response compression
 - **Requests** — HTTP client for Canvas API
 - **psycopg2-binary** — PostgreSQL database driver
 - **python-dotenv** — Environment variable management
@@ -165,7 +166,7 @@ The frontend in `script.js` loads courses, lets you pick a course and week, and 
 - Tokens are never stored on VinFocus servers
 - Tokens are only sent to Canvas-authenticated endpoints
 - Users can revoke tokens at any time from Canvas
-- POST endpoints require CSRF tokens obtained from `GET /api/csrf-token`
+- Feedback submission (`POST /api/feedback`) requires a CSRF token obtained from `GET /api/csrf-token`
 - Feedback admin access requires an `X-Admin-Key` header with constant-time comparison
 
 ### Architecture notes
@@ -189,7 +190,7 @@ If you prefer to run the app on your own machine instead of using the hosted ver
 pip install -r requirements.txt
 ```
 
-This will install all required packages including Flask, Flask-CORS, Flask-Talisman, psycopg2-binary, python-dotenv, gunicorn, and requests.
+This will install all required packages including Flask, Flask-CORS, Flask-Talisman, Flask-Compress, psycopg2-binary, python-dotenv, gunicorn, requests, and pytest.
 
 2. Start the app:
 
@@ -213,6 +214,7 @@ The test suite covers:
 
 - **Unit tests** for the `extract_weeks()` parser (single weeks, ranges, multi-week lists, edge cases, non-week modules).
 - **Integration tests** for all API endpoints (success, missing token, API failure, week 0/general, range expansion, legacy routes, overview endpoint, three-state completion).
+- **System tests** for app startup, configuration, caching, rate limiting, CSRF protection, and database connectivity.
 
 ## Environment Variables
 
@@ -236,7 +238,7 @@ The feedback endpoint is protected and requires an admin API key for security. T
 4. Make a request with the admin key:
 
 ```bash
-curl -H "X-Admin-Key: YOUR_ADMIN_KEY" https://vinschool-lms-dashboard.onrender.com/api/feedback
+curl -H "X-Admin-Key: YOUR_ADMIN_KEY" https://vinfocus.onrender.com/api/feedback
 ```
 
 Or in your browser's developer console:
@@ -275,6 +277,15 @@ curl -H "X-Admin-Key: your-secret-key-here" http://127.0.0.1:5000/api/feedback
 ## Notes
 
 This project needs a valid Canvas API token to load real data. Keep the token private and do not commit it to the repository.
+
+## Version
+
+- Backend API: `2.0`
+- Frontend script: `2.1`
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
 
 ## Author
 

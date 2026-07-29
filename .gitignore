@@ -42,7 +42,4 @@ feedback.db
 
 .env
 
-test_fixes.py
-test_main.py
-
 render.yaml

@@ -46,20 +46,20 @@ logger.addFilter(PrivacyFilter())
 
 app = Flask(__name__)
 
-# Compress(app)
+Compress(app)
 
-# csp = {
-#     "default-src": ["'self'"],
-#     "script-src": ["'self'"],
-#     "style-src": ["'self'", "'unsafe-inline'"],
-#     "img-src": ["'self'", "data:"],
-#     "object-src": ["'none'"],
-#     "frame-ancestors": ["'none'"],
-#     "form-action": ["'self'"],
-#     "base-uri": ["'self'"],
-# }
+csp = {
+    "default-src": ["'self'"],
+    "script-src": ["'self'"],
+    "style-src": ["'self'", "'unsafe-inline'"],
+    "img-src": ["'self'", "data:"],
+    "object-src": ["'none'"],
+    "frame-ancestors": ["'none'"],
+    "form-action": ["'self'"],
+    "base-uri": ["'self'"],
+}
 
-# Talisman(app, content_security_policy=csp)
+Talisman(app, content_security_policy=csp)
 
 # Limit request body size to 1MB
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
@@ -67,7 +67,7 @@ app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 # Configure CORS for frontend access
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["https://vinschool-lms-dashboard.onrender.com", "http://localhost:5000"],
+        "origins": ["https://vinfocus.onrender.com", "http://localhost:5000"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"]
     }
