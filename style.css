@@ -585,6 +585,11 @@ body::before {
     white-space: nowrap;
 }
 
+.filter_toggle:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .filter_toggle input {
     width: auto;
     margin: 0;
@@ -705,6 +710,33 @@ body::before {
     border: 1px dashed var(--border-dashed);
     border-radius: 12px;
     background: var(--bg-empty);
+}
+
+.error_retry_btn {
+    display: block;
+    margin: 12px auto 0;
+    padding: 10px 24px;
+    border: 1px solid var(--border-pill);
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.error_retry_btn:hover {
+    background: var(--accent-hover);
+}
+
+.course_pill_skeleton {
+    width: 96px;
+    height: 34px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
 }
 
 .type_section {
@@ -3398,6 +3430,54 @@ body.light .subject_label_edit_btn .edit_icon {
     font-weight: 500;
     line-height: 1.3;
     white-space: nowrap;
+}
+
+/* ── Overview Skeleton Loading ────────────────────────────── */
+
+.week_overview_card_skeleton {
+    cursor: default;
+    pointer-events: none;
+}
+
+.week_overview_card_skeleton:hover {
+    border-color: var(--border-primary);
+    background: var(--bg-card-secondary);
+}
+
+.week_overview_card_name_skeleton {
+    display: inline-block;
+    width: 100px;
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+.week_overview_card_fraction_skeleton {
+    display: inline-block;
+    width: 36px;
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+.week_overview_card_progress_skeleton {
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+.week_overview_card_types_skeleton {
+    display: inline-block;
+    width: 72%;
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--bg-pill) 25%, var(--bg-pill-hover) 50%, var(--bg-pill) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
 }
 
 .view_all_weeks_btn {

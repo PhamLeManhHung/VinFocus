@@ -264,6 +264,14 @@ def styles():
     return response
 
 
+@app.get("/static/<path:filename>")
+def static_files(filename):
+    response = make_response(send_from_directory("static", filename))
+    # Cache images and manifest files aggressively (1 year)
+    response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+
 def no_store_response(response):
     response = make_response(response)
     response.headers["Cache-Control"] = "no-store, max-age=0"
@@ -738,7 +746,7 @@ def get_week_items(
             # Collect results; preserve module order for deterministic output
             results = {}
             for future in as_completed(futures):
-                module, module_items = future.result()
+                module, module_items = future.result(timeout=Config.REQUEST_TIMEOUT)
                 results[module["id"]] = (module, module_items)
 
         for module in week_modules:
@@ -804,9 +812,10 @@ def get_all_course_items(
             for future in as_completed(futures):
                 mod_id = futures[future]
                 try:
-                    items, error = future.result()
+                    items, error = future.result(timeout=Config.REQUEST_TIMEOUT)
                     module_items_map[mod_id] = items if error is None else None
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Module items fetch timed out or failed for module {mod_id}: {e}")
                     module_items_map[mod_id] = None
 
     # Group items by week

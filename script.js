@@ -312,6 +312,9 @@ const TRANSLATIONS = {
     feedbackSubmitting: "Submitting...",
     feedbackSuccess: "Thank you for your feedback!",
     feedbackError: "Something went wrong. Please try again.",
+    feedbackValidationRating: "Please select a rating.",
+    feedbackValidationUsage: "Please select what you use it for most.",
+    feedbackValidationRecommend: "Please select a recommendation.",
     
     // Consent Banner
     consentText: "We use localStorage to save your Canvas API token and preferences. This allows you to use the app without re-entering your token. Your token is stored only in your browser and never sent to our servers.",
@@ -518,6 +521,9 @@ const TRANSLATIONS = {
     feedbackSubmitting: "Đang gửi...",
     feedbackSuccess: "Cảm ơn bạn đã phản hồi!",
     feedbackError: "Đã xảy ra lỗi. Vui lòng thử lại.",
+    feedbackValidationRating: "Vui lòng chọn đánh giá.",
+    feedbackValidationUsage: "Vui lòng chọn mục đích sử dụng.",
+    feedbackValidationRecommend: "Vui lòng chọn mức độ giới thiệu.",
     
     tcSection8Title: "8. Lưu trữ và Xóa Dữ liệu",
     tcSection8Text: "Dữ liệu phản hồi được lưu trữ không giới hạn trừ khi có yêu cầu xóa. Để yêu cầu xóa phản hồi của bạn, liên hệ hung020121@gmail.com với chủ đề 'Yêu cầu Xóa Dữ liệu'. Mã API được lưu trong trình duyệt có thể được xóa bất cứ lúc nào bằng cách xóa dữ liệu trình duyệt hoặc sử dụng tùy chọn 'Xóa Mã' trong Cài Đặt.",
@@ -711,6 +717,29 @@ let _cachedCustomSubjectLabels = null;
 // Key: URL, Value: { data, timestamp }
 const apiResponseCache = new Map();
 const API_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const API_CACHE_MAX_SIZE = 500;
+
+function apiCacheSet(key, data) {
+  if (apiResponseCache.size >= API_CACHE_MAX_SIZE) {
+    const oldestKeys = [...apiResponseCache.keys()].slice(0, Math.floor(API_CACHE_MAX_SIZE * 0.2));
+    oldestKeys.forEach(k => apiResponseCache.delete(k));
+  }
+  apiResponseCache.set(key, { data, timestamp: Date.now() });
+}
+
+function apiCacheGet(key) {
+  const cached = apiResponseCache.get(key);
+  if (cached && Date.now() - cached.timestamp < API_CACHE_TTL) {
+    return cached.data;
+  }
+  if (cached) apiResponseCache.delete(key);
+  return undefined;
+}
+
+function clearApiCache() {
+  apiResponseCache.clear();
+  debugLog("API response cache cleared");
+}
 
 // ── Overview state ─────────────────────────────────────────────
 let overviewData = null;
@@ -768,10 +797,10 @@ async function fetchJson(url, options = {}) {
   
   // Check client-side cache first (only for GET requests)
   if (options.method === undefined || options.method === "GET") {
-    const cached = apiResponseCache.get(url);
-    if (cached && Date.now() - cached.timestamp < API_CACHE_TTL) {
+    const cached = apiCacheGet(url);
+    if (cached !== undefined) {
       debugLog("fetchJson: cache hit for", url);
-      return cached.data;
+      return cached;
     }
   }
   
@@ -788,6 +817,7 @@ async function fetchJson(url, options = {}) {
       // Token expired or invalid - clear it and show setup
       debugLog("fetchJson: got 401, clearing token and showing setup overlay");
       clearToken();
+      clearApiCache();
       showSetupOverlay();
     }
     throw new Error(data.error || "Request failed.");
@@ -797,7 +827,7 @@ async function fetchJson(url, options = {}) {
   
   // Cache successful GET responses
   if (options.method === undefined || options.method === "GET") {
-    apiResponseCache.set(url, { data, timestamp: Date.now() });
+    apiCacheSet(url, data);
   }
   
   return data;
@@ -809,6 +839,35 @@ function showMessage(text) {
   message.className = "empty_message";
   message.textContent = text;
   itemList.appendChild(message);
+}
+
+function showErrorMessage(text, retryFn) {
+  itemList.innerHTML = "";
+  const message = document.createElement("p");
+  message.className = "empty_message";
+  message.textContent = text;
+  itemList.appendChild(message);
+
+  if (retryFn) {
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.className = "error_retry_btn";
+    retryBtn.textContent = "Retry";
+    retryBtn.addEventListener("click", () => {
+      showSkeletonLoading();
+      retryFn();
+    });
+    itemList.appendChild(retryBtn);
+  }
+}
+
+function showSkeletonPills(count = 4) {
+  coursePills.replaceChildren();
+  for (let i = 0; i < count; i++) {
+    const pill = document.createElement("div");
+    pill.className = "course_pill_skeleton";
+    coursePills.appendChild(pill);
+  }
 }
 
 function showSkeletonLoading() {
@@ -830,6 +889,11 @@ function showSkeletonLoading() {
     skeleton.append(title, meta, badge);
     itemList.appendChild(skeleton);
   }
+}
+
+function setFiltersEnabled(enabled) {
+  if (unfinishedOnly) unfinishedOnly.disabled = !enabled;
+  if (unknownOnly) unknownOnly.disabled = !enabled;
 }
 
 function itemMatchesSearch(item, query) {
@@ -904,11 +968,6 @@ function refreshOverviewFromState() {
   renderOverview(applyManualCompletionsToOverview(overviewData));
 }
 
-function clearApiCache() {
-  apiResponseCache.clear();
-  debugLog("API response cache cleared");
-}
-
 function clearOverviewLoadingMessageTimer() {
   if (overviewLoadingMessageTimer) {
     clearTimeout(overviewLoadingMessageTimer);
@@ -917,7 +976,7 @@ function clearOverviewLoadingMessageTimer() {
 }
 
 function showOverviewLoadingMessage() {
-  const container = document.getElementById("overview_container");
+  const container = document.getElementById("week_overview_list") || document.getElementById("overview_container");
   if (!container) return;
 
   const elapsed = Date.now() - overviewLoadStartTime;
@@ -1436,31 +1495,36 @@ async function loadCourses() {
     return;
   }
 
-  showMessage(t("loadingCourses"));
+  showSkeletonPills();
+  showSkeletonLoading();
 
-  const data = await fetchJson("/api/courses");
-  courses = data.courses;
-  coursesLoaded = true;
+  try {
+    const data = await fetchJson("/api/courses");
+    courses = data.courses;
+    coursesLoaded = true;
 
-  if (courses.length === 0) {
-    showMessage(t("noActiveCourses"));
-    return;
+    if (courses.length === 0) {
+      showMessage(t("noActiveCourses"));
+      return;
+    }
+
+    rebuildSubjectCounts();
+    courses.sort((a, b) => courseShortLabel(a).localeCompare(courseShortLabel(b)));
+
+    const savedCourseId = Number(storageGet("selectedCourseId"));
+    selectedCourseId = courses.find((course) => course.id === savedCourseId)?.id ?? courses[0].id;
+
+    renderCoursePills();
+    await loadWeeks();
+    
+    // Run items and overview in parallel since they are independent
+    await Promise.all([
+      loadItems(),
+      loadOverview(),
+    ]);
+  } catch (error) {
+    showErrorMessage(error.message, () => loadCourses());
   }
-
-  rebuildSubjectCounts();
-  courses.sort((a, b) => courseShortLabel(a).localeCompare(courseShortLabel(b)));
-
-  const savedCourseId = Number(storageGet("selectedCourseId"));
-  selectedCourseId = courses.find((course) => course.id === savedCourseId)?.id ?? courses[0].id;
-
-  renderCoursePills();
-  await loadWeeks();
-  
-  // Run items and overview in parallel since they are independent
-  await Promise.all([
-    loadItems(),
-    loadOverview(),
-  ]);
 }
 
 async function loadWeeks() {
@@ -1476,8 +1540,10 @@ async function loadWeeks() {
       currentWeek = availableWeeks.at(-1);
       storageSet("selectedWeek", String(currentWeek));
     }
-  } catch {
+  } catch (error) {
     availableWeeks = [];
+    showErrorMessage(error.message, () => loadWeeks());
+    throw error;
   }
 
   updateWeekNav();
@@ -1499,6 +1565,7 @@ async function loadItems() {
   }
 
   showSkeletonLoading();
+  setFiltersEnabled(false);
 
   // Cancel any previous request to prevent race conditions
   if (currentRequestController) {
@@ -1530,10 +1597,11 @@ async function loadItems() {
   } catch (error) {
     clearTimeout(loadItemsTimeout);
     if (error.name !== 'AbortError') {
-      showMessage(error.message);
+      showErrorMessage(error.message, () => loadItems());
     }
   } finally {
     currentRequestController = null;
+    setFiltersEnabled(true);
   }
 }
 
@@ -1542,6 +1610,8 @@ async function selectCourse(courseId) {
   selectedCourseId = courseId;
   storageSet("selectedCourseId", String(courseId));
   renderCoursePills();
+  showSkeletonLoading();
+  setFiltersEnabled(false);
   await loadWeeks();
   
   // Run items and overview in parallel since they are independent
@@ -1549,6 +1619,7 @@ async function selectCourse(courseId) {
     loadItems(),
     loadOverview(),
   ]);
+  setFiltersEnabled(true);
 }
 
 function changeWeek(delta) {
@@ -1578,10 +1649,14 @@ function changeWeek(delta) {
   currentWeek = availableWeeks[targetIndex];
   storageSet("selectedWeek", String(currentWeek));
   
+  showSkeletonLoading();
+  setFiltersEnabled(false);
   // Load items and scroll to top after a short delay to let the render start
-  loadItems();
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  loadItems().finally(() => {
+    setFiltersEnabled(true);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   });
 }
 
@@ -2194,9 +2269,10 @@ async function loadOverview() {
   overviewData = null;
   overviewLoadStartTime = Date.now();
   
-  // Start progressive loading messages (uses overview_container for messages)
+  // Show skeleton immediately to replace stale data from previous course
   clearOverviewLoadingMessageTimer();
-  showOverviewLoadingMessage();
+  showOverviewSkeleton();
+  overviewLoadingMessageTimer = setTimeout(showOverviewLoadingMessage, 8000);
 
   try {
     // Use the dedicated overview endpoint for a single efficient call
@@ -2232,6 +2308,54 @@ function renderOverview(data) {
   updateStatsGrid(data);
   updateWarningBanner(data);
   updateWeekOverview(data);
+}
+
+function showOverviewSkeleton() {
+  // Reset numeric displays to placeholders
+  const doneEl = document.getElementById("semester_done");
+  const totalEl = document.getElementById("semester_total");
+  const percentEl = document.getElementById("semester_percent");
+  if (doneEl) doneEl.textContent = "-";
+  if (totalEl) totalEl.textContent = "-";
+  if (percentEl) percentEl.textContent = "-";
+
+  // Clear progress bar
+  const barContainer = document.getElementById("semester_progress_bar");
+  if (barContainer) barContainer.innerHTML = "";
+
+  // Reset stats grid
+  const statWeeks = document.getElementById("stat_weeks");
+  const statUnknown = document.getElementById("stat_unknown");
+  const statDone = document.getElementById("stat_done");
+  const statUnfinished = document.getElementById("stat_unfinished");
+  if (statWeeks) statWeeks.textContent = "-";
+  if (statUnknown) statUnknown.textContent = "-";
+  if (statDone) statDone.textContent = "-";
+  if (statUnfinished) statUnfinished.textContent = "-";
+
+  // Hide warning banner
+  const banner = document.getElementById("warning_banner");
+  if (banner) banner.hidden = true;
+
+  // Show skeleton cards in week overview
+  const listContainer = document.getElementById("week_overview_list");
+  if (listContainer) {
+    listContainer.replaceChildren();
+    const skeletonCount = 4;
+    for (let i = 0; i < skeletonCount; i++) {
+      const card = document.createElement("div");
+      card.className = "week_overview_card week_overview_card_skeleton";
+      card.innerHTML = `
+        <div class="week_overview_card_header">
+          <span class="week_overview_card_name_skeleton">&nbsp;</span>
+          <span class="week_overview_card_fraction_skeleton">&nbsp;</span>
+        </div>
+        <div class="week_overview_card_progress week_overview_card_progress_skeleton"></div>
+        <div class="week_overview_card_types_skeleton">&nbsp;</div>
+      `;
+      listContainer.appendChild(card);
+    }
+  }
 }
 
 function updateSemesterProgress(data) {
@@ -2582,9 +2706,13 @@ weekInput.addEventListener("keydown", (event) => {
 
     currentWeek = value;
     storageSet("selectedWeek", String(currentWeek));
-    loadItems();
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    showSkeletonLoading();
+    setFiltersEnabled(false);
+    loadItems().finally(() => {
+      setFiltersEnabled(true);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     });
   }
 });
@@ -3057,6 +3185,8 @@ function reinitializeApp() {
   itemCache = new Map();
   availableWeeks = [];
   selectedCourseId = null;
+  overviewData = null;
+  clearApiCache();
 
   // Reload the app in-place
   const currentView = storageGet("selectedView") || "work";
@@ -3564,19 +3694,19 @@ function openFeedbackForm() {
   submitBtn.textContent = t("feedbackSubmit");
   submitBtn.addEventListener("click", async () => {
     if (selectedRating === 0) {
-      feedbackMsg.textContent = "Please select a rating.";
+      feedbackMsg.textContent = t("feedbackValidationRating");
       feedbackMsg.className = "setup_message setup_message_error";
       feedbackMsg.hidden = false;
       return;
     }
     if (!selectedUsage) {
-      feedbackMsg.textContent = "Please select what you use it for.";
+      feedbackMsg.textContent = t("feedbackValidationUsage");
       feedbackMsg.className = "setup_message setup_message_error";
       feedbackMsg.hidden = false;
       return;
     }
     if (!selectedRecommend) {
-      feedbackMsg.textContent = "Please select a recommendation.";
+      feedbackMsg.textContent = t("feedbackValidationRecommend");
       feedbackMsg.className = "setup_message setup_message_error";
       feedbackMsg.hidden = false;
       return;
@@ -3656,6 +3786,13 @@ function updateConsentBanner() {
 }
 
 // ── Initialize ─────────────────────────────────────────────────
+
+// Global handler for unhandled promise rejections to prevent silent failures
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("[VinFocus] Unhandled rejection:", event.reason);
+  // Don't show UI for AbortError (intentional request cancellations)
+  if (event.reason && event.reason.name === "AbortError") return;
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   // Setup overlay
