@@ -15,7 +15,7 @@
     --bg-slot-break-full: #1a1a1a;
     --bg-time-badge: #17281b;
     --bg-status-done: #1f3d2b;
-    --bg-status-open: #3d2a1f;
+    --bg-status-open: #3d1a1a;
     --bg-day-today: #142038;
     --bg-empty: #222222;
     --text-primary: #eee;
@@ -32,13 +32,17 @@
     --border-pill: #333;
     --border-pill-hover: #555;
     --border-schedule-item: #262626;
-    --accent: #1557c0;
-    --accent-hover: #1557c0;
+    --accent: #1e4fa0;
+    --accent-hover: #255fbf;
+    --accent-red: #c41e3a;
+    --accent-red-hover: #d32f2f;
     --text-accent: #c6ddff;
     --text-status-done: #8fd4a8;
-    --text-status-open: #e8b07d;
+    --text-status-open: #e8a0a0;
     --shadow-card: 0 10px 30px rgba(0,0,0,0.5);
     --shadow-input: 0px 0px 3px #242424;
+    --grid-color: rgba(255,255,255,0.02);
+    --grid-size: 24px;
 }
 
 .slot_cell_current {
@@ -73,7 +77,7 @@ body.light {
     --bg-slot-break-full: #e8e8e8;
     --bg-time-badge: #e8f5e9;
     --bg-status-done: #e8f5e9;
-    --bg-status-open: #fff3e0;
+    --bg-status-open: #ffe8e8;
     --bg-day-today: #e3f2fd;
     --bg-empty: #f0f0f0;
     --text-primary: #1a1a1a;
@@ -90,13 +94,17 @@ body.light {
     --border-pill: #ccc;
     --border-pill-hover: #999;
     --border-schedule-item: #e0e0e0;
-    --accent: #1557c0;
-    --accent-hover: #1557c0;
-    --text-accent: #1557c0;
+    --accent: #1e4fa0;
+    --accent-hover: #255fbf;
+    --accent-red: #c41e3a;
+    --accent-red-hover: #d32f2f;
+    --text-accent: #1e4fa0;
     --text-status-done: #2e7d32;
-    --text-status-open: #bf360c;
+    --text-status-open: #c62828;
     --shadow-card: 0 10px 30px rgba(0,0,0,0.1);
     --shadow-input: 0px 0px 3px #e0e0e0;
+    --grid-color: rgba(0,0,0,0.03);
+    --grid-size: 24px;
 }
 
 body {
@@ -110,6 +118,18 @@ body {
     overflow-x: hidden;
 
     font-family: "JetBrainsMono Nerd Font", monospace;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
 }
 
 * {
@@ -273,6 +293,23 @@ body {
     text-align: center;
     box-sizing: border-box;
     margin: 20px auto;
+    position: relative;
+}
+
+.card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 27px,
+        var(--grid-color) 27px,
+        var(--grid-color) 28px
+    );
+    opacity: 0.5;
 }
 
 .tagline {
@@ -283,49 +320,57 @@ body {
 
 .app_nav {
     display: inline-flex;
-    gap: 4px;
-    padding: 4px;
-    margin-top: 16px;
-    border: 1px solid var(--border-primary);
-    border-radius: 10px;
-    background: var(--bg-nav);
+    gap: 0;
+    padding: 0;
+    margin-top: 20px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
     position: relative;
 }
 
 .view_tab {
-    min-width: 92px;
-    padding: 8px 14px;
-    border: 0;
-    border-radius: 7px;
+    min-width: 96px;
+    padding: 10px 20px 8px;
+    border: none;
+    border-bottom: 3px solid var(--border-primary);
+    border-radius: 0;
     background: transparent;
     color: var(--text-muted-strong);
     font: inherit;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: color 0.15s ease;
+    transition: all 0.2s ease;
     position: relative;
-    z-index: 1;
+}
+
+.view_tab::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: border-bottom-color 0.2s ease;
 }
 
 .view_tab:hover {
     color: var(--text-primary);
+    border-bottom-color: var(--text-muted-strong);
 }
 
 .view_tab_active {
-    color: #fff;
+    color: var(--text-accent);
+    border-bottom-color: var(--accent);
 }
 
-/* Sliding indicator for active tab */
-.view_tab_indicator {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 0;
-    background: var(--accent);
-    border-radius: 7px;
-    z-index: 0;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
+.view_tab_active::before {
+    border-bottom-color: var(--accent);
 }
 
 .hub_container {
@@ -690,9 +735,9 @@ body {
 }
 
 .item_row_important {
-    background: rgba(255, 193, 7, 0.08);
-    border-left: 3px solid #ffc107;
-    border-bottom: 1px solid rgba(255, 193, 7, 0.2);
+    background: rgba(196, 30, 58, 0.06);
+    border-left: 3px solid var(--accent-red);
+    border-bottom: 1px solid rgba(196, 30, 58, 0.15);
     border-radius: 0 4px 4px 0;
     padding-left: 8px;
 }
@@ -772,6 +817,11 @@ body.light .item_row_important {
     font-size: 0.8rem;
     color: var(--text-muted);
     overflow-wrap: anywhere;
+}
+
+.item_tree_prefix {
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .status_badge {
@@ -3086,4 +3136,286 @@ body.light .subject_label_edit_btn .edit_icon {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* ── New Overview Sidebar Design ──────────────────────────────── */
+/* Based on target image: progress bar, stats grid, warning, week cards */
+
+.semester_progress {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-secondary);
+}
+
+.semester_progress_title {
+    margin: 0 0 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: center;
+}
+
+.semester_progress_bar {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 10px;
+    height: 8px;
+}
+
+.semester_progress_segment {
+    flex: 1;
+    border-radius: 2px;
+    background: var(--bg-pill);
+    transition: background 0.2s ease;
+}
+
+.semester_progress_segment_done {
+    background: var(--accent);
+}
+
+.semester_progress_main {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.semester_progress_fraction {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.semester_progress_fraction span {
+    color: var(--accent);
+}
+
+.semester_progress_percent {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted-strong);
+}
+
+/* Stats Grid */
+.stats_grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.stat_box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 6px;
+    border: 1px solid var(--border-primary);
+    border-radius: 10px;
+    background: var(--bg-card-secondary);
+    text-align: center;
+    gap: 2px;
+}
+
+.stat_count {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.stat_label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.stat_done {
+    color: var(--text-status-done);
+}
+
+.stat_unfinished {
+    color: var(--text-status-open);
+}
+
+/* Warning Banner */
+.warning_banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #5a4a1a;
+    border-radius: 8px;
+    background: rgba(255, 193, 7, 0.08);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.warning_banner:hover {
+    background: rgba(255, 193, 7, 0.15);
+    border-color: #ffc107;
+}
+
+.warning_banner:hover .warning_text {
+    color: var(--text-primary);
+}
+
+.warning_banner:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+.warning_icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.warning_text {
+    flex: 1;
+    min-width: 0;
+    transition: color 0.15s ease;
+}
+
+/* Week Overview */
+.week_overview {
+    margin-top: 4px;
+}
+
+.week_overview_header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    justify-content: center;
+}
+
+.week_overview_icon {
+    color: var(--text-muted-strong);
+    flex-shrink: 0;
+}
+
+.week_overview_title {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.week_overview_list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.week_overview_card {
+    padding: 8px 10px;
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    background: var(--bg-card-secondary);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    text-align: left;
+}
+
+.week_overview_card:hover {
+    border-color: var(--accent);
+    background: var(--bg-pill-hover);
+}
+
+.week_overview_card:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.week_overview_card_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.week_overview_card_name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.week_overview_card_fraction {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted-strong);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.week_overview_card_progress {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg-pill);
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.week_overview_card_progress_fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+.week_overview_card_types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.week_overview_card_type {
+    padding: 2px 6px;
+    border: 1px solid var(--border-pill);
+    border-radius: 999px;
+    background: var(--bg-pill);
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.view_all_weeks_btn {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view_all_weeks_btn:hover {
+    background: var(--bg-pill);
+    color: var(--text-accent);
 }

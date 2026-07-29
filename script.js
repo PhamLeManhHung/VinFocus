@@ -356,7 +356,7 @@ const TRANSLATIONS = {
     overviewWeeks: "Weeks",
     overviewNoData: "No overview data available.",
     overviewWeekGeneral: "Unassigned Modules",
-    uncategorizedWarning: "⚠️ {count} unfinished items in 'Unassigned Modules'",
+    uncategorizedWarning: "{count} unfinished items in 'Unassigned Modules'",
     noItemsWithUncategorized: "No items found for this week.\n\nSome teachers post content without assigning a week.\nCheck 'Unassigned Modules' for uncategorized work.",
     overviewStillLoading: "Canvas is still loading...",
     overviewThinkingHard: "Canvas is thinking very hard.",
@@ -536,7 +536,7 @@ const TRANSLATIONS = {
     overviewWeeks: "Tuần",
     overviewNoData: "Không có dữ liệu tổng quan.",
     overviewWeekGeneral: "Học phần chưa phân tuần",
-    uncategorizedWarning: "⚠️ {count} mục chưa hoàn thành nằm trong 'Học phần chưa phân tuần'",
+    uncategorizedWarning: "{count} mục chưa hoàn thành nằm trong 'Học phần chưa phân tuần'",
     noItemsWithUncategorized: "Không tìm thấy học phần cho tuần này.\n\nMột số giáo viên đăng nội dung mà không gắn tuần học.\nHãy kiểm tra mục 'Học phần chưa phân tuần'.",
     overviewStillLoading: "Canvas vẫn đang tải...",
     overviewThinkingHard: "Canvas đang suy nghĩ rất chậm.",
@@ -957,7 +957,7 @@ function normalizeOverviewData(data) {
   };
 }
 
-function createItemRow(item) {
+function createItemRow(item, isLastInType) {
   const row = document.createElement("div");
   row.className = "item_row";
 
@@ -984,7 +984,11 @@ function createItemRow(item) {
 
   const meta = document.createElement("p");
   meta.className = "item_meta";
-  meta.textContent = item.module;
+  const treePrefix = document.createElement("span");
+  treePrefix.className = "item_tree_prefix";
+  treePrefix.textContent = isLastInType ? "\u2514\u2500\u2500 " : "\u251C\u2500\u2500 ";
+  meta.appendChild(treePrefix);
+  meta.appendChild(document.createTextNode(item.module));
 
   content.append(title, meta);
 
@@ -1163,7 +1167,7 @@ function renderItems() {
 
     const list = document.createElement("div");
     list.className = "type_list";
-    list.append(...typeItems.map(createItemRow));
+    list.append(...typeItems.map((item, i) => createItemRow(item, i === typeItems.length - 1)));
 
     section.append(heading, list);
     itemList.append(section);
@@ -2175,9 +2179,8 @@ function applyManualCompletionsToOverview(overviewData) {
 async function loadOverview() {
   if (!selectedCourseId) return;
 
-  const container = document.getElementById("overview_container");
-  if (!container) return;
-
+  // New sidebar doesn't need a container element for API calls
+  // Just proceed with fetching data and rendering to new components
   const spinner = document.getElementById("overview_spinner");
   
   // Cancel any previous overview request to prevent race conditions
@@ -2188,16 +2191,10 @@ async function loadOverview() {
   currentOverviewController = thisOverviewController;
   const signal = thisOverviewController.signal;
 
-  // Show spinner, hide previous content
-  if (spinner) {
-    spinner.classList.add("overview_spinner_visible");
-  }
-  container.innerHTML = "";
-
   overviewData = null;
   overviewLoadStartTime = Date.now();
   
-  // Start progressive loading messages
+  // Start progressive loading messages (uses overview_container for messages)
   clearOverviewLoadingMessageTimer();
   showOverviewLoadingMessage();
 
@@ -2207,107 +2204,150 @@ async function loadOverview() {
 
     overviewData = normalizeOverviewData(data);
 
-    // Hide spinner and stop loading messages before rendering
+    // Stop loading messages and hide spinner
+    clearOverviewLoadingMessageTimer();
     if (spinner) {
       spinner.classList.remove("overview_spinner_visible");
     }
-    clearOverviewLoadingMessageTimer();
     
     // Apply manual completions before rendering
     const adjusted = applyManualCompletionsToOverview(overviewData);
     renderOverview(adjusted);
   } catch (error) {
     if (error.name === 'AbortError') return;
-    // Hide spinner and stop loading messages on error
+    // Stop loading messages on error
+    clearOverviewLoadingMessageTimer();
     if (spinner) {
       spinner.classList.remove("overview_spinner_visible");
     }
-    clearOverviewLoadingMessageTimer();
-    // Don't show "no data" immediately - the overview might still be loading.
-    // Instead, show a subtle loading message that will be replaced on retry.
-    // The overview will be retried when the user switches courses or the data loads.
-    container.innerHTML = `<p class="empty_message">${t("overviewNoData")}</p>`;
+    // The loading message will be replaced on retry
   } finally {
     currentOverviewController = null;
   }
 }
 
 function renderOverview(data) {
-  const container = document.getElementById("overview_container");
-  if (!container) return;
+  // Update new sidebar components
+  updateSemesterProgress(data);
+  updateStatsGrid(data);
+  updateWarningBanner(data);
+  updateWeekOverview(data);
+}
 
+function updateSemesterProgress(data) {
+  const barContainer = document.getElementById("semester_progress_bar");
+  const doneEl = document.getElementById("semester_done");
+  const totalEl = document.getElementById("semester_total");
+  const percentEl = document.getElementById("semester_percent");
+  
+  if (!barContainer || !doneEl || !totalEl || !percentEl) return;
+  
   if (!data || !data.weeks || data.weeks.length === 0) {
-    container.innerHTML = `<p class="empty_message">${t("overviewNoData")}</p>`;
+    barContainer.innerHTML = "";
+    doneEl.textContent = "0";
+    totalEl.textContent = "0";
+    percentEl.textContent = "0%";
     return;
   }
 
   const totalItems = data.weeks.reduce((sum, w) => sum + w.total, 0);
   const totalDone = data.weeks.reduce((sum, w) => sum + w.done, 0);
-  const totalUnfinished = data.weeks.reduce((sum, w) => sum + w.unfinished, 0);
+
+  doneEl.textContent = totalDone;
+  totalEl.textContent = totalItems;
+  
+  const percentage = totalItems > 0 ? Math.round((totalDone / totalItems) * 100) : 0;
+  percentEl.textContent = `${percentage}%`;
+
+  // Create segmented progress bar (max ~40 segments for visual clarity)
+  const maxSegments = 40;
+  const segmentCount = Math.min(maxSegments, Math.max(totalItems, 1));
+  const doneSegments = totalItems > 0 ? Math.round((totalDone / totalItems) * segmentCount) : 0;
+  
+  let segmentsHTML = "";
+  for (let i = 0; i < segmentCount; i++) {
+    const doneClass = i < doneSegments ? "semester_progress_segment_done" : "";
+    segmentsHTML += `<div class="semester_progress_segment ${doneClass}"></div>`;
+  }
+  barContainer.innerHTML = segmentsHTML;
+}
+
+function updateStatsGrid(data) {
+  const weeksEl = document.getElementById("stat_weeks");
+  const unknownEl = document.getElementById("stat_unknown");
+  const doneEl = document.getElementById("stat_done");
+  const unfinishedEl = document.getElementById("stat_unfinished");
+  
+  if (!weeksEl || !unknownEl || !doneEl || !unfinishedEl) return;
+  
+  if (!data || !data.weeks || data.weeks.length === 0) {
+    weeksEl.textContent = "0";
+    unknownEl.textContent = "0";
+    doneEl.textContent = "0";
+    unfinishedEl.textContent = "0";
+    return;
+  }
+
   const totalUnknown = data.weeks.reduce((sum, w) => sum + (w.unknown || 0), 0);
+  const totalDone = data.weeks.reduce((sum, w) => sum + w.done, 0);
+  const totalUnfinished = data.weeks.reduce((sum, w) => sum + w.unfinished, 0);
 
-  // Update donut chart
-  updateDonutChart(totalDone, totalItems);
+  weeksEl.textContent = data.weeks.length;
+  unknownEl.textContent = totalUnknown;
+  doneEl.textContent = totalDone;
+  unfinishedEl.textContent = totalUnfinished;
+}
 
-  container.replaceChildren();
-
-  // Unassigned work warning banner
-  if (data.uncategorized_unfinished_count > 0) {
-    const warningBanner = document.createElement("div");
-    warningBanner.className = "uncategorized_warning_banner";
-    warningBanner.setAttribute("role", "button");
-    warningBanner.tabIndex = 0;
-    warningBanner.title = t("uncategorizedWarning").replace("{count}", data.uncategorized_unfinished_count);
-    warningBanner.textContent = t("uncategorizedWarning").replace("{count}", data.uncategorized_unfinished_count);
-    warningBanner.addEventListener("click", () => {
-      currentWeek = 0;
-      storageSet("selectedWeek", "0");
-      setView("work");
-    });
-    container.appendChild(warningBanner);
+function updateWarningBanner(data) {
+  const banner = document.getElementById("warning_banner");
+  const textEl = document.getElementById("warning_text");
+  
+  if (!banner || !textEl) return;
+  
+  if (!data || !data.weeks || data.weeks.length === 0 || data.uncategorized_unfinished_count === 0) {
+    banner.hidden = true;
+    return;
   }
 
-  // Summary card at top
-  const summary = document.createElement("div");
-  summary.className = "overview_summary";
+  banner.hidden = false;
+  textEl.textContent = t("uncategorizedWarning").replace("{count}", data.uncategorized_unfinished_count);
+  
+  // Make banner clickable to navigate to Week 0
+  banner.style.cursor = "pointer";
+  banner.addEventListener("click", () => {
+    currentWeek = 0;
+    storageSet("selectedWeek", "0");
+    setView("work");
+  }, { once: true });
+}
 
-  const summaryItems = [
-    { label: t("overviewWeeks"), count: data.weeks.length },
-    { label: t("overviewUnknown"), count: totalUnknown, className: "overview_unknown" },
-    { label: t("overviewDone"), count: totalDone, className: "overview_done" },
-    { label: t("overviewUnfinished"), count: totalUnfinished, className: "overview_unfinished" },
-  ];
+function updateWeekOverview(data) {
+  const listContainer = document.getElementById("week_overview_list");
+  if (!listContainer) return;
 
-  for (const item of summaryItems) {
-    const stat = document.createElement("div");
-    stat.className = `overview_stat ${item.className || ""}`;
-    stat.innerHTML = `
-      <span class="overview_stat_count">${item.count}</span>
-      <span class="overview_stat_label">${item.label}</span>
-    `;
-    summary.appendChild(stat);
+  if (!data || !data.weeks || data.weeks.length === 0) {
+    listContainer.innerHTML = `<p class="empty_message">${t("overviewNoData")}</p>`;
+    return;
   }
 
-  container.appendChild(summary);
+  listContainer.replaceChildren();
 
-  // Per-week breakdown
   for (const weekSummary of data.weeks) {
     const typeCounts = weekSummary.typeCounts || weekSummary.type_counts || {};
     const weekCard = document.createElement("div");
-    weekCard.className = "overview_week_card";
+    weekCard.className = "week_overview_card";
     weekCard.setAttribute("data-week", weekSummary.week);
     weekCard.tabIndex = 0;
     weekCard.setAttribute("role", "button");
-    weekCard.title = `Go to ${t("week")} ${weekSummary.week === 0 ? t("general") : weekSummary.week}`;
+    const weekLabel = weekSummary.week === 0 ? t("overviewWeekGeneral") : `${t("week")} ${weekSummary.week}`;
+    weekCard.title = `Go to ${weekLabel}`;
 
-    // Click navigates to this week
     weekCard.addEventListener("click", () => {
       currentWeek = weekSummary.week;
       storageSet("selectedWeek", String(currentWeek));
       setView("work");
     });
     
-    // Keyboard navigation for overview week cards
     weekCard.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -2315,45 +2355,37 @@ function renderOverview(data) {
       }
     });
 
-    const weekLabel = weekSummary.week === 0 ? t("overviewWeekGeneral") : `${t("week")} ${weekSummary.week}`;
-
-    // Header row with week name, total count, and progress bar
-    const header = document.createElement("div");
-    header.className = "overview_week_header";
-
-    const name = document.createElement("span");
-    name.className = "overview_week_name";
-    name.textContent = weekLabel;
-
     const progressPct = weekSummary.total > 0 ? Math.round((weekSummary.done / weekSummary.total) * 100) : 0;
 
-    const progress = document.createElement("div");
-    progress.className = "overview_progress";
-    progress.innerHTML = `
-      <div class="overview_progress_bar">
-        <div class="overview_progress_fill" style="width: ${progressPct}%"></div>
-      </div>
-      <span class="overview_progress_text">${weekSummary.done}/${weekSummary.total}</span>
-    `;
-
-    header.append(name, progress);
-
-    // Type counts row
-    const typeRow = document.createElement("div");
-    typeRow.className = "overview_type_row";
-
+    // Build type chips HTML
+    let chipsHTML = "";
     for (const type of TYPE_ORDER) {
       const count = typeCounts[type] || 0;
       if (count === 0) continue;
-      const chip = document.createElement("span");
-      chip.className = "overview_type_chip";
-      chip.textContent = `${TYPE_LABELS[type]} (${count})`;
-      typeRow.appendChild(chip);
+      chipsHTML += `<span class="week_overview_card_type">${TYPE_LABELS[type]} (${count})</span>`;
     }
 
-    weekCard.append(header, typeRow);
-    container.appendChild(weekCard);
+    weekCard.innerHTML = `
+      <div class="week_overview_card_header">
+        <span class="week_overview_card_name">${weekLabel}</span>
+        <span class="week_overview_card_fraction">${weekSummary.done}/${weekSummary.total}</span>
+      </div>
+      <div class="week_overview_card_progress">
+        <div class="week_overview_card_progress_fill" style="width: ${progressPct}%"></div>
+      </div>
+      <div class="week_overview_card_types">${chipsHTML}</div>
+    `;
+
+    listContainer.appendChild(weekCard);
   }
+}
+
+function updateDonutChart(done, total) {
+  // Deprecated: donut chart replaced by semester progress bar
+  const donutFill = document.querySelector(".donut-fill");
+  const donutCount = document.getElementById("donut_count");
+  if (donutFill) donutFill.style.strokeDasharray = "0 251.2";
+  if (donutCount) donutCount.textContent = "-";
 }
 
 function renderWorkView() {
@@ -2371,27 +2403,6 @@ function renderWorkView() {
   const filterToggleSpans = document.querySelectorAll(".filter_toggle span");
   if (filterToggleSpans[0]) filterToggleSpans[0].textContent = t("unfinishedLabel");
   if (filterToggleSpans[1]) filterToggleSpans[1].textContent = t("unknownLabel");
-}
-
-function updateDonutChart(done, total) {
-  const donutFill = document.querySelector(".donut-fill");
-  const donutCount = document.getElementById("donut_count");
-  
-  if (!donutFill || !donutCount) return;
-  
-  // Update the count text
-  donutCount.textContent = `${done}/${total}`;
-  
-  // Calculate percentage
-  const percentage = total > 0 ? done / total : 0;
-  
-  // SVG circle properties
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  
-  // Update stroke-dasharray to show the filled portion
-  const filledLength = circumference * percentage;
-  donutFill.style.strokeDasharray = `${filledLength} ${circumference}`;
 }
 
 function renderTimetableView() {
@@ -2454,26 +2465,11 @@ function renderAll() {
 }
 
 function updateTabIndicator(viewName) {
-  const indicator = document.querySelector(".view_tab_indicator");
-  if (!indicator) return;
-
-  const activeTab = document.querySelector(`.view_tab[data-view="${viewName}"]`);
-  if (!activeTab) return;
-
-  const nav = activeTab.parentElement;
-  const navRect = nav?.getBoundingClientRect();
-  const tabRect = activeTab.getBoundingClientRect();
-  if (!navRect || !tabRect) return;
-
-  indicator.style.width = `${tabRect.width}px`;
-  indicator.style.transform = `translateX(${tabRect.left - navRect.left}px)`;
+  // Notebook tab style uses CSS border-bottom, no JS indicator needed
 }
 
 function refreshTabIndicator() {
-  const activeView = document.querySelector(".app_view_active");
-  if (activeView) {
-    updateTabIndicator(activeView.id.replace("_view", ""));
-  }
+  // Notebook tab style uses CSS border-bottom, no JS indicator needed
 }
 
 function setView(viewName) {
