@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/c0bf2085-5e51-4b41-b13e-41436c0d9945
 ![alt text](static/image-3.png)
 
 ### Work View
-![alt text](static/image.png)
+![alt text](static/image-5.png)
 
 ### Semester Progress Dashboard
 ![alt text](static/image-4.png)
