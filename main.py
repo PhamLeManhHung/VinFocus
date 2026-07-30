@@ -25,6 +25,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+VINFOCUS_SCRIPT_VERSION = "2.2"
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -58,7 +60,7 @@ csp = {
     "base-uri": ["'self'"],
 }
 
-Talisman(app, content_security_policy=csp)
+Talisman(app, content_security_policy=csp, force_https=False)
 
 # Limit request body size to 1MB
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
@@ -79,7 +81,6 @@ class Config:
     REQUEST_TIMEOUT = 30  # Increased for overview requests
     PER_PAGE = 1000       # Increased for large courses
     CACHE_TTL = 300  # seconds (5 minutes)
-    OVERVIEW_CACHE_TTL = 120  # overview data should reflect recent Canvas/manual changes
     MAX_CACHE_SIZE = 1000  # Maximum number of cached items
     MAX_COURSE_ID = 999999  # Maximum reasonable course ID for validation
     
@@ -247,7 +248,7 @@ def cache_set(key: str, data: Any) -> None:
 @app.get("/")
 def landing():
     return no_store_response(
-        make_response(render_template("landing.html"))
+        make_response(render_template("landing.html", version=VINFOCUS_SCRIPT_VERSION))
     )
 
 @app.get("/app")
@@ -851,12 +852,18 @@ def validate_token():
     """Validate a Canvas API token by making a test call to the Canvas API.
     
     Expects JSON body: { "token": "..." }
+    Requires X-CSRF-Token header for CSRF protection.
     Returns: { "valid": true/false, "message": "..." }
     The token is used only for this validation request and is never stored
     server-side. The frontend is responsible for persisting it in localStorage.
     
     Rate limited: 5 requests per minute per IP.
     """
+    # Validate CSRF token
+    csrf_token = request.headers.get("X-CSRF-Token", "")
+    if not validate_csrf_token(csrf_token):
+        return jsonify({"valid": False, "message": "Invalid or missing CSRF token. Please refresh and try again."}), 403
+
     data = request.get_json(silent=True)
     if not data or not data.get("token"):
         return jsonify({"valid": False, "message": "No token provided."}), 400
@@ -905,6 +912,7 @@ def validate_token():
 
 
 @app.get("/api/csrf-token")
+@rate_limit()
 def get_csrf_token():
     """Get a CSRF token for POST endpoints.
     
@@ -1439,14 +1447,6 @@ def request_entity_too_large(error):
     return jsonify({
         "error": "Request body too large. Maximum size is 1MB."
     }), 413
-
-
-@app.errorhandler(429)
-def too_many_requests(error):
-    """Handle rate limit exceeded errors."""
-    return jsonify({
-        "error": "Too many requests. Please slow down and try again."
-    }), 429
 
 
 # ─── Startup ────────────────────────────────────────────────────

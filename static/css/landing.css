@@ -1,26 +1,12 @@
-*, *::before, *::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 html {
     scroll-behavior: smooth;
 }
 
 body {
-    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
     background: #111111;
     color: #e0e0e0;
     min-height: 100vh;
     line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-    color: inherit;
-    text-decoration: none;
 }
 
 img {
@@ -49,6 +35,13 @@ body::before {
         linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
     background-size: 48px 48px;
 }
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* ── Background Effects ── */
 
 body::after {
     content: "";
@@ -228,7 +221,7 @@ body::after {
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .nav_links {
         position: fixed;
         top: 60px;
@@ -317,7 +310,7 @@ body::after {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
-        gap: 48px;
+        gap: 0px;
         text-align: left;
     }
 
@@ -354,6 +347,7 @@ body::after {
     line-height: 1.7;
     max-width: 600px;
     margin: 0 auto 24px;
+    white-space: pre-line;
 }
 
 .hero_actions {
@@ -418,7 +412,7 @@ body::after {
     color: #777;
     text-align: center;
     margin-bottom: 56px;
-    max-width: 500px;
+    max-width: 650px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -426,6 +420,9 @@ body::after {
 /* ── Features Grid ── */
 
 .features_grid {
+    max-width: 1000px;
+    margin: 0 auto;
+
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 20px;
@@ -715,6 +712,66 @@ body::after {
     }
 }
 
+/* ── Steps Note ── */
+
+.steps_note {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    max-width: 720px;
+    margin: 32px auto 0;
+    padding: 18px 20px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 12px;
+    background: rgba(245, 158, 11, 0.06);
+}
+
+.steps_note_icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(245, 158, 11, 0.12);
+    color: #F59E0B;
+    margin-top: 2px;
+}
+
+.steps_note_text {
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: #ccc;
+    line-height: 1.65;
+}
+
+.steps_note_text strong {
+    color: #F59E0B;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .steps_note {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .steps_note_icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    .steps_note_icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .steps_note_text {
+        font-size: 0.82rem;
+    }
+}
+
 /* ── FAQ ── */
 
 .faq_list {
@@ -939,3 +996,57 @@ body::after {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.12);
 }
+
+/* ── Scroll-to-top button ── */
+
+.scroll_top {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    margin-left: -22px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(8px);
+    color: #ccc;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.scroll_top:hover {
+    background: rgba(50, 50, 50, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.scroll_top_visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* ── Inline kbd styling ── */
+
+kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 0.78em;
+    font-family: inherit;
+    font-weight: 600;
+    color: #ddd;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    line-height: 1.5;
+}
+

@@ -10,46 +10,30 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 def test_imports():
     """Test that all imports work."""
     print("Testing imports...")
-    try:
-        import main
-        print("✓ main.py imports successfully")
-        return True
-    except Exception as e:
-        print(f"✗ Import failed: {e}")
-        return False
+    import main
+    assert True
+    print("✓ main.py imports successfully")
 
 def test_cache_bug_fixed():
     """Test that courses are not cached globally."""
     print("\nTesting cache bug fix...")
     import main
     
-    # Check that get_courses doesn't use cache
     import inspect
     source = inspect.getsource(main.get_courses)
     
-    if 'cache_get("courses")' in source:
-        print("✗ FAIL: get_courses still uses global cache")
-        return False
+    assert 'cache_get("courses")' not in source, "get_courses still uses global cache"
+    assert 'not cached - user-specific' in source, "Could not verify cache fix"
     
-    if 'not cached - user-specific' in source:
-        print("✓ PASS: get_courses correctly avoids global cache")
-        return True
-    
-    print("✗ FAIL: Could not verify cache fix")
-    return False
+    print("✓ PASS: get_courses correctly avoids global cache")
 
 def test_cors_configured():
     """Test that CORS is configured."""
     print("\nTesting CORS configuration...")
     import main
     
-    # Check that CORS is imported and used
-    if hasattr(main, 'CORS'):
-        print("✓ PASS: CORS is configured")
-        return True
-    
-    print("✗ FAIL: CORS not configured")
-    return False
+    assert hasattr(main, 'CORS'), "CORS not configured"
+    print("✓ PASS: CORS is configured")
 
 def test_health_endpoint():
     """Test that health endpoint exists."""
@@ -59,37 +43,24 @@ def test_health_endpoint():
     rules = [rule for rule in main.app.url_map.iter_rules()]
     health_rules = [r for r in rules if '/health' in str(r)]
     
-    if health_rules:
-        print(f"✓ PASS: Health endpoint exists: {health_rules[0]}")
-        return True
-    
-    print("✗ FAIL: Health endpoint not found")
-    return False
+    assert health_rules, "Health endpoint not found"
+    print(f"✓ PASS: Health endpoint exists: {health_rules[0]}")
 
 def test_db_pooling():
     """Test that database pooling is configured."""
     print("\nTesting database pooling...")
     import main
     
-    if hasattr(main, '_db_pool'):
-        print("✓ PASS: Database pool variable exists")
-        return True
-    
-    print("✗ FAIL: Database pool not configured")
-    return False
+    assert hasattr(main, '_db_pool'), "Database pool not configured"
+    print("✓ PASS: Database pool variable exists")
 
 def test_no_crash_without_db():
     """Test that app doesn't crash if DATABASE_URL is missing."""
     print("\nTesting graceful DB handling...")
     import main
     
-    # The app should have initialized even without DB
-    if hasattr(main, 'app'):
-        print("✓ PASS: App initialized without crashing")
-        return True
-    
-    print("✗ FAIL: App did not initialize")
-    return False
+    assert hasattr(main, 'app'), "App did not initialize"
+    print("✓ PASS: App initialized without crashing")
 
 def main_test():
     """Run all tests."""
@@ -109,7 +80,11 @@ def main_test():
     results = []
     for test in tests:
         try:
-            results.append(test())
+            test()
+            results.append(True)
+        except AssertionError as e:
+            print(f"✗ FAIL: {e}")
+            results.append(False)
         except Exception as e:
             print(f"✗ Test {test.__name__} raised exception: {e}")
             results.append(False)

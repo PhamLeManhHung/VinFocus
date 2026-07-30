@@ -39,7 +39,3 @@ dist/
 
 # Database
 feedback.db
-
-.env
-
-render.yaml

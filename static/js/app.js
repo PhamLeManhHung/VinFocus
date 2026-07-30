@@ -21,7 +21,7 @@ const timetableNote = document.getElementById("timetable_note");
 const timetableHeader = document.querySelector(".timetable_header");
 const subjectLabelEditBtn = document.getElementById("subject_label_edit_btn");
 
-const VINFOCUS_SCRIPT_VERSION = "2.1";
+const VINFOCUS_SCRIPT_VERSION = "2.2";
 console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
 const DEBUG = false;
 function debugLog(...args) {
@@ -743,6 +743,7 @@ function clearApiCache() {
 
 // ── Overview state ─────────────────────────────────────────────
 let overviewData = null;
+let courseProgress = new Map(); // course_id -> { done, total }
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -1018,7 +1019,7 @@ function normalizeOverviewData(data) {
 
 function createItemRow(item, isLastInType) {
   const row = document.createElement("div");
-  row.className = "item_row";
+  row.className = "item_row item_row_animate";
 
   if (isItemImportant(item)) {
     row.classList.add("item_row_important");
@@ -1087,7 +1088,7 @@ function createItemRow(item, isLastInType) {
       
       // Optimistic UI update - immediately show as done
       const newBadge = document.createElement("span");
-      newBadge.className = "status_badge status_done status_manual";
+      newBadge.className = "status_badge status_done status_manual status_pulse";
       newBadge.textContent = t("done");
       
       const undoBtn = document.createElement("button");
@@ -1098,7 +1099,20 @@ function createItemRow(item, isLastInType) {
       undoBtn.addEventListener("click", (ue) => {
         ue.stopPropagation();
         saveManualCompletion(key, false);
-        renderItems();
+        
+        const isUnknown = item.completed === null;
+        const restoredBadge = document.createElement("span");
+        if (isUnknown) {
+          restoredBadge.className = "status_badge status_unknown";
+          restoredBadge.textContent = "?";
+          restoredBadge.title = t("unknown");
+        } else {
+          restoredBadge.className = "status_badge status_open";
+          restoredBadge.textContent = t("unfinished");
+        }
+        
+        badgeGroup.replaceChildren(restoredBadge, toggleBtn);
+        
         updateHubTitle();
         refreshOverviewFromState();
       });
@@ -1124,8 +1138,15 @@ function createItemRow(item, isLastInType) {
       
       // Optimistic UI update - immediately revert to original state
       const newBadge = document.createElement("span");
-      newBadge.className = "status_badge status_open";
-      newBadge.textContent = t("unfinished");
+      const isUnknown = item.completed === null;
+      if (isUnknown) {
+        newBadge.className = "status_badge status_unknown";
+        newBadge.textContent = "?";
+        newBadge.title = t("unknown");
+      } else {
+        newBadge.className = "status_badge status_open";
+        newBadge.textContent = t("unfinished");
+      }
       
       const toggleBtn = document.createElement("button");
       toggleBtn.type = "button";
@@ -1137,7 +1158,7 @@ function createItemRow(item, isLastInType) {
         const k = `${item.course_id}:${item.module_item_id}`;
         
         const doneBadge = document.createElement("span");
-        doneBadge.className = "status_badge status_done status_manual";
+        doneBadge.className = "status_badge status_done status_manual status_pulse";
         doneBadge.textContent = t("done");
         
         const newUndoBtn = document.createElement("button");
@@ -1148,7 +1169,6 @@ function createItemRow(item, isLastInType) {
         newUndoBtn.addEventListener("click", (ue2) => {
           ue2.stopPropagation();
           saveManualCompletion(k, false);
-          renderItems();
           updateHubTitle();
           refreshOverviewFromState();
         });
@@ -1236,6 +1256,9 @@ function renderItems() {
 function renderCoursePills() {
   coursePills.replaceChildren(
     ...courses.map((course) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "course_pill_wrapper";
+
       const button = document.createElement("button");
       button.type = "button";
       button.className = "course_pill";
@@ -1249,7 +1272,6 @@ function renderCoursePills() {
       }
 
       if (subjectLabelEditMode) {
-        // In edit mode, pills open the label editor instead of switching courses
         button.style.cursor = "pointer";
         const subjectKey = courseSubjectKey(course);
         button.dataset.subjectKey = subjectKey || "";
@@ -1264,8 +1286,21 @@ function renderCoursePills() {
       } else {
         button.addEventListener("click", () => selectCourse(course.id));
       }
+
+      wrapper.appendChild(button);
+
+      // Progress bar
+      const prog = courseProgress.get(course.id);
+      if (prog && prog.total > 0) {
+        const pct = Math.round((prog.done / prog.total) * 100);
+        const bar = document.createElement("div");
+        bar.className = "course_progress_bar";
+        bar.innerHTML = `<div class="course_progress_fill" style="width:${pct}%"></div>`;
+        bar.title = `${prog.done}/${prog.total} (${pct}%)`;
+        wrapper.appendChild(bar);
+      }
       
-      return button;
+      return wrapper;
     })
   );
   
@@ -1460,7 +1495,6 @@ function updateWeekNav() {
 function weekApiPath(courseId, week) {
   let suffix = "";
   if (unfinishedOnly.checked) suffix = "/unfinished";
-  else if (unknownOnly.checked) suffix = "/unknown";
   return `/api/courses/${courseId}/week/${week}${suffix}`;
 }
 
@@ -1554,7 +1588,7 @@ async function loadItems() {
     return;
   }
 
-  const cacheKey = `${selectedCourseId}:${currentWeek}:${unfinishedOnly.checked}`;
+  const cacheKey = `${selectedCourseId}:${currentWeek}:${unfinishedOnly.checked}:${unknownOnly.checked}`;
   
   if (itemCache.has(cacheKey)) {
     items = itemCache.get(cacheKey);
@@ -2280,6 +2314,15 @@ async function loadOverview() {
 
     overviewData = normalizeOverviewData(data);
 
+    // Store course progress for progress bars
+    if (overviewData && overviewData.totals) {
+      courseProgress.set(selectedCourseId, {
+        done: overviewData.totals.done || 0,
+        total: overviewData.totals.total || 0,
+      });
+      renderCoursePills();
+    }
+
     // Stop loading messages and hide spinner
     clearOverviewLoadingMessageTimer();
     if (spinner) {
@@ -2730,12 +2773,20 @@ document.addEventListener("keydown", (event) => {
   const overlay = document.getElementById("setup_overlay");
   if (overlay && !overlay.hidden) return;
 
-  if (event.key === "ArrowLeft") {
+  if (event.key === "ArrowLeft" || event.key === "j") {
     event.preventDefault();
     changeWeek(-1);
-  } else if (event.key === "ArrowRight") {
+  } else if (event.key === "ArrowRight" || event.key === "k") {
     event.preventDefault();
     changeWeek(1);
+  } else if (event.key === "g") {
+    event.preventDefault();
+    weekInput.focus();
+    weekInput.select();
+  } else if (event.key === "f") {
+    event.preventDefault();
+    unfinishedOnly.checked = !unfinishedOnly.checked;
+    loadItems();
   }
 });
 
@@ -3052,9 +3103,10 @@ async function validateAndSaveToken() {
 
   try {
     debugLog("validateAndSaveToken: sending POST to /api/validate-token");
+    const csrfToken = await getCsrfToken();
     const response = await fetch("/api/validate-token", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
       body: JSON.stringify({ token }),
     });
     const data = await response.json();
@@ -3496,9 +3548,10 @@ function openTokenSettings() {
     msg.hidden = false;
 
     try {
+      const csrfToken = await getCsrfToken();
       const response = await fetch("/api/validate-token", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
         body: JSON.stringify({ token }),
       });
       const data = await response.json();

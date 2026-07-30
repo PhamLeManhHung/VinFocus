@@ -24,6 +24,10 @@
     <meta name="twitter:image" content="https://vinfocus.onrender.com/static/images/image-5.png">
 
     <title>VinFocus — Browse Canvas. Not the clutter.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body>
@@ -43,7 +47,7 @@
         </div>
         <div class="nav_links" id="nav_links">
             <a href="#features" class="nav_link" data-i18n="nav_features">Features</a>
-            <a href="#showcase-progress" class="nav_link" data-i18n="nav_screenshots">Screenshots</a>
+            <a href="#showcase-progress" class="nav_link" data-i18n="nav_showcase">Showcase</a>
             <a href="#privacy" class="nav_link" data-i18n="nav_privacy">Privacy</a>
             <a href="#faq" class="nav_link" data-i18n="nav_faq">FAQ</a>
             <a href="https://github.com/PhamLeManhHung/VinFocus" target="_blank" rel="noopener" class="nav_link nav_link_muted" data-i18n="nav_github">GitHub</a>
@@ -72,7 +76,7 @@
     </div>
     <div class="hero_screenshot_wrapper hero_load_screenshot">
         <div class="hero_screenshot_glow"></div>
-        <img src="/static/images/image-5.png" alt="VinFocus application showing course browser and week navigation" class="hero_screenshot" loading="eager">
+        <img src="/static/images/image-5.png" alt="VinFocus course browser showing week navigation, course pills, and item list organized by type with completion badges" class="hero_screenshot" loading="eager">
     </div>
 </section>
 
@@ -90,7 +94,7 @@
                     </svg>
                 </div>
                 <h3 class="feature_title" data-i18n="feature1_title">Browse Courses</h3>
-                <p class="feature_desc" data-i18n="feature1_desc">View all your active courses side by side. Switch between subjects instantly with clean pill-style navigation.</p>
+                <p class="feature_desc" data-i18n="feature1_desc">All your courses in pill-style navigation. Each subject shows its completion progress at a glance.</p>
             </div>
             <div class="feature_card">
                 <div class="feature_icon">
@@ -100,7 +104,7 @@
                     </svg>
                 </div>
                 <h3 class="feature_title" data-i18n="feature2_title">Search Everything</h3>
-                <p class="feature_desc" data-i18n="feature2_desc">Search across courses, modules, quizzes, assignments, and files from a single search bar with instant results.</p>
+                <p class="feature_desc" data-i18n="feature2_desc">One search bar across courses, modules, quizzes, assignments, and files. Instant results.</p>
             </div>
             <div class="feature_card">
                 <div class="feature_icon">
@@ -109,7 +113,7 @@
                     </svg>
                 </div>
                 <h3 class="feature_title" data-i18n="feature3_title">Semester Progress</h3>
-                <p class="feature_desc" data-i18n="feature3_desc">See exactly where you stand. Per-week completion stats, type breakdowns, and a visual progress bar for the entire semester.</p>
+                <p class="feature_desc" data-i18n="feature3_desc">Per-week completion stats, type breakdowns, and a visual progress bar for the semester.</p>
             </div>
             <div class="feature_card">
                 <div class="feature_icon">
@@ -121,7 +125,33 @@
                     </svg>
                 </div>
                 <h3 class="feature_title" data-i18n="feature4_title">Weekly Overview</h3>
-                <p class="feature_desc" data-i18n="feature4_desc">Navigate weeks instead of scrolling through long module lists. Every quiz, assignment, and file organized by week.</p>
+                <p class="feature_desc" data-i18n="feature4_desc">Navigate weeks instead of long module lists. Quizzes, assignments, and files organized by week.</p>
+            </div>
+            <div class="feature_card">
+                <div class="feature_icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                </div>
+                <h3 class="feature_title" data-i18n="feature5_title">Keyboard Shortcuts</h3>
+                <p class="feature_desc" data-i18n="feature5_desc">Navigate weeks with <kbd>j</kbd>/<kbd>k</kbd>, jump to week with <kbd>g</kbd>, toggle filters with <kbd>f</kbd>.</p>
+            </div>
+            <div class="feature_card">
+                <div class="feature_icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v4"></path>
+                        <path d="M12 18v4"></path>
+                        <path d="M4.93 4.93l2.83 2.83"></path>
+                        <path d="M16.24 16.24l2.83 2.83"></path>
+                        <path d="M2 12h4"></path>
+                        <path d="M18 12h4"></path>
+                        <path d="M4.93 19.07l2.83-2.83"></path>
+                        <path d="M16.24 7.76l2.83-2.83"></path>
+                    </svg>
+                </div>
+                <h3 class="feature_title" data-i18n="feature6_title">Offline Ready</h3>
+                <p class="feature_desc" data-i18n="feature6_desc">Previously loaded courses and weeks work without a connection. Your data stays accessible.</p>
             </div>
         </div>
     </div>
@@ -131,19 +161,19 @@
     <div class="section_inner showcase_row">
         <div class="showcase_image_wrapper">
             <div class="showcase_glow"></div>
-            <img src="/static/images/semester.png" alt="Semester Progress Dashboard showing per-week completion stats" class="showcase_image" loading="lazy">
+            <img src="/static/images/semester.png" alt="Semester progress sidebar showing per-week completion bars with done/unfinished/unknown counts and a course-wide progress summary" class="showcase_image" loading="lazy">
         </div>
         <div class="showcase_text">
             <span class="showcase_label" data-i18n="showcase1_label">Dashboard</span>
             <h2 class="showcase_title" data-i18n="showcase1_title">Semester progress at a glance</h2>
             <p class="showcase_desc" data-i18n="showcase1_desc">
-                The overview sidebar shows you exactly where you stand in each course. See which weeks have unfinished work, which types of assignments remain, and how much of the semester you have completed — all without leaving the page.
+                The overview sidebar shows you exactly where you stand in each course. See which weeks have unfinished work, which types of assignments remain, and how much of the semester you have completed — all without leaving the page. Each course pill also shows its own progress bar so you can track every subject at a glance.
             </p>
             <ul class="showcase_list">
                 <li data-i18n="showcase1_li1">Per-week completion stats with visual progress bars</li>
                 <li data-i18n="showcase1_li2">Item type breakdowns (Quizzes, Assignments, Files, Pages)</li>
                 <li data-i18n="showcase1_li3">Course-wide totals: done, unfinished, and unknown items</li>
-                <li data-i18n="showcase1_li4">Warning banner for unassigned work</li>
+                <li data-i18n="showcase1_li4">Per-course progress bars in the navigation pills</li>
             </ul>
         </div>
     </div>
@@ -153,7 +183,7 @@
     <div class="section_inner showcase_row showcase_row_reverse">
         <div class="showcase_image_wrapper">
             <div class="showcase_glow"></div>
-            <img src="/static/images/image-2.png" alt="Weekly Timetable view in VinFocus" class="showcase_image" loading="lazy">
+            <img src="/static/images/image-2.png" alt="Weekly timetable grid showing Monday-to-Friday columns with subject periods, current period highlighting, and today column emphasis" class="showcase_image" loading="lazy">
         </div>
         <div class="showcase_text">
             <span class="showcase_label" data-i18n="showcase2_label">Timetable</span>
@@ -225,6 +255,18 @@
                 <p class="step_desc" data-i18n="step3_desc">Your courses load automatically. Navigate weeks, search resources, and track your semester progress.</p>
             </div>
         </div>
+        <div class="steps_note">
+            <div class="steps_note_icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            </div>
+            <div class="steps_note_content">
+                <p class="steps_note_text" data-i18n="steps_note_text"></p>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -289,7 +331,7 @@
         <div class="footer_links">
             <a href="https://github.com/PhamLeManhHung/VinFocus" target="_blank" rel="noopener" class="footer_link">GitHub</a>
             <span class="footer_dot"></span>
-            <span class="footer_link footer_link_muted">v2.1</span>
+            <span class="footer_link footer_link_muted">v{{ version }}</span>
             <span class="footer_dot"></span>
             <a href="https://github.com/PhamLeManhHung/VinFocus/releases" target="_blank" rel="noopener" class="footer_link">Changelog</a>
             <span class="footer_dot"></span>
@@ -302,6 +344,10 @@
         <p class="footer_copyright" data-i18n="footer_copyright">&copy; 2026 VinFocus</p>
     </div>
 </footer>
+
+<button type="button" id="scroll_top" class="scroll_top" aria-label="Scroll to top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+</button>
 
 <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
 </body>

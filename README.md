@@ -1,10 +1,19 @@
 # VinFocus
+> "Everything from Canvas. Nothing in your way."
 
 VinFocus is a personal information hub for Vinschool's Canvas LMS, designed for Vinschool students. It aggregates course modules and items into a cleaner interface so you can browse what exists — without trying to predict what you should do on a given day.
 
 ## Demo
 
 https://github.com/user-attachments/assets/c0bf2085-5e51-4b41-b13e-41436c0d9945
+
+## Access
+
+The app is hosted and ready to use at:
+
+**https://vinfocus.onrender.com/**
+
+No installation or setup is required, just open the link, follow the setup wizard to generate and paste your Canvas API token, and start browsing.
 
 ## Screenshots
 
@@ -19,14 +28,6 @@ https://github.com/user-attachments/assets/c0bf2085-5e51-4b41-b13e-41436c0d9945
 
 ### Timetable
 ![alt text](static/images/image-2.png)
-
-## Access
-
-The app is hosted and ready to use at:
-
-**https://vinfocus.onrender.com/**
-
-No installation or setup is required, just open the link, follow the setup wizard to generate and paste your Canvas API token, and start browsing.
 
 ## Why I Built This
 
@@ -44,24 +45,43 @@ VinFocus is not designed to tell students what they should do each day. Instead,
 
 Students decide what to work on. VinFocus simply makes the information easier to find.
 
+## Why Not Just Use LMS Canvass?
+
+Canvas contains all the information students need, but navigating between courses, modules, assignments, quizzes, and files often requires many clicks.
+
+VinFocus doesn't replace Canvas. It reorganizes the same information into a faster, searchable interface.
+
 ## Features
 
 ### Navigation
-- Course browser
-- Week navigation
-- Search
+- Course browser with pill-style navigation
+- Week navigation with keyboard shortcuts (`j`/`k` to move, `g` to jump)
+- Search across courses, modules, quizzes, assignments, and files
 
 ### Productivity
 - Unfinished filter — filter items to only those explicitly tracked as incomplete by Canvas
 - Unknown filter — filter items that have no completion tracking (Canvas doesn't report completion status)
-- Semester progress dashboard — per-week item counts, completion stats, and type breakdowns
+- Semester progress dashboard — per-week item counts, completion stats, type breakdowns, and a visual progress bar
 - Item importance — items matching keywords like `HKII`, `HS1`, `cuối năm` are visually highlighted as important
-- Manual completion override — mark any item as done even without Canvas tracking; stored in browser localStorage
+- Manual completion override — mark any item as done even without Canvas tracking; stored in browser localStorage with undo support
+- Course progress bars — each course pill shows completion percentage
 
 ### Customization
-- Themes
+- Dark/light theme toggle
 - Subject labels — rename-only (no color customization)
-- Bilingual UI
+- Bilingual UI (English/Vietnamese)
+
+### Timetable
+- Weekly timetable grid with Monday–Friday periods
+- Current period and today column highlighting
+- Next period highlighting
+- Inline editing with desktop dropdown and mobile modal
+- Today vs full week view toggle on mobile
+- Data stored locally in browser
+
+### About View
+- App description and usage instructions
+- How-to guide covering all major features
 
 ### Notices & Banners
 - **Token expiry warning** — warns when your Canvas API token is about to expire or has already expired
@@ -69,9 +89,17 @@ Students decide what to work on. VinFocus simply makes the information easier to
 - **Unassigned work warning** — in the overview dashboard, warns about unfinished items in modules without a week assignment
 - **Terms & Conditions** — modal with privacy and usage terms, accessible from the consent banner
 
+### Offline Support
+- Service worker with network-first strategy for API calls
+- Cache-first for static assets
+- Previously loaded data remains accessible offline
+
 ### Other
-- Timetable
-- Feedback
+- Feedback form
+- Keyboard shortcuts
+- Skeleton loading states
+- Progressive loading messages for slow Canvas responses
+- Client-side API response cache (5-minute TTL, 500 max entries)
 
 ## Tech Stack
 
@@ -97,13 +125,13 @@ Students decide what to work on. VinFocus simply makes the information easier to
 | `GET /api/courses/<course_id>/weeks` | Week numbers found in module names. Week `0` is included if any modules have no week information. Returns `{ course_id, week_count, weeks: [int] }`. |
 | `GET /api/courses/<course_id>/week/<week>` | Quizzes, assignments, and files for a week. Returns `{ course_id, course_name, week, item_count, items: [...] }`. |
 | `GET /api/courses/<course_id>/week/<week>/unfinished` | Same items, filtered to incomplete Canvas work. Same response shape. |
-| `GET /api/courses/<course_id>/overview` | Overview data for a course: all weeks with item counts, completion stats (done/unfinished/unknown), and type breakdowns. Returns `{ course_id, course_name, week_count, weeks: [...], totals: { total, done, unfinished, unknown } }`. |
+| `GET /api/courses/<course_id>/overview` | Overview data for a course: all weeks with item counts, completion stats (done/unfinished/unknown), type breakdowns, and uncategorized warning count. Returns `{ course_id, course_name, week_count, weeks: [...], totals: { total, done, unfinished, unknown }, uncategorized_unfinished_count: int }`. |
 
 ### Token Management
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/validate-token` | Validate a Canvas API token. Expects JSON body `{ "token": "..." }`. Returns `{ "valid": true/false, "message": "..." }`. Rate limited: 5 requests/minute. |
+| `POST /api/validate-token` | Validate a Canvas API token. Expects JSON body `{ "token": "..." }` and `X-CSRF-Token` header. Returns `{ "valid": true/false, "message": "..." }`. Rate limited: 5 requests/minute. |
 | `GET /api/csrf-token` | Get a CSRF token for POST endpoints. The frontend should include this token in the `X-CSRF-Token` header when making POST requests. Returns `{ "csrf_token": "..." }`. |
 
 ### Feedback
@@ -111,14 +139,14 @@ Students decide what to work on. VinFocus simply makes the information easier to
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/feedback` | Get all feedback submissions. Requires `X-Admin-Key` header with the admin API key. |
-| `POST /api/feedback` | Submit user feedback. Expects JSON body `{ "rating": int (1-5), "usage_type": str, "recommend": str, "improvement": str }`. Requires `X-CSRF-Token` header. Rate limited: 10 requests/minute. |
+| `POST /api/feedback` | Submit user feedback. Expects JSON body `{ "rating": int (1-5), "usage_type": str, "recommend": str, "improvement": str }` and `X-CSRF-Token` header. Rate limited: 10 requests/minute. |
 | `DELETE /api/feedback/<feedback_id>` | Delete a specific feedback entry by ID. Requires `X-Admin-Key` header. Returns `{ "success": true/false, "message": "..." }`. |
 
 ### Health Check
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /health` | Health check endpoint for monitoring. Returns `{ "status": "healthy", "service": "VinFocus", "database": "configured" or "not configured", "version": "2.0" }`. |
+| `GET /health` | Health check endpoint for monitoring. Returns `{ "status": "healthy", "service": "VinFocus", "database": "configured" or "not configured", "database_detail": "ok" or "no database URL configured" or "connection failed", "version": "2.2" }`. |
 
 ### Legacy routes (backward compatibility)
 
@@ -156,11 +184,18 @@ Allowed item types: `Quiz`, `Assignment`, `File`, `Page`.
 
 The Flask server in `main.py` proxies Canvas API requests. When you open the app for the first time, a setup wizard guides you through generating and pasting your Canvas API token. The token is sent with every request via the `Authorization` header, so no environment variable is needed for end users.
 
-Helper functions fetch courses, modules, and module items, then format them into consistent JSON for the frontend.
+The frontend loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable. The app also includes an overview sidebar with semester progress, week cards, and completion stats.
 
-The frontend in `static/js/app.js` loads courses, lets you pick a course and week, and renders items grouped by type. The timetable is stored locally in the browser's `localStorage` and is fully editable.
+A service worker (`static/sw.js`) provides offline support with network-first API calls and cache-first static assets.
 
-The landing page at `templates/landing.html` with styling in `static/css/landing.css` provides the public-facing homepage with feature highlights, screenshots, FAQ, and privacy information.
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `j` or `←` | Previous week |
+| `k` or `→` | Next week |
+| `g` | Focus week input |
+| `f` | Toggle unfinished filter |
 
 ## Security
 
@@ -170,17 +205,23 @@ The landing page at `templates/landing.html` with styling in `static/css/landing
 - Users can revoke tokens at any time from Canvas
 - Feedback submission (`POST /api/feedback`) requires a CSRF token obtained from `GET /api/csrf-token`
 - Feedback admin access requires an `X-Admin-Key` header with constant-time comparison
+- Content Security Policy headers restrict script and style sources
+- CORS is restricted to specific origins
+- Request body size limited to 1MB
+- IP addresses are redacted from logs via privacy filter
+- Rate limiting per IP address using token bucket algorithm
 
-### Architecture notes
+## Architecture Notes
 
-- **Caching** — In-memory cache with a 5-minute TTL (2-minute TTL for overview data) and FIFO eviction (max 1000 entries). When the cache exceeds the limit, the oldest 20% of entries are evicted. Thread-safe with a lock. Cache keys include a SHA256 hash of the user's token to prevent data leaks between users.
-- **Concurrency** — Module items are fetched in parallel using `ThreadPoolExecutor` (up to 8 workers).
+- **Caching** — In-memory cache with a 5-minute TTL (same for all endpoints) and FIFO eviction (max 1000 entries). When the cache exceeds the limit, the oldest 20% of entries are evicted. Thread-safe with a lock. Cache keys include a SHA256 hash of the user's token to prevent data leaks between users.
+- **Concurrency** — Module items are fetched using `get_course_modules(include_items=True)` to fetch all items in a single API call, eliminating N+1 requests.
 - **Rate limiting** — Token bucket algorithm per IP address. General endpoints: 300 requests per 60-second window. Token validation: 5 requests per 60-second window. Feedback submission: 10 requests per minute.
-- **Logging** — Structured logging with timestamps, log levels, and module names.
-- **Week parsing** — A custom parser extracts week numbers from module names. Supports Vietnamese (`tuần`) and English (`week`) keywords, ranges (`-`, `–`), lists (`+`, `&`, `,`, `/`), and mixed formats. Uses `functools.lru_cache` (maxsize=256) for caching parsed results.
+- **Logging** — Structured logging with timestamps, log levels, and module names. IP addresses are redacted.
+- **Week parsing** — A custom parser extracts week numbers from module names. Supports Vietnamese (`tuần`, `tuân`, `tuan`) and English (`week`) keywords, ranges (`-`, `–`), lists (`+`, `&`, `,`, `/`, `=`), and mixed formats. Uses `functools.lru_cache` (maxsize=256) for caching parsed results.
 - **Course code parsing** — Course codes like `THCS.OP-MATHS-TEACHER` are parsed to extract subject keys for labeling and filtering.
 - **CSRF protection** — Server-generated tokens with 1-hour expiry, validated on POST endpoints. Stale tokens are cleaned up periodically.
-- **Request body limit** — Maximum request body size of 1MB.
+- **Database** — PostgreSQL connection pool (min 2, max 20 connections) for feedback storage.
+- **Client-side caching** — API response cache with 5-minute TTL and 500 max entries. AbortController cancels stale requests.
 
 ## Running Locally
 
@@ -215,8 +256,14 @@ pytest tests/ -v
 The test suite covers:
 
 - **Unit tests** for the `extract_weeks()` parser (single weeks, ranges, multi-week lists, edge cases, non-week modules).
-- **Integration tests** for all API endpoints (success, missing token, API failure, week 0/general, range expansion, legacy routes, overview endpoint, three-state completion).
-- **System tests** for app startup, configuration, caching, rate limiting, CSRF protection, and database connectivity.
+- **Unit tests** for `get_item_completion()` and `format_module_item()` (three-state completion: done, unfinished, unknown).
+- **Integration tests** for all API endpoints (success, missing token, API failure, week 0/general, range expansion, legacy routes, overview endpoint, three-state completion, feedback endpoints).
+
+Additionally, `tests/test_fixes.py` is a standalone verification script that can be run directly:
+
+```bash
+python tests/test_fixes.py
+```
 
 ## Environment Variables
 
@@ -224,9 +271,20 @@ The test suite covers:
 |----------|---------|-------------|
 | `API_TOKEN` | — | Canvas API token (optional — can be set via the UI wizard instead) |
 | `DATABASE_URL` | — | PostgreSQL database URL (for feedback feature) |
-| `ADMIN_API_KEY` | — | Secret key for accessing feedback data (auto-generated on Render) |
+| `ADMIN_API_KEY` | — | Secret key for accessing feedback data. On Render, this is auto-generated. |
 | `FLASK_DEBUG` | `"false"` | Enable Flask debug mode |
 | `PORT` | `5000` | Port for the development server |
+
+## Deployment
+
+The app is configured for deployment on Render using `render.yaml`. Key settings:
+
+- **Build**: `pip install -r requirements.txt`
+- **Start**: `gunicorn main:app --bind 0.0.0.0:$PORT --workers 4 --timeout 120`
+- **Plan**: Free tier
+- **Health check**: `/health`
+- **Database**: Free PostgreSQL database (`vinfocus_feedback`)
+- **Auto-deploy**: Enabled
 
 ## Accessing Feedback Data
 
@@ -279,11 +337,6 @@ curl -H "X-Admin-Key: your-secret-key-here" http://127.0.0.1:5000/api/feedback
 ## Notes
 
 This project needs a valid Canvas API token to load real data. Keep the token private and do not commit it to the repository.
-
-## Version
-
-- Backend API: `2.0`
-- Frontend app: `2.1`
 
 ## License
 
