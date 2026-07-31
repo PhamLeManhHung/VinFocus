@@ -2615,6 +2615,11 @@ body.light .setup_step_note {
     color: var(--text-muted);
     transition: color 0.15s ease, transform 0.15s ease;
     user-select: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    line-height: 1;
 }
 
 .star:hover {
@@ -3201,6 +3206,7 @@ body.light .subject_label_edit_btn .edit_icon {
 
 .subject_label_inline_btns {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-end;
     margin-top: 4px;
@@ -3578,4 +3584,55 @@ body.light .subject_label_edit_btn .edit_icon {
 .view_all_weeks_btn:hover {
     background: var(--bg-pill);
     color: var(--text-accent);
+}
+
+/* ── Keyboard focus visibility ───────────────────────────────── */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Restore a visible keyboard focus indicator on elements that suppress outlines */
+.week_input_inline:focus-visible,
+.subject_label_input:focus-visible,
+.subject_label_inline_input:focus-visible,
+.setup_token_input:focus-visible,
+.feedback_textarea:focus-visible,
+.timetable_edit_btn_active:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* The modal overlay itself is focused programmatically; no ring needed */
+.token_settings_modal:focus-visible {
+    outline: none;
+}
+
+/* ── Offline banner ──────────────────────────────────────────── */
+
+.offline_banner {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-primary);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    box-shadow: var(--shadow-card);
+}
+
+.offline_banner[hidden] {
+    display: none !important;
 }

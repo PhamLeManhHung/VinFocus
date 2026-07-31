@@ -22,7 +22,6 @@ const timetableHeader = document.querySelector(".timetable_header");
 const subjectLabelEditBtn = document.getElementById("subject_label_edit_btn");
 
 const VINFOCUS_SCRIPT_VERSION = "1.7.0";
-console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
 const DEBUG = false;
 function debugLog(...args) {
   if (DEBUG) console.log("[VinFocus Debug]", ...args);
@@ -229,6 +228,12 @@ const TRANSLATIONS = {
     aboutHow6: "Switch between English and Vietnamese.",
     aboutHow7: "Toggle between dark and light themes.",
     aboutHow8: "For modules that don't have a week number, go to Week 0.",
+    aboutHow9: "Press d to toggle the Unfinished filter.",
+    aboutHow10: "Press f to toggle the Unknown filter.",
+    aboutHow11: "Use j/k or ←/→ to navigate between weeks.",
+    aboutHow12: "Press g to jump to a specific week.",
+    aboutHow13: "Click the search icon to open or close the search bar.",
+    offlineBanner: "Offline — showing cached data.",
     week: "Week",
     general: "Unassigned Modules",
     searchPlaceholder: "Search items",
@@ -291,6 +296,7 @@ const TRANSLATIONS = {
     subjectLabelsDesc: "Set custom labels for subject codes. These override the default names and persist across language changes. Leave a field empty to use the default.",
     subjectLabelsReset: "Reset",
     subjectLabelsResetConfirm: "Reset all custom labels to defaults?",
+    subjectLabelsResetDefault: "Reset to default",
     subjectLabelsSave: "Save",
     subjectLabelsCancel: "Cancel",
     subjectLabelsRename: "Rename",
@@ -298,6 +304,7 @@ const TRANSLATIONS = {
     subjectLabelsDefault: "Default",
     feedbackTitle: "Send Feedback",
     feedbackRating: "How useful has VinFocus been?",
+    feedbackStarLabel: "Rate {n} out of 5 stars",
     feedbackUsage: "What do you use it for most?",
     feedbackUsageQuizzes: "Finding quizzes, assignments and more",
     feedbackUsageTimetable: "Timetable",
@@ -439,6 +446,12 @@ const TRANSLATIONS = {
     aboutHow6: "Chuyển đổi giữa Tiếng Anh và Tiếng Việt.",
     aboutHow7: "Chuyển đổi giữa chủ đề tối và sáng.",
     aboutHow8: "Đối với các học phần chung không có số tuần, hãy chuyển đến Tuần 0.",
+    aboutHow9: "Nhấn d để bật/tắt bộ lọc Chưa Hoàn Thành.",
+    aboutHow10: "Nhấn f để bật/tắt bộ lọc Chưa rõ.",
+    aboutHow11: "Dùng j/k hoặc ←/→ để chuyển giữa các tuần.",
+    aboutHow12: "Nhấn g để nhảy đến một tuần cụ thể.",
+    aboutHow13: "Nhấn biểu tượng tìm kiếm để mở hoặc đóng thanh tìm kiếm.",
+    offlineBanner: "Ngoại tuyến — đang hiển thị dữ liệu đã lưu.",
     week: "Tuần",
     general: "Học phần chưa phân tuần",
     searchPlaceholder: "Tìm kiếm mục",
@@ -501,6 +514,7 @@ const TRANSLATIONS = {
     subjectLabelsDesc: "Đặt nhãn tùy chỉnh cho mã môn học. Các nhãn này ghi đè tên mặc định và duy trì khi chuyển ngôn ngữ. Để trống để dùng nhãn mặc định.",
     subjectLabelsReset: "Đặt Lại",
     subjectLabelsResetConfirm: "Đặt lại tất cả nhãn tùy chỉnh về mặc định?",
+    subjectLabelsResetDefault: "Đặt về mặc định",
     subjectLabelsSave: "Lưu",
     subjectLabelsCancel: "Hủy",
     subjectLabelsRename: "Đổi tên",
@@ -508,6 +522,7 @@ const TRANSLATIONS = {
     subjectLabelsDefault: "Mặc định",
     feedbackTitle: "Gửi Phản Hồi",
     feedbackRating: "VinFocus hữu ích như thế nào?",
+    feedbackStarLabel: "Đánh giá {n} trên 5 sao",
     feedbackUsage: "Bạn sử dụng VinFocus nhiều nhất để làm gì?",
     feedbackUsageQuizzes: "Tìm bài kiểm tra, bài tập và hơn thế nữa",
     feedbackUsageTimetable: "Thời khóa biểu",
@@ -810,6 +825,13 @@ async function fetchJson(url, options = {}) {
   const response = await apiFetch(url, options);
   debugLog("fetchJson: response status", response.status, "for", url);
 
+  if (response.headers.get("X-Offline") === "true") {
+    debugLog("fetchJson: offline response served from cache for", url);
+    showOfflineBanner();
+  } else {
+    hideOfflineBanner();
+  }
+
   if (!response.ok) {
     const dataText = await response.text();
     let data;
@@ -835,6 +857,39 @@ async function fetchJson(url, options = {}) {
   
   return data;
 }
+
+// ── Offline banner ─────────────────────────────────────────────
+// Shown when the service worker serves cached data with X-Offline: true.
+
+let offlineBannerShown = false;
+
+function showOfflineBanner() {
+  if (offlineBannerShown) return;
+  offlineBannerShown = true;
+
+  let banner = document.getElementById("offline_banner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "offline_banner";
+    banner.className = "offline_banner";
+    banner.setAttribute("role", "status");
+    const text = document.createElement("span");
+    text.className = "offline_banner_text";
+    text.textContent = t("offlineBanner");
+    banner.appendChild(text);
+    document.body.appendChild(banner);
+  }
+  banner.hidden = false;
+}
+
+function hideOfflineBanner() {
+  if (!offlineBannerShown) return;
+  offlineBannerShown = false;
+  const banner = document.getElementById("offline_banner");
+  if (banner) banner.hidden = true;
+}
+
+window.addEventListener("online", hideOfflineBanner);
 
 function showMessage(text) {
   itemList.innerHTML = "";
@@ -1407,7 +1462,24 @@ function openSubjectLabelEditor(subjectKey, pillElement) {
     closeSubjectLabelEditor();
   });
 
-  btnRow.append(saveBtn, cancelBtn);
+  const resetDefaultBtn = document.createElement("button");
+  resetDefaultBtn.type = "button";
+  resetDefaultBtn.className = "timetable_editor_btn";
+  resetDefaultBtn.textContent = t("subjectLabelsResetDefault");
+  resetDefaultBtn.setAttribute("aria-label", t("subjectLabelsResetDefault"));
+  resetDefaultBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setSubjectCustomization(subjectKey, "");
+    closeSubjectLabelEditor();
+    renderCoursePills();
+    renderAll();
+    // Re-enter edit mode after re-render
+    subjectLabelEditMode = true;
+    updateSubjectLabelEditBtn();
+    renderCoursePills();
+  });
+
+  btnRow.append(saveBtn, cancelBtn, resetDefaultBtn);
   popover.append(nameInput, btnRow);
 
   // Append to body and position
@@ -2624,6 +2696,16 @@ function renderAll() {
   if (aboutHow7) aboutHow7.textContent = t("aboutHow7");
   const aboutHow8 = document.getElementById("about_how_8");
   if (aboutHow8) aboutHow8.textContent = t("aboutHow8");
+  const aboutHow9 = document.getElementById("about_how_9");
+  if (aboutHow9) aboutHow9.textContent = t("aboutHow9");
+  const aboutHow10 = document.getElementById("about_how_10");
+  if (aboutHow10) aboutHow10.textContent = t("aboutHow10");
+  const aboutHow11 = document.getElementById("about_how_11");
+  if (aboutHow11) aboutHow11.textContent = t("aboutHow11");
+  const aboutHow12 = document.getElementById("about_how_12");
+  if (aboutHow12) aboutHow12.textContent = t("aboutHow12");
+  const aboutHow13 = document.getElementById("about_how_13");
+  if (aboutHow13) aboutHow13.textContent = t("aboutHow13");
   // Update footer text
   const footerMadeBy = document.getElementById("footer_made_by");
   if (footerMadeBy) footerMadeBy.textContent = t("footerMadeBy");
@@ -2785,9 +2867,13 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     weekInput.focus();
     weekInput.select();
-  } else if (event.key === "f") {
+  } else if (event.key === "d") {
     event.preventDefault();
     unfinishedOnly.checked = !unfinishedOnly.checked;
+    loadItems();
+  } else if (event.key === "f") {
+    event.preventDefault();
+    unknownOnly.checked = !unknownOnly.checked;
     loadItems();
   }
 });
@@ -2817,7 +2903,17 @@ searchInput.addEventListener("input", () => {
   }, 300);
 });
 
-document.querySelector(".icon").addEventListener("click", () => searchInput.focus());
+const searchIconBtn = document.querySelector(".icon");
+// Prevent the icon button from stealing focus on mousedown so the
+// click handler can correctly detect whether the search bar is focused.
+searchIconBtn.addEventListener("mousedown", (e) => e.preventDefault());
+searchIconBtn.addEventListener("click", () => {
+  if (document.activeElement === searchInput && searchInput.value.trim() === "") {
+    searchInput.blur();
+  } else {
+    searchInput.focus();
+  }
+});
 viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => setView(tab.dataset.view));
 });
@@ -3143,7 +3239,7 @@ function showSetupOverlay() {
   // Close settings modal if it's open to prevent overlap
   const settingsModal = document.getElementById("token_settings_modal");
   if (settingsModal) {
-    settingsModal.remove();
+    removeModal(settingsModal);
     debugLog("showSetupOverlay: removed settings modal");
   }
 
@@ -3295,6 +3391,41 @@ function updateTokenWarning() {
 
 // ── Shared modal close (X) button ─────────────────────────────
 
+// Focus is saved when a modal opens and restored when it closes so
+// keyboard users don't lose their place after dismissing a dialog.
+let modalFocusAnchor = null;
+
+function saveModalFocus() {
+  modalFocusAnchor = document.activeElement;
+}
+
+function restoreModalFocus() {
+  if (modalFocusAnchor && typeof modalFocusAnchor.focus === "function") {
+    modalFocusAnchor.focus();
+  }
+  modalFocusAnchor = null;
+}
+
+// Marks an element as an accessible modal dialog, saves the current
+// focus, and makes the dialog itself focusable so focus can move into it.
+function prepareModal(modal) {
+  saveModalFocus();
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("tabindex", "-1");
+}
+
+// Closes a modal and restores focus. #tc_modal is a static DOM element
+// that is hidden rather than removed.
+function removeModal(modal) {
+  if (modal.id === "tc_modal") {
+    modal.hidden = true;
+  } else {
+    modal.remove();
+  }
+  restoreModalFocus();
+}
+
 // Adds a top-right X close button to a modal's content element. The button
 // reuses the same styling as the setup wizard's close button for consistency.
 function addModalCloseButton(content, onClose) {
@@ -3326,12 +3457,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     const modal = document.querySelector(".token_settings_modal:not([hidden])");
     if (modal) {
-      // #tc_modal is a static DOM element that should be hidden, not removed
-      if (modal.id === "tc_modal") {
-        modal.hidden = true;
-      } else {
-        modal.remove();
-      }
+      removeModal(modal);
     }
   }
 });
@@ -3341,6 +3467,8 @@ document.addEventListener("keydown", (event) => {
 function openTermsModal() {
   const modal = document.getElementById("tc_modal");
   if (!modal) return;
+
+  saveModalFocus();
 
   // Populate content
   const titleEl = document.getElementById("tc_title");
@@ -3381,7 +3509,7 @@ function openTermsModal() {
     closeBtn.textContent = "✕";
     closeBtn.addEventListener("click", (e) => {
       e.stopPropagation(); // Prevent backdrop click
-      modal.hidden = true;
+      removeModal(modal);
     });
     header.appendChild(closeBtn);
   }
@@ -3390,13 +3518,14 @@ function openTermsModal() {
   if (!modal.hasAttribute("data-backdrop-listener")) {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
-        modal.hidden = true;
+        removeModal(modal);
       }
     });
     modal.setAttribute("data-backdrop-listener", "true");
   }
 
   modal.hidden = false;
+  setTimeout(() => modal.focus(), 0);
 }
 
 // ── Settings Menu Modal ────────────────────────────────────────
@@ -3414,6 +3543,7 @@ function openSettingsMenu() {
   const modal = document.createElement("div");
   modal.id = "settings_menu_modal";
   modal.className = "token_settings_modal";
+  prepareModal(modal);
 
   const content = document.createElement("div");
   content.className = "token_settings_content";
@@ -3436,7 +3566,7 @@ function openSettingsMenu() {
     <span class="settings_menu_label">${t("settingsApiToken")}</span>
   `;
   apiOption.addEventListener("click", () => {
-    modal.remove();
+    removeModal(modal);
     openTokenSettings();
   });
   content.appendChild(apiOption);
@@ -3454,21 +3584,22 @@ function openSettingsMenu() {
     <span class="settings_menu_label">${t("settingsFeedback")}</span>
   `;
   feedbackOption.addEventListener("click", () => {
-    modal.remove();
+    removeModal(modal);
     openFeedbackForm();
   });
   content.appendChild(feedbackOption);
 
-  addModalCloseButton(content, () => modal.remove());
+  addModalCloseButton(content, () => removeModal(modal));
 
   modal.appendChild(content);
 
   // Close on backdrop click
   modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) removeModal(modal);
   });
 
   document.body.appendChild(modal);
+  setTimeout(() => modal.focus(), 0);
 }
 
 // ── Token Management Modal ─────────────────────────────────────
@@ -3480,6 +3611,7 @@ function openTokenSettings() {
   const modal = document.createElement("div");
   modal.id = "token_settings_modal";
   modal.className = "token_settings_modal";
+  prepareModal(modal);
 
   const content = document.createElement("div");
   content.className = "token_settings_content";
@@ -3565,7 +3697,7 @@ function openTokenSettings() {
         msg.textContent = t("setupSuccess");
         msg.className = "setup_message setup_message_success";
         setTimeout(() => {
-          modal.remove();
+          removeModal(modal);
           reinitializeApp();
         }, 1000);
       } else {
@@ -3590,18 +3722,18 @@ function openTokenSettings() {
   needTokenBtn.textContent = t("setupTokenHelp");
   needTokenBtn.style.marginTop = "4px";
   needTokenBtn.addEventListener("click", () => {
-    modal.remove();
+    removeModal(modal);
     showSetupOverlay();
   });
   content.appendChild(needTokenBtn);
 
-  addModalCloseButton(content, () => modal.remove());
+  addModalCloseButton(content, () => removeModal(modal));
 
   modal.appendChild(content);
 
   // Close on backdrop click
   modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) removeModal(modal);
   });
 
   document.body.appendChild(modal);
@@ -3619,6 +3751,7 @@ function openFeedbackForm() {
   const modal = document.createElement("div");
   modal.id = "feedback_modal";
   modal.className = "token_settings_modal";
+  prepareModal(modal);
 
   const content = document.createElement("div");
   content.className = "token_settings_content feedback_form";
@@ -3638,14 +3771,18 @@ function openFeedbackForm() {
   let selectedRating = 0;
 
   for (let i = 1; i <= 5; i++) {
-    const star = document.createElement("span");
+    const star = document.createElement("button");
+    star.type = "button";
     star.className = "star";
     star.dataset.value = i;
     star.textContent = "★";
+    star.setAttribute("aria-label", t("feedbackStarLabel").replace("{n}", String(i)));
+    star.setAttribute("aria-pressed", "false");
     star.addEventListener("click", () => {
       selectedRating = i;
       starContainer.querySelectorAll(".star").forEach((s, idx) => {
         s.classList.toggle("star_filled", idx < i);
+        s.setAttribute("aria-pressed", String(idx < i));
       });
     });
     star.addEventListener("mouseenter", () => {
@@ -3798,7 +3935,7 @@ function openFeedbackForm() {
         feedbackMsg.hidden = false;
         submitBtn.textContent = t("feedbackSubmit");
         submitBtn.disabled = true;
-        setTimeout(() => modal.remove(), 2000);
+        setTimeout(() => removeModal(modal), 2000);
       } else {
         feedbackMsg.textContent = data.message || t("feedbackError");
         feedbackMsg.className = "setup_message setup_message_error";
@@ -3816,16 +3953,17 @@ function openFeedbackForm() {
   });
   content.appendChild(submitBtn);
 
-  addModalCloseButton(content, () => modal.remove());
+  addModalCloseButton(content, () => removeModal(modal));
 
   modal.appendChild(content);
 
   // Close on backdrop click
   modal.addEventListener("click", (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) removeModal(modal);
   });
 
   document.body.appendChild(modal);
+  setTimeout(() => modal.focus(), 0);
 }
 
 // ── Consent Banner ─────────────────────────────────────────────

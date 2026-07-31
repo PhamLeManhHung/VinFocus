@@ -110,6 +110,11 @@
                             <li id="about_how_6">Switch between English and Vietnamese.</li>
                             <li id="about_how_7">Toggle between dark and light themes.</li>
                             <li id="about_how_8">For general modules that don't have a week number, go to Week 0.</li>
+                            <li id="about_how_9">Press d to toggle the Unfinished filter.</li>
+                            <li id="about_how_10">Press f to toggle the Unknown filter.</li>
+                            <li id="about_how_11">Use j/k or ←/→ to navigate between weeks.</li>
+                            <li id="about_how_12">Press g to jump to a specific week.</li>
+                            <li id="about_how_13">Click the search icon to open or close the search bar.</li>
                         </ul>
                     </section>
                 </div>
@@ -280,7 +285,7 @@
         </div>
 
         <!-- Terms and Conditions Modal -->
-        <div id="tc_modal" class="token_settings_modal" hidden>
+        <div id="tc_modal" class="token_settings_modal" role="dialog" aria-modal="true" tabindex="-1" hidden>
             <div class="token_settings_content tc_content">
                 <div class="tc_header_sticky">
                     <h2 id="tc_title"></h2>
@@ -290,7 +295,7 @@
         </div>
 
         <!-- Settings Menu Modal (hidden, used as template) -->
-        <div id="settings_menu_modal" hidden>
+        <div id="settings_menu_modal" role="dialog" aria-modal="true" tabindex="-1" hidden>
             <div class="token_settings_content">
                 <h2 id="settings_title"></h2>
                 <button class="settings_menu_option" id="settings_api_option">
@@ -314,7 +319,7 @@
         </div>
 
         <!-- Token Settings Modal (hidden, used as template) -->
-        <div id="token_settings_modal" hidden>
+        <div id="token_settings_modal" role="dialog" aria-modal="true" tabindex="-1" hidden>
             <div class="token_settings_content">
                 <h2 id="token_settings_title"></h2>
                 <p class="token_settings_info" id="token_settings_info"></p>
@@ -328,7 +333,7 @@
         </div>
 
         <!-- Feedback Modal (hidden, used as template) -->
-        <div id="feedback_modal" hidden>
+        <div id="feedback_modal" role="dialog" aria-modal="true" tabindex="-1" hidden>
             <div class="token_settings_content feedback_form">
                 <h2 id="feedback_title"></h2>
                 <p class="feedback_question" id="feedback_rating_label"></p>

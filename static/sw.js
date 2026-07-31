@@ -49,7 +49,13 @@ async function networkFirstWithTimeout(request, timeoutMs = 5000) {
   } catch {
     const cached = await caches.match(request);
     if (cached) {
-      return cached;
+      const headers = new Headers(cached.headers);
+      headers.set("X-Offline", "true");
+      return new Response(cached.body, {
+        status: cached.status,
+        statusText: cached.statusText,
+        headers,
+      });
     }
     return new Response(
       JSON.stringify({ error: "You are offline. Showing cached data." }),

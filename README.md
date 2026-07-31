@@ -195,7 +195,8 @@ A service worker (`static/sw.js`) provides offline support with network-first AP
 | `j` or `←` | Previous week |
 | `k` or `→` | Next week |
 | `g` | Focus week input |
-| `f` | Toggle unfinished filter |
+| `d` | Toggle unfinished filter |
+| `f` | Toggle unknown filter |
 
 ## Security
 
