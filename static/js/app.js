@@ -21,7 +21,7 @@ const timetableNote = document.getElementById("timetable_note");
 const timetableHeader = document.querySelector(".timetable_header");
 const subjectLabelEditBtn = document.getElementById("subject_label_edit_btn");
 
-const VINFOCUS_SCRIPT_VERSION = "2.2";
+const VINFOCUS_SCRIPT_VERSION = "1.7.0";
 console.log("[VinFocus] Script loaded, version:", VINFOCUS_SCRIPT_VERSION);
 const DEBUG = false;
 function debugLog(...args) {
@@ -271,6 +271,7 @@ const TRANSLATIONS = {
     setupStep5Note: "Each token lasts up to 4 months. You'll need to repeat this process about 2-3 times per school year.",
     setupStep6Title: "Copy and Paste Your Token",
     setupStep6Desc: "Copy the generated API key and paste it into the field at the final step.",
+    setupStep6Note: "Save it somewhere safe. It can only be viewed once.",
     setupScreenshot: "Screenshot coming soon",
     tokenExpiresSoon: "Your API token will expire in {days} days.",
     tokenExpired: "Your API token has expired. Please update it.",
@@ -480,6 +481,7 @@ const TRANSLATIONS = {
     setupStep5Note: "Mỗi token có thời hạn tối đa 4 tháng. Bạn sẽ cần làm lại quy trình này khoảng 2-3 lần mỗi năm học.",
     setupStep6Title: "Sao Chép và Dán Token",
     setupStep6Desc: "Sao chép mã API được tạo và dán vào ô ở bước cuối cùng.",
+    setupStep6Note: "Hãy lưu ở nơi an toàn. Bạn chỉ có thể xem lại một lần.",
     setupScreenshot: "Ảnh chụp màn hình sẽ được cập nhật sau",
     tokenExpiresSoon: "Mã API của bạn sẽ hết hạn trong {days} ngày.",
     tokenExpired: "Mã API của bạn đã hết hạn. Vui lòng cập nhật.",
@@ -2877,7 +2879,7 @@ const SETUP_STEPS = [
   { titleKey: "setupStep3Title", descKey: "setupStep3Desc" },
   { titleKey: "setupStep4Title", descKey: "setupStep4Desc" },
   { titleKey: "setupStep5Title", descKey: "setupStep5Desc", noteKey: "setupStep5Note" },
-  { titleKey: "setupStep6Title", descKey: "setupStep6Desc" },
+  { titleKey: "setupStep6Title", descKey: "setupStep6Desc", noteKey: "setupStep6Note" },
   { titleKey: "setupSecurityTitle", descKey: "setupSecurityDesc", isSecurity: true },
 ];
 
@@ -2914,10 +2916,12 @@ function renderSetupStep(stepIndex) {
   content.appendChild(screenshot);
 
   // Description
-  const desc = document.createElement("p");
-  desc.className = "setup_step_desc";
-  desc.textContent = t(step.descKey);
-  content.appendChild(desc);
+  if (!step.isSecurity) {
+    const desc = document.createElement("p");
+    desc.className = "setup_step_desc";
+    desc.textContent = t(step.descKey);
+    content.appendChild(desc);
+  }
 
   // Optional note (for step 5 - expiry info)
   if (step.noteKey) {
@@ -3958,6 +3962,17 @@ if (languageToggle) {
 
 renderAll();
 refreshTabIndicator();
+
+// ── Service Worker Registration ────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/static/sw.js').then(() => {
+      console.log('[VinFocus] Service worker registered');
+    }).catch((err) => {
+      console.log('[VinFocus] Service worker registration failed:', err);
+    });
+  });
+}
 
 // Add swipe gesture for mobile timetable
 let touchStartX = 0;

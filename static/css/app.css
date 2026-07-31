@@ -2298,7 +2298,7 @@ body.light .setup_screenshot_placeholder {
 }
 
 .setup_step_desc {
-    margin: 0 0 8px;
+    margin: 8px 0 8px;
     font-size: 0.9rem;
     color: var(--text-secondary);
     line-height: 1.6;

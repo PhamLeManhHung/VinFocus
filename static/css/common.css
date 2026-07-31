@@ -17,3 +17,7 @@ button {
     border: none;
     outline: none;
 }
+
+* {
+    font-family: "JetBrainsMono Nerd Font" !important;
+}
