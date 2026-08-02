@@ -175,8 +175,8 @@
       faq3_a: "Yes. Your token is stored only in your browser's localStorage or sessionStorage. It is sent directly to Canvas with each request and is never logged or stored on VinFocus servers. No data is collected or shared.",
       faq4_q: "Can teachers see that I use VinFocus?",
       faq4_a: "No. VinFocus uses the same Canvas API that any student can use. It makes read-only requests that are indistinguishable from normal Canvas usage. There is no way for teachers to detect VinFocus.",
-      faq5_q: "Does it work on mobile?",
-      faq5_a: "Yes. VinFocus is fully responsive and works on mobile browsers. The interface adapts to smaller screens with touch-friendly controls and a mobile-optimized timetable view.",
+      faq5_q: "Why not use Vinschool LMS?",
+      faq5_a: "VinFocus doesn't replace Vinschool LMS. It provides a faster, more focused way to view assignments, progress, and schedules without navigating through multiple LMS pages.",
       footer_credit: "A product by Pham Le Manh Hung",
       footer_disclaimer: "VinFocus is an independent project and is not affiliated with Vinschool or Canvas LMS.",
       footer_copyright: "© 2026 VinFocus"
@@ -246,8 +246,8 @@
       faq3_a: "Có. Mã của bạn chỉ được lưu trong localStorage hoặc sessionStorage của trình duyệt, được gửi trực tiếp đến Canvas khi cần và không bao giờ lưu hay ghi lại trên máy chủ VinFocus. Không có dữ liệu nào bị thu thập hay chia sẻ.",
       faq4_q: "Giáo viên có biết tôi dùng VinFocus không?",
       faq4_a: "Không. VinFocus chỉ sử dụng API đọc dữ liệu của Canvas và không thực hiện hành động nào thay mặt bạn.",
-      faq5_q: "Trang này có dùng được trên điện thoại không?",
-      faq5_a: "Có. VinFocus hoạt động tốt trên trình duyệt di động, với giao diện tự thích ứng với màn hình nhỏ, điều khiển dễ chạm và chế độ xem thời khóa biểu tối ưu di động.",
+      faq5_q: "Tại sao không dùng LMS Vinschool?",
+      faq5_a: "VinFocus không thay thế Vinschool LMS. Đây là một cách nhanh gọn và trực quan hơn để theo dõi bài tập, tiến độ học tập và thời khóa biểu mà không cần chuyển qua nhiều trang khác nhau trên LMS.",
       footer_credit: "Một dự án của Phạm Lê Mạnh Hùng",
       footer_disclaimer: "VinFocus là dự án độc lập và không liên kết với Vinschool hay Canvas LMS.",
       footer_copyright: "© 2026 VinFocus"

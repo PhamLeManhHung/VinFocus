@@ -219,20 +219,24 @@ const TRANSLATIONS = {
     aboutWhatDesc: "VinFocus is a personal dashboard for vinschool's Canvas LMS. It organizes quizzes, assignments, files, and course modules into a cleaner, easier-to-navigate interface so students can quickly find what they need.",
     aboutWhyTitle: "Why I built it",
     aboutWhyDesc: "Vinschool LMS contains all the necessary information, but finding it often requires opening multiple pages and searching through long module lists. I built VinFocus to make course information easier to access, helping students spend less time navigating and more time studying.",
-    aboutHowTitle: "How to use it",
-    aboutHow1: "Browse your active Canvas courses.",
-    aboutHow2: "Navigate between weeks to view related modules and resources.",
-    aboutHow3: "Search across courses, modules, quizzes, assignments, and files.",
-    aboutHow4: "Filter unfinished items based on Canvas completion status.",
-    aboutHow5: "View and manage your weekly timetable.",
-    aboutHow6: "Switch between English and Vietnamese.",
-    aboutHow7: "Toggle between dark and light themes.",
-    aboutHow8: "For modules that don't have a week number, go to Week 0.",
-    aboutHow9: "Press d to toggle the Unfinished filter.",
-    aboutHow10: "Press f to toggle the Unknown filter.",
-    aboutHow11: "Use j/k or ←/→ to navigate between weeks.",
-    aboutHow12: "Press g to jump to a specific week.",
-    aboutHow13: "Click the search icon to open or close the search bar.",
+    aboutFeaturesTitle: "Features",
+    aboutFeature1: "Browse your active Canvas courses.",
+    aboutFeature2: "Navigate between weeks to view related modules and resources.",
+    aboutFeature3: "Search across courses, modules, quizzes, assignments, and files.",
+    aboutFeature4: "Filter unfinished items based on Canvas completion status.",
+    aboutFeature5: "View and manage your weekly timetable.",
+    aboutFeature6: "Switch between English and Vietnamese.",
+    aboutFeature7: "Toggle between dark and light themes.",
+    aboutFeature8: "For modules that don't have a week number, go to Week 0.",
+    aboutShortcutsTitle: "Keyboard shortcuts",
+    aboutShortcut1: "Toggle unfinished",
+    aboutShortcut2: "Toggle unknown",
+    aboutShortcut3: "Previous / next week",
+    aboutShortcut4: "Previous / next week",
+    aboutShortcut5: "Jump to week",
+    aboutThanks: "Thanks for using VinFocus.",
+    aboutTetoCaption: "This Teto plushie serves NO purpose. That's why it's cool.",
+    aboutBlessing: "$ vinfocus --good-luck\n\ngood luck this semester.\n\nhope this little project saves you\na few clicks every day.\n\n(>ω<)ﾉ - fatass teto",
     offlineBanner: "Offline — showing cached data.",
     week: "Week",
     general: "Unassigned Modules",
@@ -437,20 +441,24 @@ const TRANSLATIONS = {
     aboutWhatDesc: "VinFocus là một bảng điều khiển cá nhân cho Canvas LMS của vinschool. Nó sắp xếp các bài kiểm tra, bài tập, tệp tin và các module khóa học vào một giao diện sạch hơn, dễ điều hướng hơn, giúp học sinh nhanh chóng tìm thấy những gì cần thiết.",
     aboutWhyTitle: "Tại sao mình xây dựng nó",
     aboutWhyDesc: "Vinschool LMS chứa tất cả thông tin cần thiết, nhưng việc tìm kiếm thường đòi hỏi phải mở nhiều trang và tìm kiếm qua danh sách module dài. Mình xây dựng VinFocus để giúp việc truy cập thông tin khóa học dễ dàng hơn, giúp học sinh dành ít thời gian điều hướng hơn và nhiều thời gian học tập hơn.",
-    aboutHowTitle: "Cách sử dụng",
-    aboutHow1: "Duyệt các khóa học Canvas đang hoạt động của bạn.",
-    aboutHow2: "Điều hướng giữa các tuần để xem module và tài nguyên liên quan.",
-    aboutHow3: "Tìm kiếm qua các khóa học, module, bài kiểm tra, bài tập và tệp tin.",
-    aboutHow4: "Lọc các mục chưa hoàn thành dựa trên trạng thái hoàn thành của Canvas.",
-    aboutHow5: "Xem và quản lý thời khóa biểu hàng tuần của bạn.",
-    aboutHow6: "Chuyển đổi giữa Tiếng Anh và Tiếng Việt.",
-    aboutHow7: "Chuyển đổi giữa chủ đề tối và sáng.",
-    aboutHow8: "Đối với các học phần chung không có số tuần, hãy chuyển đến Tuần 0.",
-    aboutHow9: "Nhấn d để bật/tắt bộ lọc Chưa Hoàn Thành.",
-    aboutHow10: "Nhấn f để bật/tắt bộ lọc Chưa rõ.",
-    aboutHow11: "Dùng j/k hoặc ←/→ để chuyển giữa các tuần.",
-    aboutHow12: "Nhấn g để nhảy đến một tuần cụ thể.",
-    aboutHow13: "Nhấn biểu tượng tìm kiếm để mở hoặc đóng thanh tìm kiếm.",
+    aboutFeaturesTitle: "Tính năng",
+    aboutFeature1: "Duyệt các khóa học Canvas đang hoạt động của bạn.",
+    aboutFeature2: "Điều hướng giữa các tuần để xem module và tài nguyên liên quan.",
+    aboutFeature3: "Tìm kiếm qua các khóa học, module, bài kiểm tra, bài tập và tệp tin.",
+    aboutFeature4: "Lọc các mục chưa hoàn thành dựa trên trạng thái hoàn thành của Canvas.",
+    aboutFeature5: "Xem và quản lý thời khóa biểu hàng tuần của bạn.",
+    aboutFeature6: "Chuyển đổi giữa Tiếng Anh và Tiếng Việt.",
+    aboutFeature7: "Chuyển đổi giữa chủ đề tối và sáng.",
+    aboutFeature8: "Đối với các học phần chung không có số tuần, hãy chuyển đến Tuần 0.",
+    aboutShortcutsTitle: "Phím tắt",
+    aboutShortcut1: "Bật/tắt Chưa Hoàn Thành",
+    aboutShortcut2: "Bật/tắt Chưa rõ",
+    aboutShortcut3: "Tuần trước / tiếp theo",
+    aboutShortcut4: "Tuần trước / tiếp theo",
+    aboutShortcut5: "Nhảy đến tuần",
+    aboutThanks: "Cảm ơn bạn đã sử dụng VinFocus.",
+    aboutTetoCaption: "Teto này chẳng có tác dụng gì cả. Đó là lý do tại sao nó lại ngầu.",
+    aboutBlessing: "$ vinfocus --good-luck\n\nchúc bạn may mắn trong học kỳ này.\n\nhy vọng dự án nhỏ này giúp bạn\ntiết kiệm vài cú click mỗi ngày.\n\n(>ω<)ﾉ - fatass teto",
     offlineBanner: "Ngoại tuyến — đang hiển thị dữ liệu đã lưu.",
     week: "Tuần",
     general: "Học phần chưa phân tuần",
@@ -761,6 +769,8 @@ function clearApiCache() {
 // ── Overview state ─────────────────────────────────────────────
 let overviewData = null;
 let courseProgress = new Map(); // course_id -> { done, total }
+// Load persisted course progress so bars survive refresh
+loadCourseProgress();
 
 function courseSubjectKey(course) {
   const parts = (course.course_code || "").split("-");
@@ -1021,9 +1031,44 @@ function getEffectiveCompletion(item) {
   return item.completed;
 }
 
+function saveCourseProgress() {
+  try {
+    const obj = {};
+    courseProgress.forEach((v, k) => { obj[k] = v; });
+    storageSet("course_progress", JSON.stringify(obj));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function loadCourseProgress() {
+  try {
+    const stored = storageGet("course_progress");
+    if (stored) {
+      const obj = JSON.parse(stored);
+      Object.entries(obj).forEach(([k, v]) => {
+        if (v && Number.isFinite(v.done) && Number.isFinite(v.total)) {
+          courseProgress.set(Number(k), { done: v.done, total: v.total });
+        }
+      });
+    }
+  } catch {
+    // ignore parse errors
+  }
+}
+
 function refreshOverviewFromState() {
   if (!overviewData) return;
-  renderOverview(applyManualCompletionsToOverview(overviewData));
+  const adjusted = applyManualCompletionsToOverview(overviewData);
+  if (adjusted && adjusted.totals) {
+    courseProgress.set(selectedCourseId, {
+      done: adjusted.totals.done || 0,
+      total: adjusted.totals.total || 0,
+    });
+    saveCourseProgress();
+    renderCoursePills();
+  }
+  renderOverview(adjusted);
 }
 
 function clearOverviewLoadingMessageTimer() {
@@ -2388,12 +2433,17 @@ async function loadOverview() {
 
     overviewData = normalizeOverviewData(data);
 
-    // Store course progress for progress bars
-    if (overviewData && overviewData.totals) {
+    // Apply manual completions before computing progress for bars
+    const adjusted = applyManualCompletionsToOverview(overviewData);
+
+    // Store course progress for progress bars (use adjusted totals so manual
+    // completions are reflected in the bar, matching the semester progress)
+    if (adjusted && adjusted.totals) {
       courseProgress.set(selectedCourseId, {
-        done: overviewData.totals.done || 0,
-        total: overviewData.totals.total || 0,
+        done: adjusted.totals.done || 0,
+        total: adjusted.totals.total || 0,
       });
+      saveCourseProgress();
       renderCoursePills();
     }
 
@@ -2403,8 +2453,6 @@ async function loadOverview() {
       spinner.classList.remove("overview_spinner_visible");
     }
     
-    // Apply manual completions before rendering
-    const adjusted = applyManualCompletionsToOverview(overviewData);
     renderOverview(adjusted);
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -2678,34 +2726,44 @@ function renderAll() {
   if (aboutWhyTitle) aboutWhyTitle.textContent = t("aboutWhyTitle");
   const aboutWhyDesc = document.getElementById("about_why_desc");
   if (aboutWhyDesc) aboutWhyDesc.textContent = t("aboutWhyDesc");
-  const aboutHowTitle = document.getElementById("about_how_title");
-  if (aboutHowTitle) aboutHowTitle.textContent = t("aboutHowTitle");
-  const aboutHow1 = document.getElementById("about_how_1");
-  if (aboutHow1) aboutHow1.textContent = t("aboutHow1");
-  const aboutHow2 = document.getElementById("about_how_2");
-  if (aboutHow2) aboutHow2.textContent = t("aboutHow2");
-  const aboutHow3 = document.getElementById("about_how_3");
-  if (aboutHow3) aboutHow3.textContent = t("aboutHow3");
-  const aboutHow4 = document.getElementById("about_how_4");
-  if (aboutHow4) aboutHow4.textContent = t("aboutHow4");
-  const aboutHow5 = document.getElementById("about_how_5");
-  if (aboutHow5) aboutHow5.textContent = t("aboutHow5");
-  const aboutHow6 = document.getElementById("about_how_6");
-  if (aboutHow6) aboutHow6.textContent = t("aboutHow6");
-  const aboutHow7 = document.getElementById("about_how_7");
-  if (aboutHow7) aboutHow7.textContent = t("aboutHow7");
-  const aboutHow8 = document.getElementById("about_how_8");
-  if (aboutHow8) aboutHow8.textContent = t("aboutHow8");
-  const aboutHow9 = document.getElementById("about_how_9");
-  if (aboutHow9) aboutHow9.textContent = t("aboutHow9");
-  const aboutHow10 = document.getElementById("about_how_10");
-  if (aboutHow10) aboutHow10.textContent = t("aboutHow10");
-  const aboutHow11 = document.getElementById("about_how_11");
-  if (aboutHow11) aboutHow11.textContent = t("aboutHow11");
-  const aboutHow12 = document.getElementById("about_how_12");
-  if (aboutHow12) aboutHow12.textContent = t("aboutHow12");
-  const aboutHow13 = document.getElementById("about_how_13");
-  if (aboutHow13) aboutHow13.textContent = t("aboutHow13");
+  const aboutFeaturesTitle = document.getElementById("about_features_title");
+  if (aboutFeaturesTitle) aboutFeaturesTitle.textContent = t("aboutFeaturesTitle");
+  const aboutFeature1 = document.getElementById("about_feature_1");
+  if (aboutFeature1) aboutFeature1.textContent = t("aboutFeature1");
+  const aboutFeature2 = document.getElementById("about_feature_2");
+  if (aboutFeature2) aboutFeature2.textContent = t("aboutFeature2");
+  const aboutFeature3 = document.getElementById("about_feature_3");
+  if (aboutFeature3) aboutFeature3.textContent = t("aboutFeature3");
+  const aboutFeature4 = document.getElementById("about_feature_4");
+  if (aboutFeature4) aboutFeature4.textContent = t("aboutFeature4");
+  const aboutFeature5 = document.getElementById("about_feature_5");
+  if (aboutFeature5) aboutFeature5.textContent = t("aboutFeature5");
+  const aboutFeature6 = document.getElementById("about_feature_6");
+  if (aboutFeature6) aboutFeature6.textContent = t("aboutFeature6");
+  const aboutFeature7 = document.getElementById("about_feature_7");
+  if (aboutFeature7) aboutFeature7.textContent = t("aboutFeature7");
+  const aboutFeature8 = document.getElementById("about_feature_8");
+  if (aboutFeature8) aboutFeature8.textContent = t("aboutFeature8");
+  const aboutShortcutsTitle = document.getElementById("about_shortcuts_title");
+  if (aboutShortcutsTitle) aboutShortcutsTitle.textContent = t("aboutShortcutsTitle");
+  const aboutShortcut1 = document.getElementById("about_shortcut_1");
+  if (aboutShortcut1) aboutShortcut1.textContent = t("aboutShortcut1");
+  const aboutShortcut2 = document.getElementById("about_shortcut_2");
+  if (aboutShortcut2) aboutShortcut2.textContent = t("aboutShortcut2");
+  const aboutShortcut3 = document.getElementById("about_shortcut_3");
+  if (aboutShortcut3) aboutShortcut3.textContent = t("aboutShortcut3");
+  const aboutShortcut4 = document.getElementById("about_shortcut_4");
+  if (aboutShortcut4) aboutShortcut4.textContent = t("aboutShortcut4");
+  const aboutShortcut5 = document.getElementById("about_shortcut_5");
+  if (aboutShortcut5) aboutShortcut5.textContent = t("aboutShortcut5");
+  const aboutThanks = document.getElementById("about_thanks");
+  if (aboutThanks) aboutThanks.textContent = t("aboutThanks");
+  const aboutTetoCaption = document.getElementById("about_teto_caption");
+  if (aboutTetoCaption) aboutTetoCaption.textContent = t("aboutTetoCaption");
+  const aboutBlessing = document.getElementById("about_blessing");
+  if (aboutBlessing) aboutBlessing.textContent = t("aboutBlessing");
+  const aboutTetoCaptionPill = document.getElementById("about_teto_caption_pill");
+  if (aboutTetoCaptionPill) aboutTetoCaptionPill.textContent = t("aboutTetoCaption");
   // Update footer text
   const footerMadeBy = document.getElementById("footer_made_by");
   if (footerMadeBy) footerMadeBy.textContent = t("footerMadeBy");
@@ -2870,16 +2928,24 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "d") {
     event.preventDefault();
     unfinishedOnly.checked = !unfinishedOnly.checked;
+    if (unfinishedOnly.checked) unknownOnly.checked = false;
     loadItems();
   } else if (event.key === "f") {
     event.preventDefault();
     unknownOnly.checked = !unknownOnly.checked;
+    if (unknownOnly.checked) unfinishedOnly.checked = false;
     loadItems();
   }
 });
 
-unfinishedOnly.addEventListener("click", loadItems);
-unknownOnly.addEventListener("click", loadItems);
+unfinishedOnly.addEventListener("click", () => {
+  if (unfinishedOnly.checked) unknownOnly.checked = false;
+  loadItems();
+});
+unknownOnly.addEventListener("click", () => {
+  if (unknownOnly.checked) unfinishedOnly.checked = false;
+  loadItems();
+});
 
 // Search input management
 function updateSearchWrapperClass() {

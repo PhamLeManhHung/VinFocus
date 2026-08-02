@@ -45,11 +45,21 @@ VinFocus is not designed to tell students what they should do each day. Instead,
 
 Students decide what to work on. VinFocus simply makes the information easier to find.
 
-## Why Not Just Use LMS Canvass?
+## Why Not Just Use Vinschool LMS?
 
 Canvas contains all the information students need, but navigating between courses, modules, assignments, quizzes, and files often requires many clicks.
 
 VinFocus doesn't replace Canvas. It reorganizes the same information into a faster, searchable interface.
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `j` or `←` | Previous week |
+| `k` or `→` | Next week |
+| `g` | Focus week input |
+| `d` | Toggle unfinished filter |
+| `f` | Toggle unknown filter |
 
 ## Features
 
@@ -188,16 +198,6 @@ The frontend loads courses, lets you pick a course and week, and renders items g
 
 A service worker (`static/sw.js`) provides offline support with network-first API calls and cache-first static assets.
 
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `j` or `←` | Previous week |
-| `k` or `→` | Next week |
-| `g` | Focus week input |
-| `d` | Toggle unfinished filter |
-| `f` | Toggle unknown filter |
-
 ## Security
 
 - Tokens are stored only in browser localStorage (or sessionStorage if consent is declined)
@@ -334,6 +334,8 @@ curl -H "X-Admin-Key: your-secret-key-here" http://127.0.0.1:5000/api/feedback
 
 - Automatic timetable import from VSC Timetable (will implement when school starts)
 - Cross-course global search
+- Resource page
+- Split view mode (Experimental)
 
 ## Notes
 
