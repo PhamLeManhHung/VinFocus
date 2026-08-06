@@ -80,6 +80,7 @@
             <nav class="app_nav" aria-label="App views">
                 <button type="button" class="view_tab view_tab_active" data-view="work">Work</button>
                 <button type="button" class="view_tab" data-view="timetable">Timetable</button>
+                <button type="button" class="view_tab" data-view="resource">Resource</button>
                 <button type="button" class="view_tab" data-view="about">About</button>
             </nav>
         </div>
@@ -359,9 +360,17 @@
                     <button type="button" class="timetable_view_toggle_btn" data-view="week">Full Week</button>
                 </div>
 
+                <div id="timetable_indicators" class="indicator_container"></div>
+
                 <div id="timetable_grid" class="timetable_grid" aria-label="Weekly timetable"></div>
                 <div id="timetable_mobile" class="timetable_mobile" aria-label="Weekly timetable by day"></div>
             </div>
+            </main>
+
+            <main id="resource_view" class="app_view">
+                <div class="card resource_wip_container">
+                    <h1 class="resource_wip_text">WIP</h1>
+                </div>
             </main>
         </div>
 

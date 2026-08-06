@@ -45,19 +45,105 @@
     --grid-size: 24px;
 }
 
-.slot_cell_current {
-    background: var(--accent);
-    box-shadow: inset 0 0 0 2px var(--accent);
+.slot_cell.slot_cell_current {
+    background: rgba(30, 79, 160, 0.35);
 }
 
-.slot_cell_next {
-    background: rgba(0, 173, 181, 0.3);
-    box-shadow: inset 0 0 0 2px var(--accent);
+.slot_cell.slot_cell_next {
+    background: rgba(0, 173, 181, 0.25);
 }
 
-.slot_cell_current .slot_subject,
-.slot_cell_next .slot_subject {
+.slot_cell.slot_cell_current .slot_subject,
+.slot_cell.slot_cell_next .slot_subject {
     font-weight: 800;
+}
+
+/* ── Timetable Indicators (Current / Next) ───────────────────── */
+
+.indicator_container {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.indicator_card {
+    flex: 1;
+    background: var(--bg-card-secondary);
+    border: 1px solid var(--border-schedule-item);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow-card);
+}
+
+.indicator_card_current {
+    border-left: 4px solid var(--accent);
+}
+
+.indicator_card_next {
+    opacity: 0.85;
+}
+
+.indicator_card_idle {
+    border-left: 4px solid var(--text-muted);
+}
+
+.indicator_card_idle .indicator_tag {
+    color: var(--text-muted);
+}
+
+.indicator_card_idle .indicator_dot {
+    background: var(--text-muted);
+    animation: none;
+}
+
+.indicator_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.indicator_tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.indicator_card_current .indicator_tag {
+    color: var(--text-status-done);
+}
+
+.indicator_dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-status-done);
+    animation: indicator-pulse 1.6s infinite;
+}
+
+@keyframes indicator-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.indicator_title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.indicator_meta {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
 body.light {
@@ -226,6 +312,29 @@ body::before {
     top: 0;
     outline: 2px solid var(--text-accent);
     outline-offset: 2px;
+}
+
+/* ── Resource WIP ─────────────────────────────────────────── */
+
+.resource_wip_container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px 20px;
+    max-width: 1200px;
+    width: 100%
+}
+
+.resource_wip_text {
+    font-size: clamp(4rem, 12vw, 9rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--text-muted-strong);
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1;
+    user-select: none;
 }
 
 /* ── Top-right Toolbar ────────────────────────────────────── */
@@ -1818,6 +1927,19 @@ body.light .edit_icon {
     gap: 12px;
     padding: 12px 0;
     border-bottom: 1px solid var(--border-secondary);
+}
+
+.mobile_slot.slot_cell_current {
+    background: rgba(30, 79, 160, 0.35);
+}
+
+.mobile_slot.slot_cell_next {
+    background: rgba(0, 173, 181, 0.25);
+}
+
+.mobile_slot.slot_cell_current .slot_subject,
+.mobile_slot.slot_cell_next .slot_subject {
+    font-weight: 800;
 }
 
 .mobile_time {

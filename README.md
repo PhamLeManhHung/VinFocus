@@ -335,6 +335,7 @@ curl -H "X-Admin-Key: your-secret-key-here" http://127.0.0.1:5000/api/feedback
 - Automatic timetable import from VSC Timetable (will implement when school starts)
 - Cross-course global search
 - Resource page
+- Redesign Settings' UI
 - Split view mode (Experimental)
 
 ## Notes

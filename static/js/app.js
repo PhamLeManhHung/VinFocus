@@ -11,6 +11,7 @@ const viewTabs = document.querySelectorAll(".view_tab");
 const themeToggle = document.getElementById("theme_toggle");
 const workView = document.getElementById("work_view");
 const timetableView = document.getElementById("timetable_view");
+const resourceView = document.getElementById("resource_view");
 const aboutView = document.getElementById("about_view");
 const timetableGrid = document.getElementById("timetable_grid");
 const timetableMobile = document.getElementById("timetable_mobile");
@@ -21,7 +22,7 @@ const timetableNote = document.getElementById("timetable_note");
 const timetableHeader = document.querySelector(".timetable_header");
 const subjectLabelEditBtn = document.getElementById("subject_label_edit_btn");
 
-const VINFOCUS_SCRIPT_VERSION = "1.7.0";
+const VINFOCUS_SCRIPT_VERSION = "1.7.5";
 const DEBUG = false;
 function debugLog(...args) {
   if (DEBUG) console.log("[VinFocus Debug]", ...args);
@@ -127,9 +128,6 @@ function setLanguage(lang) {
     languageToggle.textContent = lang === "vi" ? "VN" : "EN";
   }
   renderAll();
-  requestAnimationFrame(() => {
-    refreshTabIndicator();
-  });
 }
 
 function t(key) {
@@ -216,7 +214,7 @@ const TRANSLATIONS = {
     about: "About",
     aboutTitle: "About VinFocus",
     aboutWhatTitle: "What is VinFocus?",
-    aboutWhatDesc: "VinFocus is a personal dashboard for vinschool's Canvas LMS. It organizes quizzes, assignments, files, and course modules into a cleaner, easier-to-navigate interface so students can quickly find what they need.",
+    aboutWhatDesc: "VinFocus is a personal dashboard for Vinschool's Canvas LMS. It organizes quizzes, assignments, files, and course modules into a cleaner, easier-to-navigate interface so students can quickly find what they need.",
     aboutWhyTitle: "Why I built it",
     aboutWhyDesc: "Vinschool LMS contains all the necessary information, but finding it often requires opening multiple pages and searching through long module lists. I built VinFocus to make course information easier to access, helping students spend less time navigating and more time studying.",
     aboutFeaturesTitle: "Features",
@@ -235,7 +233,7 @@ const TRANSLATIONS = {
     aboutShortcut4: "Previous / next week",
     aboutShortcut5: "Jump to week",
     aboutThanks: "Thanks for using VinFocus.",
-    aboutTetoCaption: "This Teto plushie serves NO purpose. That's why it's cool.",
+    aboutTetoCaption: "almost any website will eventually have a mysterious mascot. this one's ours.",
     aboutBlessing: "$ vinfocus --good-luck\n\ngood luck this semester.\n\nhope this little project saves you\na few clicks every day.\n\n(>ω<)ﾉ - fatass teto",
     offlineBanner: "Offline — showing cached data.",
     week: "Week",
@@ -249,6 +247,12 @@ const TRANSLATIONS = {
     items: "items",
     noClassesAdded: "No classes added yet.",
     weekendNoClasses: "No classes, it's the weekend.",
+    indicatorCurrent: "Current",
+    indicatorNext: "Next",
+    passingPeriod: "Passing Period",
+    breaktime: "Breaktime",
+    lunchBreak: "Lunch Break",
+    notInClass: "End of the school day",
     setupTitle: "Welcome to VinFocus",
     setupSubtitle: "Set up your Canvas API token to get started.",
     setupStep: "Step",
@@ -457,7 +461,7 @@ const TRANSLATIONS = {
     aboutShortcut4: "Tuần trước / tiếp theo",
     aboutShortcut5: "Nhảy đến tuần",
     aboutThanks: "Cảm ơn bạn đã sử dụng VinFocus.",
-    aboutTetoCaption: "Teto này chẳng có tác dụng gì cả. Đó là lý do tại sao nó lại ngầu.",
+    aboutTetoCaption: "bạn đã cuộn đến cuối trang. tuy nhiên, con Teto này đã ở đây từ trước, dù hình dạng của nó trông như vừa thua một trận với định luật vật lý.",
     aboutBlessing: "$ vinfocus --good-luck\n\nchúc bạn may mắn trong học kỳ này.\n\nhy vọng dự án nhỏ này giúp bạn\ntiết kiệm vài cú click mỗi ngày.\n\n(>ω<)ﾉ - fatass teto",
     offlineBanner: "Ngoại tuyến — đang hiển thị dữ liệu đã lưu.",
     week: "Tuần",
@@ -471,6 +475,12 @@ const TRANSLATIONS = {
     items: "bài",
     noClassesAdded: "Chưa có lớp học nào được thêm.",
     weekendNoClasses: "Không có tiết học nào, hôm nay là cuối tuần.",
+    indicatorCurrent: "Hiện tại",
+    indicatorNext: "Tiết tiếp",
+    passingPeriod: "Giờ Ra Chơi",
+    breaktime: "Giờ Ra Chơi",
+    lunchBreak: "Nghỉ Trưa",
+    notInClass: "Kết thúc ngày học",
     setupTitle: "Chào mừng đến với VinFocus",
     setupSubtitle: "Thiết lập mã API Canvas để bắt đầu.",
     setupStep: "Bước",
@@ -1611,11 +1621,20 @@ function updateWeekNav() {
   }
 }
 
-function weekApiPath(courseId, week) {
+function weekApiPath(courseId, week, bustCache = false) {
   let suffix = "";
   if (unfinishedOnly.checked) suffix = "/unfinished";
-  return `/api/courses/${courseId}/week/${week}${suffix}`;
+  const url = `/api/courses/${courseId}/week/${week}${suffix}`;
+  if (bustCache) {
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}_t=${Date.now()}`;
+  }
+  return url;
 }
+
+// Track whether the initial page load has completed.
+// Used to ensure cache-busting only happens on actual reloads, not week navigation.
+let _initialLoadBustCache = true;
 
 function updateHubTitle() {
   const course = courses.find((entry) => entry.id === selectedCourseId);
@@ -1648,6 +1667,10 @@ async function loadCourses() {
     return;
   }
 
+  // Initial course load: bust cache to ensure fresh completion data from Canvas
+  const bustCache = _initialLoadBustCache;
+  _initialLoadBustCache = false;
+
   showSkeletonPills();
   showSkeletonLoading();
 
@@ -1672,8 +1695,8 @@ async function loadCourses() {
     
     // Run items and overview in parallel since they are independent
     await Promise.all([
-      loadItems(),
-      loadOverview(),
+      loadItems(bustCache),
+      loadOverview(bustCache),
     ]);
   } catch (error) {
     showErrorMessage(error.message, () => loadCourses());
@@ -1681,6 +1704,7 @@ async function loadCourses() {
 }
 
 async function loadWeeks() {
+  // Weeks list itself is small and rarely changes; no cache-bust needed.
   if (!selectedCourseId) {
     return;
   }
@@ -1702,7 +1726,7 @@ async function loadWeeks() {
   updateWeekNav();
 }
 
-async function loadItems() {
+async function loadItems(bustCache = false) {
   if (!selectedCourseId || (currentWeek !== 0 && !currentWeek)) {
     return;
   }
@@ -1738,12 +1762,11 @@ async function loadItems() {
   }, 10000);
 
   try {
-    const data = await fetchJson(weekApiPath(selectedCourseId, currentWeek), {
+    const data = await fetchJson(weekApiPath(selectedCourseId, currentWeek, bustCache), {
       signal: currentRequestController.signal
     });
     clearTimeout(loadItemsTimeout);
     items = data.items;
-    itemCache.set(cacheKey, items);
     updateHubTitle();
     updateWeekNav();
     renderItems();
@@ -1859,18 +1882,11 @@ function nextPeriodKey() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   
-  let foundCurrent = false;
-  
   for (const period of TIMETABLE_PERIODS) {
-    if (foundCurrent) {
-      return period.key;
-    }
-    
+    if (period.type !== "class") continue;
     const startTotal = timeToMinutes(period.start);
-    const endTotal = timeToMinutes(period.end);
-    
-    if (currentMinutes >= startTotal && currentMinutes < endTotal) {
-      foundCurrent = true;
+    if (currentMinutes < startTotal) {
+      return period.key;
     }
   }
 
@@ -1916,6 +1932,121 @@ function createSlotContent(period, entry) {
 
   fragment.append(subject, meta);
   return fragment;
+}
+
+function renderTimetableIndicators() {
+  const container = document.getElementById("timetable_indicators");
+  if (!container) return;
+
+  const todayKey = todayDayKey();
+  const currentPeriod = currentPeriodKey();
+  const nextPeriod = nextPeriodKey();
+  container.replaceChildren();
+
+  if (!todayKey) return;
+
+  const currentEntry = currentPeriod ? timetableEntryFor(todayKey, currentPeriod) : null;
+  const nextEntry = nextPeriod ? timetableEntryFor(todayKey, nextPeriod) : null;
+
+  const currentPeriodObj = TIMETABLE_PERIODS.find(p => p.key === currentPeriod);
+  const nextPeriodObj = TIMETABLE_PERIODS.find(p => p.key === nextPeriod);
+
+  // Determine current label and whether we're in an active class
+  let currentLabel = "";
+  let isActiveClass = false;
+
+  if (currentPeriodObj) {
+    if (currentPeriodObj.type === "class") {
+      if (currentEntry?.subject) {
+        currentLabel = getSubjectLabel(currentEntry.subject);
+        isActiveClass = true;
+      } else {
+        currentLabel = t("free");
+        isActiveClass = false;
+      }
+    } else if (currentPeriodObj.type === "break") {
+      const duration = timeToMinutes(currentPeriodObj.end) - timeToMinutes(currentPeriodObj.start);
+      if (currentPeriodObj.key === "lunch") {
+        currentLabel = t("lunchBreak");
+      } else if (duration <= 5) {
+        currentLabel = t("passingPeriod");
+      } else {
+        currentLabel = t("breaktime");
+      }
+      isActiveClass = false;
+    }
+  } else {
+    currentLabel = t("notInClass");
+    isActiveClass = false;
+  }
+
+  const nextLabel = nextEntry?.subject
+    ? getSubjectLabel(nextEntry.subject)
+    : nextPeriod
+      ? t("free")
+      : null;
+
+  const currentTimeStr = currentPeriodObj ? `${currentPeriodObj.start} – ${currentPeriodObj.end}` : "";
+  const nextTimeStr = nextPeriodObj ? `${nextPeriodObj.start} – ${nextPeriodObj.end}` : "";
+
+  // Current card
+  const currentCard = document.createElement("div");
+  currentCard.className = "indicator_card";
+  if (isActiveClass) {
+    currentCard.classList.add("indicator_card_current");
+  } else {
+    currentCard.classList.add("indicator_card_idle");
+  }
+
+  const currentHeader = document.createElement("div");
+  currentHeader.className = "indicator_header";
+
+  const currentTag = document.createElement("span");
+  currentTag.className = "indicator_tag";
+  if (isActiveClass) {
+    currentTag.innerHTML = `<span class="indicator_dot" aria-hidden="true"></span>${t("indicatorCurrent")}`;
+  } else {
+    currentTag.textContent = t("indicatorCurrent");
+  }
+
+  const currentTitle = document.createElement("p");
+  currentTitle.className = "indicator_title";
+  currentTitle.textContent = currentLabel;
+
+  const currentMeta = document.createElement("p");
+  currentMeta.className = "indicator_meta";
+  currentMeta.textContent = currentTimeStr;
+
+  currentCard.append(currentHeader, currentTitle, currentMeta);
+  currentHeader.appendChild(currentTag);
+
+  container.appendChild(currentCard);
+
+  // Next card
+  if (nextLabel) {
+    const nextCard = document.createElement("div");
+    nextCard.className = "indicator_card indicator_card_next";
+
+    const nextHeader = document.createElement("div");
+    nextHeader.className = "indicator_header";
+
+    const nextTag = document.createElement("span");
+    nextTag.className = "indicator_tag";
+    nextTag.textContent = t("indicatorNext");
+
+    const nextTitle = document.createElement("p");
+    nextTitle.className = "indicator_title";
+    nextTitle.textContent = nextLabel;
+
+    const nextMeta = document.createElement("p");
+    nextMeta.className = "indicator_meta";
+    nextMeta.textContent = nextTimeStr;
+
+    nextCard.append(nextHeader, nextTitle, nextMeta);
+    nextHeader.appendChild(nextTag);
+
+    container.appendChild(nextCard);
+  }
 }
 
 function renderTimetableGrid() {
@@ -2030,6 +2161,7 @@ function handleSlotKeydown(event) {
 
 function renderTimetableMobile() {
   const todayKey = todayDayKey();
+  const currentPeriod = currentPeriodKey();
   const nextPeriod = nextPeriodKey();
   
   // Check if it's a weekend (Saturday=6, Sunday=0) and "Today" view is active
@@ -2090,7 +2222,9 @@ function renderTimetableMobile() {
       time.textContent = `${t(period.labelKey)}\n${period.start}-\n${period.end}`;
 
       const content = document.createElement("div");
-      if (day.key === todayKey && period.key === nextPeriod) {
+      if (day.key === todayKey && period.key === currentPeriod) {
+        slot.classList.add("slot_cell_current");
+      } else if (day.key === todayKey && period.key === nextPeriod) {
         slot.classList.add("slot_cell_next");
       }
       content.append(createSlotContent(period, entry));
@@ -2113,7 +2247,41 @@ function renderTimetableMobile() {
   timetableMobile.replaceChildren(...daySections);
 }
 
+let _lastIndicatorState = null;
+let _lastTimetableTick = 0;
+
+function isWithinSchoolHours() {
+  const now = new Date();
+  const day = now.getDay();
+  // Weekday only: Monday(1) – Friday(5)
+  if (day === 0 || day === 6) return false;
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const start = timeToMinutes("07:40am");
+  const end = timeToMinutes("03:30pm");
+  return minutes >= start && minutes < end;
+}
+
+function timetableClockLoop(timestamp) {
+  if (timestamp - _lastTimetableTick >= 15000) {
+    _lastTimetableTick = timestamp;
+    if (isWithinSchoolHours()) {
+      renderTimetable();
+    }
+  }
+  requestAnimationFrame(timetableClockLoop);
+}
+
 function renderTimetable() {
+  const todayKey = todayDayKey();
+  const currentPeriod = currentPeriodKey();
+  const nextPeriod = nextPeriodKey();
+  const stateKey = `${todayKey}|${currentPeriod}|${nextPeriod}`;
+
+  // Skip re-render if nothing changed (avoids flicker on the 15s tick)
+  if (_lastIndicatorState === stateKey) return;
+  _lastIndicatorState = stateKey;
+
+  renderTimetableIndicators();
   renderTimetableGrid();
   renderTimetableMobile();
 }
@@ -2404,13 +2572,9 @@ function applyManualCompletionsToOverview(overviewData) {
   return adjusted;
 }
 
-async function loadOverview() {
+async function loadOverview(bustCache = false) {
   if (!selectedCourseId) return;
 
-  // New sidebar doesn't need a container element for API calls
-  // Just proceed with fetching data and rendering to new components
-  const spinner = document.getElementById("overview_spinner");
-  
   // Cancel any previous overview request to prevent race conditions
   if (currentOverviewController) {
     currentOverviewController.abort();
@@ -2429,7 +2593,10 @@ async function loadOverview() {
 
   try {
     // Use the dedicated overview endpoint for a single efficient call
-    const data = await fetchJson(`/api/courses/${selectedCourseId}/overview`, { signal });
+    // Cache-bust on initial load to ensure fresh completion data from Canvas
+    const overviewUrl = `/api/courses/${selectedCourseId}/overview`;
+    const cacheBustParam = bustCache ? `?_t=${Date.now()}` : "";
+    const data = await fetchJson(`${overviewUrl}${cacheBustParam}`, { signal });
 
     overviewData = normalizeOverviewData(data);
 
@@ -2447,20 +2614,14 @@ async function loadOverview() {
       renderCoursePills();
     }
 
-    // Stop loading messages and hide spinner
+    // Stop loading messages
     clearOverviewLoadingMessageTimer();
-    if (spinner) {
-      spinner.classList.remove("overview_spinner_visible");
-    }
     
     renderOverview(adjusted);
   } catch (error) {
     if (error.name === 'AbortError') return;
     // Stop loading messages on error
     clearOverviewLoadingMessageTimer();
-    if (spinner) {
-      spinner.classList.remove("overview_spinner_visible");
-    }
     // The loading message will be replaced on retry
   } finally {
     currentOverviewController = null;
@@ -2669,14 +2830,6 @@ function updateWeekOverview(data) {
   }
 }
 
-function updateDonutChart(done, total) {
-  // Deprecated: donut chart replaced by semester progress bar
-  const donutFill = document.querySelector(".donut-fill");
-  const donutCount = document.getElementById("donut_count");
-  if (donutFill) donutFill.style.strokeDasharray = "0 251.2";
-  if (donutCount) donutCount.textContent = "-";
-}
-
 function renderWorkView() {
   renderCoursePills();
   renderItems();
@@ -2762,8 +2915,6 @@ function renderAll() {
   if (aboutTetoCaption) aboutTetoCaption.textContent = t("aboutTetoCaption");
   const aboutBlessing = document.getElementById("about_blessing");
   if (aboutBlessing) aboutBlessing.textContent = t("aboutBlessing");
-  const aboutTetoCaptionPill = document.getElementById("about_teto_caption_pill");
-  if (aboutTetoCaptionPill) aboutTetoCaptionPill.textContent = t("aboutTetoCaption");
   // Update footer text
   const footerMadeBy = document.getElementById("footer_made_by");
   if (footerMadeBy) footerMadeBy.textContent = t("footerMadeBy");
@@ -2773,16 +2924,8 @@ function renderAll() {
   if (footerCopyright) footerCopyright.textContent = t("footerCopyright");
 }
 
-function updateTabIndicator(viewName) {
-  // Notebook tab style uses CSS border-bottom, no JS indicator needed
-}
-
-function refreshTabIndicator() {
-  // Notebook tab style uses CSS border-bottom, no JS indicator needed
-}
-
 function setView(viewName) {
-  const nextView = viewName === "timetable" ? "timetable" : viewName === "about" ? "about" : "work";
+  const nextView = viewName === "timetable" ? "timetable" : viewName === "about" ? "about" : viewName === "resource" ? "resource" : "work";
   storageSet("selectedView", nextView);
 
   const currentView = document.querySelector(".app_view_active");
@@ -2798,11 +2941,10 @@ function setView(viewName) {
         loadOverview(),
       ]).catch((error) => showMessage(error.message));
     }
-    refreshTabIndicator();
     return;
   }
 
-  // Update tabs and indicator
+  // Update tabs
   for (const tab of viewTabs) {
     const isActive = tab.dataset.view === nextView;
     tab.classList.toggle("view_tab_active", isActive);
@@ -2810,7 +2952,7 @@ function setView(viewName) {
   }
 
   // Get the next view element and the container
-  const nextViewEl = nextView === "work" ? workView : nextView === "timetable" ? timetableView : aboutView;
+  const nextViewEl = nextView === "work" ? workView : nextView === "timetable" ? timetableView : nextView === "resource" ? resourceView : aboutView;
 
   // Switch views with animation
   const switchToNext = () => {
@@ -2822,7 +2964,6 @@ function setView(viewName) {
     // Show the new view (position: absolute, so it overlaps where the old view was)
     nextViewEl.classList.add("app_view_transitioning");
     nextViewEl.classList.add("app_view_active");
-    refreshTabIndicator();
 
     requestAnimationFrame(() => {
       nextViewEl.classList.remove("app_view_transitioning");
@@ -2859,7 +3000,7 @@ function setView(viewName) {
 }
 
 window.addEventListener("resize", () => {
-  refreshTabIndicator();
+  // Tab indicator updated via CSS border-bottom
 });
 
 // Use a flag to prevent duplicate event listeners
@@ -2980,6 +3121,7 @@ searchIconBtn.addEventListener("click", () => {
     searchInput.focus();
   }
 });
+
 viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => setView(tab.dataset.view));
 });
@@ -3142,30 +3284,7 @@ function renderSetupStep(stepIndex) {
     });
     inputGroup.appendChild(toggleBtn);
 
-    const validateBtn = document.createElement("button");
-    validateBtn.type = "button";
-    validateBtn.className = "setup_validate_btn";
-    validateBtn.textContent = t("setupValidate");
-    validateBtn.addEventListener("click", () => {
-      if (!tcCheckbox.checked) {
-        msg.textContent = t("setupTcError");
-        msg.className = "setup_message setup_message_error";
-        msg.hidden = false;
-        return;
-      }
-      validateAndSaveToken();
-    });
-    inputGroup.appendChild(validateBtn);
-
-    content.appendChild(inputGroup);
-
-    // API warning text
-    const apiWarning = document.createElement("p");
-    apiWarning.className = "setup_api_warning";
-    apiWarning.textContent = t("tcApiWarning");
-    content.appendChild(apiWarning);
-
-    // T&C agreement checkbox
+    // T&C agreement checkbox (must be created before validateBtn handler)
     const tcGroup = document.createElement("div");
     tcGroup.className = "setup_tc_group";
 
@@ -3192,7 +3311,6 @@ function renderSetupStep(stepIndex) {
     
     tcLabel.append(tcLabelText, " ", tcLink);
     tcGroup.append(tcCheckbox, tcLabel);
-    content.appendChild(tcGroup);
 
     // Message area (hidden by default, shown when an error/success/info message is set)
     const msg = document.createElement("p");
@@ -3200,6 +3318,31 @@ function renderSetupStep(stepIndex) {
     msg.className = "setup_message";
     msg.hidden = true;
     content.appendChild(msg);
+
+    const validateBtn = document.createElement("button");
+    validateBtn.type = "button";
+    validateBtn.className = "setup_validate_btn";
+    validateBtn.textContent = t("setupValidate");
+    validateBtn.addEventListener("click", () => {
+      if (!tcCheckbox.checked) {
+        msg.textContent = t("setupTcError");
+        msg.className = "setup_message setup_message_error";
+        msg.hidden = false;
+        return;
+      }
+      validateAndSaveToken();
+    });
+    inputGroup.appendChild(validateBtn);
+
+    content.appendChild(inputGroup);
+
+    // API warning text
+    const apiWarning = document.createElement("p");
+    apiWarning.className = "setup_api_warning";
+    apiWarning.textContent = t("tcApiWarning");
+    content.appendChild(apiWarning);
+    
+    content.appendChild(tcGroup);
 
     tcCheckbox.addEventListener("change", () => {
       validateBtn.disabled = !tcCheckbox.checked;
@@ -4081,8 +4224,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const initialView = new URLSearchParams(window.location.search).get("view")
       || storageGet("selectedView")
       || "work";
+    // Mark that the initial load should bust cache for fresh completion data
+    _initialLoadBustCache = true;
     setView(initialView);
-    refreshTabIndicator();
   }
 
   // Consent banner handlers
@@ -4141,6 +4285,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Check every hour
   setInterval(updateTokenWarning, 60 * 60 * 1000);
 
+  // Keep the timetable's current/next indicators in sync with the clock.
+  // Uses requestAnimationFrame so it pauses when the tab is hidden,
+  // and only runs during weekday school hours (7:40am – 3:30pm).
+  requestAnimationFrame(timetableClockLoop);
+
   // Warning banner "Update" button
   const warningBtn = document.getElementById("token_warning_btn");
   if (warningBtn) {
@@ -4165,7 +4314,6 @@ if (languageToggle) {
 }
 
 renderAll();
-refreshTabIndicator();
 
 // ── Service Worker Registration ────────────────────────────────
 if ('serviceWorker' in navigator) {

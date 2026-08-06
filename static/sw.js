@@ -46,7 +46,23 @@ async function networkFirstWithTimeout(request, timeoutMs = 5000) {
       });
     }
     return response;
-  } catch {
+  } catch (error) {
+    // Only fall back to the persistent cache on genuine offline/network errors.
+    // A timeout means the network is slow but we still prefer the live response
+    // over serving stale cached data to the user.
+    if (error.message === "timeout") {
+      // Retry the network request without timeout as a last resort.
+      try {
+        const response = await fetch(request);
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(API_CACHE).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      } catch {
+        // Network truly failed; fall through to cached data below.
+      }
+    }
     const cached = await caches.match(request);
     if (cached) {
       const headers = new Headers(cached.headers);

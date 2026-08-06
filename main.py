@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-VINFOCUS_SCRIPT_VERSION = "1.7.0"
+VINFOCUS_SCRIPT_VERSION = "1.7.4"
 
 # Configure logging
 logging.basicConfig(
@@ -588,9 +588,16 @@ def get_course_modules(course_id: int, headers: Dict[str, str], include_items: b
         params["include[]"] = "items"
 
     cache_key = f"modules:{token_hash(headers)}:{course_id}:include_items={include_items}"
-    cached = cache_get(cache_key)
-    if cached is not None:
-        return cached, None
+    # Bypass cache when the request carries a cache-buster query param.
+    # The frontend appends ?_t=<timestamp> on week/overview loads to force
+    # fresh completion data from Canvas, so we must not serve stale modules.
+    if request.args.get("_t"):
+        with _cache_lock:
+            _cache.pop(cache_key, None)
+    else:
+        cached = cache_get(cache_key)
+        if cached is not None:
+            return cached, None
 
     data, response = canvas_get(
         f"{course_api_url(course_id)}/modules",
@@ -1435,7 +1442,7 @@ def health_check():
         "service": "VinFocus",
         "database": db_status,
         "database_detail": db_detail,
-        "version": "2.0",
+        "version": VINFOCUS_SCRIPT_VERSION,
     }), 200 if db_status != "error" else 503
 
 
