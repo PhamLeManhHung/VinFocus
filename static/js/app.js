@@ -233,7 +233,7 @@ const TRANSLATIONS = {
     aboutShortcut4: "Previous / next week",
     aboutShortcut5: "Jump to week",
     aboutThanks: "Thanks for using VinFocus.",
-    aboutTetoCaption: "almost any website will eventually have a mysterious mascot. this one's ours.",
+    aboutTetoCaption: "almost any website will eventually have a mysterious mascot.\nthis one's ours.",
     aboutBlessing: "$ vinfocus --good-luck\n\ngood luck this semester.\n\nhope this little project saves you\na few clicks every day.\n\n(>ω<)ﾉ - fatass teto",
     offlineBanner: "Offline — showing cached data.",
     week: "Week",

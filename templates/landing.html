@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="VinFocus - Browse Canvas. Not the clutter. A personal information hub for Vinschool's Canvas LMS.">
-    <meta name="theme-color" content="#111111">
+    <meta name="theme-color" content="#0A0C10">
     <link rel="icon" type="image/png" href="/static/images/favicon-96x96.png?v=1" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg?v=1" />
     <link rel="shortcut icon" href="/static/images/favicon.ico?v=1" />
@@ -34,7 +34,8 @@
         <div class="nav_left">
             <a href="/" class="nav_logo">
                 <img src="/static/images/logo.png" alt="VinFocus" class="nav_logo_img">
-                <span class="nav_logo_text">VinFocus</span>
+                <span class="nav_logo_text">~/vinfocus</span>
+                <span class="nav_version">v{{ version }}</span>
             </a>
             <div class="lang_switcher" id="lang_switcher">
                 <span class="lang_option" data-lang="en">en</span>
@@ -43,8 +44,7 @@
             </div>
         </div>
         <div class="nav_links" id="nav_links">
-            <a href="#features" class="nav_link" data-i18n="nav_features">Features</a>
-            <a href="#showcase-progress" class="nav_link" data-i18n="nav_showcase">Showcase</a>
+            <a href="#search" class="nav_link" data-i18n="nav_features">Features</a>
             <a href="#privacy" class="nav_link" data-i18n="nav_privacy">Privacy</a>
             <a href="#faq" class="nav_link" data-i18n="nav_faq">FAQ</a>
             <a href="https://github.com/PhamLeManhHung/VinFocus" target="_blank" rel="noopener" class="nav_link nav_link_muted" data-i18n="nav_github">GitHub</a>
@@ -60,196 +60,360 @@
 
 <main>
 
+<!-- ═══════════════ 01 · HERO ═══════════════ -->
+
 <section class="hero" id="hero">
     <div class="hero_text">
-        <h1 class="hero_title hero_load_title" data-i18n="hero_title">Browse Canvas.<br>Not the clutter.</h1>
-        <p class="hero_desc" data-i18n="hero_desc">
-            Everything from Canvas. Nothing in your way.
+        <p class="eyebrow hero_eyebrow" id="hero_prompt" aria-hidden="false">
+            <span class="eyebrow_prompt">$</span><span id="hero_prompt_text" data-i18n="hero_eyebrow">vinfocus --view this-week</span><span class="hero_caret" aria-hidden="true"></span>
         </p>
-        <div class="hero_actions hero_load_actions">
+        <h1 class="hero_title" data-i18n="hero_title">Browse Canvas.<br>Not the clutter.</h1>
+        <p class="hero_desc" data-i18n="hero_desc">
+            A faster way through Vinschool's Canvas LMS. Everything from Canvas. Nothing in your way.
+        </p>
+        <div class="hero_actions">
             <a href="/app" class="btn btn_primary" data-i18n="hero_launch">Launch App</a>
             <a href="https://github.com/PhamLeManhHung/VinFocus" target="_blank" rel="noopener" class="btn btn_secondary" data-i18n="hero_github">View on GitHub</a>
         </div>
+        <p class="hero_kbd" aria-hidden="true"><span class="hero_kbd_keys">[j] [k]</span> <span data-i18n="hero_kbd">navigate sections</span></p>
     </div>
-    <div class="hero_screenshot_wrapper hero_load_screenshot">
-        <div class="hero_screenshot_glow"></div>
-        <img src="/static/images/image-5.png" alt="VinFocus course browser showing week navigation, course pills, and item list organized by type with completion badges" class="hero_screenshot" loading="eager">
-    </div>
-</section>
-
-<section class="section" id="features">
-    <div class="section_inner">
-        <h2 class="section_title" data-i18n="features_title">Everything in one place</h2>
-        <p class="section_subtitle" data-i18n="features_subtitle">Canvas has the data. VinFocus puts it in front of you.</p>
-        <div class="features_grid">
-            <div class="feature_card">
-                <div class="feature_icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="3" y1="9" x2="21" y2="9"></line>
-                        <line x1="9" y1="21" x2="9" y2="9"></line>
-                    </svg>
-                </div>
-                <h3 class="feature_title" data-i18n="feature1_title">Browse Courses</h3>
-                <p class="feature_desc" data-i18n="feature1_desc">All your courses in pill-style navigation. Each subject shows its completion progress at a glance.</p>
+    <div class="hero_shot">
+        <div class="window">
+            <div class="window_bar">
+                <span class="window_mark"></span>
+                <span class="window_path">~/vinfocus/courses/mathematics/week-5</span>
+                <span class="window_tag">read-only</span>
             </div>
-            <div class="feature_card">
-                <div class="feature_icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                </div>
-                <h3 class="feature_title" data-i18n="feature2_title">Search Everything</h3>
-                <p class="feature_desc" data-i18n="feature2_desc">One search bar across courses, modules, quizzes, assignments, and files. Instant results.</p>
-            </div>
-            <div class="feature_card">
-                <div class="feature_icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                    </svg>
-                </div>
-                <h3 class="feature_title" data-i18n="feature3_title">Semester Progress</h3>
-                <p class="feature_desc" data-i18n="feature3_desc">Per-week completion stats, type breakdowns, and a visual progress bar for the semester.</p>
-            </div>
-            <div class="feature_card">
-                <div class="feature_icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                </div>
-                <h3 class="feature_title" data-i18n="feature4_title">Weekly Overview</h3>
-                <p class="feature_desc" data-i18n="feature4_desc">Navigate weeks instead of long module lists. Quizzes, assignments, and files organized by week.</p>
-            </div>
-            <div class="feature_card">
-                <div class="feature_icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 20h9"></path>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                    </svg>
-                </div>
-                <h3 class="feature_title" data-i18n="feature5_title">Keyboard Shortcuts</h3>
-                <p class="feature_desc" data-i18n="feature5_desc">Navigate weeks with <kbd>j</kbd>/<kbd>k</kbd>, jump to week with <kbd>g</kbd>, toggle filters with <kbd>d</kbd>/<kbd>f</kbd>.</p>
-            </div>
-            <div class="feature_card">
-                <div class="feature_icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2v4"></path>
-                        <path d="M12 18v4"></path>
-                        <path d="M4.93 4.93l2.83 2.83"></path>
-                        <path d="M16.24 16.24l2.83 2.83"></path>
-                        <path d="M2 12h4"></path>
-                        <path d="M18 12h4"></path>
-                        <path d="M4.93 19.07l2.83-2.83"></path>
-                        <path d="M16.24 7.76l2.83-2.83"></path>
-                    </svg>
-                </div>
-                <h3 class="feature_title" data-i18n="feature6_title">Offline Ready</h3>
-                <p class="feature_desc" data-i18n="feature6_desc">Previously loaded courses and weeks work without a connection. Your data stays accessible.</p>
-            </div>
+            <img src="/static/images/image-5.png" alt="VinFocus course browser showing week navigation, course pills, search bar, and an item list organized by type with completion badges" class="hero_screenshot" loading="eager">
         </div>
     </div>
 </section>
 
-<section class="section section_showcase" id="showcase-progress">
-    <div class="section_inner showcase_row">
-        <div class="showcase_image_wrapper">
-            <div class="showcase_glow"></div>
-            <img src="/static/images/semester.png" alt="Semester progress sidebar showing per-week completion bars with done/unfinished/unknown counts and a course-wide progress summary" class="showcase_image" loading="lazy">
+<div class="status_strip" aria-hidden="true">
+    <span class="status_item"><span class="status_label" data-i18n="hero_status_courses">courses</span> <b>20+</b></span>
+    <span class="status_sep">·</span>
+    <span class="status_item"><span class="status_label" data-i18n="hero_status_weeks">weeks</span> <b>400+</b></span>
+    <span class="status_sep">·</span>
+    <span class="status_item"><span class="status_label" data-i18n="hero_status_indexed">items indexed</span> <b>1,000+</b></span>
+    <span class="status_sep">·</span>
+    <span class="status_item"><span class="status_label" data-i18n="hero_status_sync">last sync</span> <b>2m ago</b></span>
+</div>
+
+<!-- ═══════════════ 02 · THE PROBLEM ═══════════════ -->
+
+<section class="section section--quiet" id="problem">
+    <div class="section_inner section_inner--narrow">
+        <p class="eyebrow" data-i18n="problem_eyebrow">// the problem</p>
+        <h2 class="section_title" data-i18n="problem_title">Canvas has everything.<br>Finding it is the hard part.</h2>
+        <p class="section_desc" data-i18n="problem_body1">
+            Open a course. Scroll the module list. Hope the quiz you need is where you left it. Repeat for every subject, every week.
+        </p>
+        <p class="section_desc" data-i18n="problem_body2">
+            Canvas isn't bad. It's just slow to navigate. VinFocus doesn't replace it — it rearranges the same information into something you can actually move through.
+        </p>
+    </div>
+</section>
+
+<!-- ═══════════════ 03 · THE FIX (annotated tour) ═══════════════ -->
+
+<section class="section section--tour" id="tour">
+    <div class="section_inner section_inner--mid">
+        <p class="eyebrow" data-i18n="reveal_eyebrow">// the fix</p>
+        <h2 class="section_title" data-i18n="reveal_title">The whole week, at a glance</h2>
+        <p class="section_desc" data-i18n="reveal_desc">
+            One window for the work you actually have to do. A tour of the main screen:
+        </p>
+    </div>
+    <div class="tour_stage">
+        <div class="window window--tour">
+            <div class="window_bar">
+                <span class="window_mark"></span>
+                <span class="window_path">~/vinfocus/work-view</span>
+                <span class="window_tag">read-only</span>
+            </div>
+            <div class="tour_shot">
+                <img src="/static/images/image-5.png" alt="" class="tour_image" loading="lazy">
+                <span class="annot annot--search" data-i18n="annot_search" aria-hidden="true">one search across everything</span>
+                <span class="annot annot--pills" data-i18n="annot_pills" aria-hidden="true">course pills · progress per subject</span>
+                <span class="annot annot--week" data-i18n="annot_week" aria-hidden="true">week navigator · j / k or g to jump</span>
+                <span class="annot annot--filter" data-i18n="annot_filter" aria-hidden="true">unfinished · unknown filters</span>
+                <span class="annot annot--overview" data-i18n="annot_overview" aria-hidden="true">semester progress sidebar</span>
+                <span class="annot annot--items" data-i18n="annot_items" aria-hidden="true">quizzes · assignments · files · pages</span>
+            </div>
         </div>
-        <div class="showcase_text">
-            <span class="showcase_label" data-i18n="showcase1_label">Dashboard</span>
-            <h2 class="showcase_title" data-i18n="showcase1_title">Semester progress at a glance</h2>
-            <p class="showcase_desc" data-i18n="showcase1_desc">
-                The overview sidebar shows you exactly where you stand in each course. See which weeks have unfinished work, which types of assignments remain, and how much of the semester you have completed — all without leaving the page. Each course pill also shows its own progress bar so you can track every subject at a glance.
+        <ul class="tour_legend">
+            <li data-i18n="annot_search">one search across everything</li>
+            <li data-i18n="annot_pills">course pills · progress per subject</li>
+            <li data-i18n="annot_week">week navigator · j / k or g to jump</li>
+            <li data-i18n="annot_filter">unfinished · unknown filters</li>
+            <li data-i18n="annot_overview">semester progress sidebar</li>
+            <li data-i18n="annot_items">quizzes · assignments · files · pages</li>
+        </ul>
+    </div>
+</section>
+
+<!-- ═══════════════ 04 · SEARCH (live demo) ═══════════════ -->
+
+<section class="section section--quiet" id="search">
+    <div class="section_inner section_inner--narrow">
+        <p class="eyebrow" data-i18n="search_eyebrow">// search</p>
+        <h2 class="section_title" data-i18n="search_title">Search everything. Unlike Canvas.</h2>
+        <p class="section_desc" data-i18n="search_desc">
+            This is not a mockup — type and the list filters. The real app does the same across courses, modules, quizzes, assignments, and files.
+        </p>
+    </div>
+    <div class="section_inner section_inner--mid">
+        <div class="window window--search">
+            <div class="window_bar">
+                <span class="window_mark"></span>
+                <span class="window_path">~/vinfocus/search</span>
+                <span class="window_tag" id="search_count">12 items</span>
+            </div>
+            <div class="search_box">
+                <span class="search_prompt">$</span>
+                <input id="demo_search" class="search_input" type="text" data-i18n-ph="search_placeholder" placeholder="search items…" aria-label="Search demo" autocomplete="off" spellcheck="false">
+            </div>
+            <ul class="search_results" id="demo_results" aria-live="polite">
+                <!-- rendered by landing.js -->
+            </ul>
+            <p class="search_hint" data-i18n="search_hint">try "quiz" · "week 3" · "revision"</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ 05 · WEEKS ═══════════════ -->
+
+<section class="section section--split" id="weeks">
+    <div class="section_inner section_inner--split">
+        <div class="split_text">
+            <p class="eyebrow" data-i18n="weeks_eyebrow">// weeks</p>
+            <h2 class="section_title section_title--left" data-i18n="weeks_title">Modules are for teachers.<br>Weeks are for you.</h2>
+            <p class="section_desc" data-i18n="weeks_desc">
+                Canvas hides content in long module lists. VinFocus reads the module names — messy as they are — and rebuilds them into a clean week navigator.
             </p>
-            <ul class="showcase_list">
-                <li data-i18n="showcase1_li1">Per-week completion stats with visual progress bars</li>
-                <li data-i18n="showcase1_li2">Item type breakdowns (Quizzes, Assignments, Files, Pages)</li>
-                <li data-i18n="showcase1_li3">Course-wide totals: done, unfinished, and unknown items</li>
-                <li data-i18n="showcase1_li4">Per-course progress bars in the navigation pills</li>
+            <ul class="check_list">
+                <li data-i18n="weeks_li1">Names like "TUẦN 35 + 36" become one clean week</li>
+                <li data-i18n="weeks_li2"><kbd>j</kbd> / <kbd>k</kbd> to move, <kbd>g</kbd> to jump to any week</li>
+                <li data-i18n="weeks_li3">Each week shows quizzes, assignments, files, and pages together</li>
             </ul>
         </div>
+        <div class="split_visual">
+            <div class="window window--weeks">
+                <div class="window_bar">
+                    <span class="window_mark"></span>
+                    <span class="window_path">~/vinfocus/navigate-weeks</span>
+                </div>
+                <div class="weeks_demo">
+                    <div class="weeks_nav">
+                        <button type="button" class="week_btn" aria-label="previous week" disabled>&lsaquo;</button>
+                        <span class="week_label">week <span class="week_num">32</span></span>
+                        <button type="button" class="week_btn" aria-label="next week">&rsaquo;</button>
+                    </div>
+                    <div class="weeks_strip">
+                        <span class="week_pill">30</span>
+                        <span class="week_pill">31</span>
+                        <span class="week_pill week_pill--active">32</span>
+                        <span class="week_pill">33</span>
+                        <span class="week_pill">34</span>
+                    </div>
+                    <ul class="weeks_items">
+                        <li class="demo_row"><span class="type_badge type--quiz">QZ</span> Quiz &mdash; Chapter 4 reading check</li>
+                        <li class="demo_row"><span class="type_badge type--assignment">AS</span> Assignment &mdash; essay draft</li>
+                        <li class="demo_row"><span class="type_badge type--file">FL</span> File &mdash; revision notes</li>
+                        <li class="demo_row"><span class="type_badge type--page">PG</span> Page &mdash; grammar guide</li>
+                    </ul>
+                </div>
+            </div>
+            <p class="split_footnote mono" data-i18n="weeks_footnote">week 0 exists because someone named a module "misc stuff".</p>
+        </div>
     </div>
 </section>
 
-<section class="section section_showcase" id="showcase-timetable">
-    <div class="section_inner showcase_row showcase_row_reverse">
-        <div class="showcase_image_wrapper">
-            <div class="showcase_glow"></div>
-            <img src="/static/images/image-2.png" alt="Weekly timetable grid showing Monday-to-Friday columns with subject periods, current period highlighting, and today column emphasis" class="showcase_image" loading="lazy">
-        </div>
-        <div class="showcase_text">
-            <span class="showcase_label" data-i18n="showcase2_label">Timetable</span>
-            <h2 class="showcase_title" data-i18n="showcase2_title">Your schedule, always accessible</h2>
-            <p class="showcase_desc" data-i18n="showcase2_desc">
-                A fully editable weekly timetable that lives in your browser. Add, edit, or remove subjects and periods. The timetable highlights the current period and today's column so you always know what is next.
+<!-- ═══════════════ 06 · PROGRESS ═══════════════ -->
+
+<section class="section section--split section--split_reverse" id="progress">
+    <div class="section_inner section_inner--split">
+        <div class="split_text">
+            <p class="eyebrow" data-i18n="progress_eyebrow">// progress</p>
+            <h2 class="section_title section_title--left" data-i18n="progress_title">You can see the finish line.</h2>
+            <p class="section_desc" data-i18n="progress_desc">
+                The overview sidebar tracks every item Canvas reports — per week, per type, per course. No more guessing how far along the semester you actually are.
             </p>
-            <ul class="showcase_list">
-                <li data-i18n="showcase2_li1">Edit subjects inline or with a dedicated editor</li>
-                <li data-i18n="showcase2_li2">Current period and today highlighting</li>
-                <li data-i18n="showcase2_li3">Responsive design with mobile-friendly modal editing</li>
-                <li data-i18n="showcase2_li4">Data stored locally — no server uploads</li>
+            <ul class="check_list">
+                <li data-i18n="progress_li1">Per-week completion bars across the whole semester</li>
+                <li data-i18n="progress_li2">Type breakdowns: quizzes, assignments, files, pages</li>
+                <li data-i18n="progress_li3">Course-wide totals &mdash; done, unfinished, unknown</li>
             </ul>
         </div>
-    </div>
-</section>
-
-<section class="section section_privacy" id="privacy">
-    <div class="section_inner">
-        <div class="privacy_card">
-            <h2 class="privacy_title" data-i18n="privacy_title">Your privacy comes first.</h2>
-            <p class="privacy_subtitle" data-i18n="privacy_subtitle">VinFocus is designed to be transparent about what it can and cannot do with your account.</p>
-            <div class="privacy_grid">
-                <div class="privacy_item">
-                    <span class="privacy_check">&#10003;</span>
-                    <span data-i18n="privacy_1">No Canvas password required</span>
+        <div class="split_visual">
+            <div class="window">
+                <div class="window_bar">
+                    <span class="window_mark"></span>
+                    <span class="window_path">~/vinfocus/overview</span>
+                    <span class="window_tag">read-only</span>
                 </div>
-                <div class="privacy_item">
-                    <span class="privacy_check">&#10003;</span>
-                    <span data-i18n="privacy_2">Uses your personal Access Card</span>
-                </div>
-                <div class="privacy_item">
-                    <span class="privacy_check">&#10003;</span>
-                    <span data-i18n="privacy_3">Read-only access</span>
-                </div>
-                <div class="privacy_item">
-                    <span class="privacy_check">&#10003;</span>
-                    <span data-i18n="privacy_4">Cannot submit assignments</span>
-                </div>
-                <div class="privacy_item">
-                    <span class="privacy_check">&#10003;</span>
-                    <span data-i18n="privacy_5">Your data stays yours</span>
-                </div>
+                <img src="/static/images/semester.png" alt="Semester progress sidebar showing per-week completion bars with done, unfinished, and unknown counts and a course-wide progress summary" class="split_image" loading="lazy">
             </div>
         </div>
     </div>
 </section>
 
-<section class="section" id="getting-started">
-    <div class="section_inner">
+<!-- ═══════════════ 07 · TIMETABLE ═══════════════ -->
+
+<section class="section section--split" id="timetable">
+    <div class="section_inner section_inner--split">
+        <div class="split_text">
+            <p class="eyebrow" data-i18n="timetable_eyebrow">// timetable</p>
+            <h2 class="section_title section_title--left" data-i18n="timetable_title">What's next, without another tab.</h2>
+            <p class="section_desc" data-i18n="timetable_desc">
+                A weekly timetable that lives in your browser. It highlights the current period and today's column, so you always know what's next — even at break.
+            </p>
+            <ul class="check_list">
+                <li data-i18n="timetable_li1">Current period and today column highlighted</li>
+                <li data-i18n="timetable_li2">Inline editing on desktop, mobile editor on phones</li>
+                <li data-i18n="timetable_li3">Stored locally &mdash; no uploads, no accounts</li>
+            </ul>
+        </div>
+        <div class="split_visual">
+            <div class="window">
+                <div class="window_bar">
+                    <span class="window_mark"></span>
+                    <span class="window_path">~/vinfocus/timetable</span>
+                    <span class="window_tag">today + week</span>
+                </div>
+                <img src="/static/images/image-2.png" alt="Weekly timetable grid showing Monday-to-Friday columns with subject periods, current period highlighting, and today column emphasis" class="split_image" loading="lazy">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ 08 · THREE-STATE STRIP ═══════════════ -->
+
+<section class="section section--strip" id="unfinished">
+    <div class="section_inner section_inner--mid">
+        <p class="eyebrow" data-i18n="three_eyebrow">// unfinished</p>
+        <h2 class="section_title" data-i18n="three_title">Canvas knows three things about your work.<br>VinFocus shows all three.</h2>
+        <p class="section_desc" data-i18n="three_desc">
+            The unfinished filter keeps the week list honest. "Unknown" means Canvas isn't tracking it — VinFocus marks it instead of pretending.
+        </p>
+    </div>
+    <div class="section_inner section_inner--mid">
+        <div class="three_state">
+            <div class="three_state_row three_state_row--done">
+                <span class="ts_dot ts_dot--done" aria-hidden="true"></span>
+                <span class="ts_title" data-i18n="three_row1">Quiz &mdash; Chapter 4 reading check</span>
+                <span class="ts_status ts_status--done" data-i18n="three_row1_status">completed</span>
+            </div>
+            <div class="three_state_row three_state_row--open">
+                <span class="ts_dot ts_dot--open" aria-hidden="true"></span>
+                <span class="ts_title" data-i18n="three_row2">Assignment &mdash; essay draft</span>
+                <span class="ts_status ts_status--open" data-i18n="three_row2_status">not done</span>
+            </div>
+            <div class="three_state_row three_state_row--unknown">
+                <span class="ts_dot ts_dot--unknown" aria-hidden="true"></span>
+                <span class="ts_title" data-i18n="three_row3">File &mdash; revision notes</span>
+                <span class="ts_status ts_status--unknown" data-i18n="three_row3_status">no tracking</span>
+            </div>
+        </div>
+        <div class="three_legend mono" aria-hidden="true">
+            <span class="legend_key"><span class="ts_dot ts_dot--done"></span><span data-i18n="done_label">done</span></span>
+            <span class="legend_key"><span class="ts_dot ts_dot--open"></span><span data-i18n="unfinished_label">unfinished</span></span>
+            <span class="legend_key"><span class="ts_dot ts_dot--unknown"></span><span data-i18n="unknown_label">unknown</span></span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ 09 · WHY I BUILT THIS ═══════════════ -->
+
+<section class="section section--quiet" id="about">
+    <div class="section_inner section_inner--narrow">
+        <p class="eyebrow" data-i18n="about_eyebrow">// context</p>
+        <h2 class="section_title" data-i18n="about_title">Built because Canvas was in the way.</h2>
+        <p class="section_desc" data-i18n="about_body1">
+            I'm a student at Vinschool. Every week meant opening Canvas, clicking a course, scrolling a module list, and hoping the quiz I needed was where I remembered it. It usually wasn't.
+        </p>
+        <p class="section_desc" data-i18n="about_body2">
+            So I built VinFocus. It reads the same courses you already have and rearranges them into weeks, a search bar, and a progress view. It doesn't decide what you should do. It makes what exists easier to find.
+        </p>
+        <p class="about_mono mono" data-i18n="about_mono">not affiliated with vinschool or canvas. it just makes them usable.</p>
+    </div>
+</section>
+
+<!-- ═══════════════ 10 · PRIVACY (permission table) ═══════════════ -->
+
+<section class="section section--quiet" id="privacy">
+    <div class="section_inner section_inner--narrow">
+        <p class="eyebrow" data-i18n="privacy_eyebrow">// privacy</p>
+        <h2 class="section_title" data-i18n="privacy_title">Check the permissions yourself.</h2>
+        <p class="section_desc" data-i18n="privacy_intro">
+            No signup. No account. No server-side storage of anything that matters.
+        </p>
+    </div>
+    <div class="section_inner section_inner--mid">
+        <div class="window window--perm">
+            <div class="window_bar">
+                <span class="window_mark"></span>
+                <span class="window_path perm_prompt" data-i18n="privacy_prompt">$ vinfocus --check-permissions</span>
+            </div>
+            <table class="perm_table">
+                <tbody>
+                    <tr>
+                        <td class="perm_op" data-i18n="perm_op_read_courses">READ courses</td>
+                        <td class="perm_val perm_val--accent" data-i18n="perm_yes">yes</td>
+                    </tr>
+                    <tr>
+                        <td class="perm_op" data-i18n="perm_op_read_assignments">READ assignments</td>
+                        <td class="perm_val perm_val--accent" data-i18n="perm_yes">yes</td>
+                    </tr>
+                    <tr>
+                        <td class="perm_op" data-i18n="perm_op_write">WRITE anything</td>
+                        <td class="perm_val perm_val--ok" data-i18n="perm_no">no</td>
+                    </tr>
+                    <tr>
+                        <td class="perm_op" data-i18n="perm_op_submit">SUBMIT assignments</td>
+                        <td class="perm_val perm_val--ok" data-i18n="perm_no">no</td>
+                    </tr>
+                    <tr>
+                        <td class="perm_op" data-i18n="perm_op_store">STORE token</td>
+                        <td class="perm_val perm_val--ok" data-i18n="perm_browser_only">browser only</td>
+                    </tr>
+                    <tr>
+                        <td class="perm_op" data-i18n="perm_op_send">SEND your data</td>
+                        <td class="perm_val perm_val--ok" data-i18n="perm_nowhere">nowhere</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="privacy_note" data-i18n="privacy_note">
+            Your Access Card lives in your browser and goes straight to Canvas. It is never stored on VinFocus servers, and nothing is collected or shared.
+        </p>
+    </div>
+</section>
+
+<!-- ═══════════════ 11 · SETUP ═══════════════ -->
+
+<section class="section section--quiet" id="getting-started">
+    <div class="section_inner section_inner--narrow">
+        <p class="eyebrow" data-i18n="steps_eyebrow">// setup</p>
         <h2 class="section_title" data-i18n="steps_title">Getting started</h2>
-        <p class="section_subtitle" data-i18n="steps_subtitle">Three simple steps to start browsing.</p>
-        <div class="steps">
-            <div class="step">
-                <div class="step_number">1</div>
-                <h3 class="step_title" data-i18n="step1_title">Generate an Access Card</h3>
-                <p class="step_desc" data-i18n="step1_desc">Open your Canvas account settings and create a new API access token. This is your personal Access Card.</p>
+        <p class="section_subtitle" data-i18n="steps_subtitle">Three steps. No installation.</p>
+    </div>
+    <div class="section_inner section_inner--narrow">
+        <div class="steps_code">
+            <div class="steps_block">
+                <p class="steps_line steps_line--cmd"><span class="steps_prompt">$</span> step 1 of 3</p>
+                <p class="steps_line steps_line--title" data-i18n="step1_title">generate an access card</p>
+                <p class="steps_line steps_line--muted" data-i18n="step1_desc">Open your Canvas account settings and create a new API access token. This is your personal Access Card.</p>
             </div>
-            <div class="step_divider"></div>
-            <div class="step">
-                <div class="step_number">2</div>
-                <h3 class="step_title" data-i18n="step2_title">Paste it into VinFocus</h3>
-                <p class="step_desc" data-i18n="step2_desc">Copy your Access Card and paste it into the VinFocus setup wizard. The card is stored only in your browser.</p>
+            <div class="steps_block">
+                <p class="steps_line steps_line--cmd"><span class="steps_prompt">$</span> step 2 of 3</p>
+                <p class="steps_line steps_line--title" data-i18n="step2_title">paste it into vinfocus</p>
+                <p class="steps_line steps_line--muted" data-i18n="step2_desc">Copy your Access Card and paste it into the setup wizard. The card is stored only in your browser.</p>
             </div>
-            <div class="step_divider"></div>
-            <div class="step">
-                <div class="step_number">3</div>
-                <h3 class="step_title" data-i18n="step3_title">Start browsing</h3>
-                <p class="step_desc" data-i18n="step3_desc">Your courses load automatically. Navigate weeks, search resources, and track your semester progress.</p>
+            <div class="steps_block">
+                <p class="steps_line steps_line--cmd"><span class="steps_prompt">$</span> step 3 of 3</p>
+                <p class="steps_line steps_line--title" data-i18n="step3_title">start browsing</p>
+                <p class="steps_line steps_line--muted" data-i18n="step3_desc">Your courses load automatically. Navigate weeks, search resources, and track your semester progress.</p>
             </div>
         </div>
         <div class="steps_note">
@@ -267,8 +431,10 @@
     </div>
 </section>
 
-<section class="section" id="faq">
-    <div class="section_inner section_inner_narrow">
+<!-- ═══════════════ 12 · FAQ ═══════════════ -->
+
+<section class="section section--quiet" id="faq">
+    <div class="section_inner section_inner--narrow">
         <h2 class="section_title" data-i18n="faq_title">Frequently asked questions</h2>
         <p class="section_subtitle" data-i18n="faq_subtitle">Quick answers to common questions.</p>
         <div class="faq_list">
@@ -310,13 +476,28 @@
             </div>
             <div class="faq_item">
                 <button class="faq_question" aria-expanded="false">
-                    <span data-i18n="faq5_q">Does it work on mobile?</span>
+                    <span data-i18n="faq5_q">Why not use Vinschool LMS?</span>
                     <svg class="faq_chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </button>
                 <div class="faq_answer">
-                    <p data-i18n="faq5_a">Yes. VinFocus is fully responsive and works on mobile browsers. The interface adapts to smaller screens with touch-friendly controls and a mobile-optimized timetable view.</p>
+                    <p data-i18n="faq5_a">VinFocus doesn't replace Vinschool LMS. It provides a faster, more focused way to view assignments, progress, and schedules without navigating through multiple LMS pages.</p>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ 13 · CTA ═══════════════ -->
+
+<section class="section section--cta" id="cta">
+    <div class="section_inner section_inner--narrow">
+        <p class="eyebrow" data-i18n="cta_eyebrow">$ ./vinfocus</p>
+        <h2 class="section_title" data-i18n="cta_title">Your next week is one tab away.</h2>
+        <p class="section_desc" data-i18n="cta_desc">
+            Open the app, paste your Access Card, and see everything Canvas hides in module lists.
+        </p>
+        <div class="cta_actions">
+            <a href="/app" class="btn btn_primary" data-i18n="cta_launch">Launch App</a>
         </div>
     </div>
 </section>
@@ -326,13 +507,13 @@
 <footer class="footer">
     <div class="footer_inner">
         <div class="footer_links">
-            <a href="https://github.com/PhamLeManhHung/VinFocus" target="_blank" rel="noopener" class="footer_link">GitHub</a>
-            <span class="footer_dot"></span>
+            <a href="https://github.com/PhamLeManhHung/VinFocus" target="_blank" rel="noopener" class="footer_link">github</a>
+            <span class="footer_sep">/</span>
             <span class="footer_link footer_link_muted">v{{ version }}</span>
-            <span class="footer_dot"></span>
-            <a href="https://github.com/PhamLeManhHung/VinFocus/releases" target="_blank" rel="noopener" class="footer_link">Changelog</a>
-            <span class="footer_dot"></span>
-            <a href="https://github.com/PhamLeManhHung/VinFocus/blob/main/LICENSE" target="_blank" rel="noopener" class="footer_link">License</a>
+            <span class="footer_sep">/</span>
+            <a href="https://github.com/PhamLeManhHung/VinFocus/releases" target="_blank" rel="noopener" class="footer_link">changelog</a>
+            <span class="footer_sep">/</span>
+            <a href="https://github.com/PhamLeManhHung/VinFocus/blob/main/LICENSE" target="_blank" rel="noopener" class="footer_link">license</a>
         </div>
         <p class="footer_credit" data-i18n="footer_credit">Made by Pham Le Manh Hung</p>
         <p class="footer_disclaimer" data-i18n="footer_disclaimer">
